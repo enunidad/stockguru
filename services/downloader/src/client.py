@@ -2,32 +2,13 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Optional
 
 import pandas as pd
 import yfinance as yf
 
-
-class DownloaderClientError(Exception):
-    """Base exception for downloader client errors."""
-
-
-class EmptyDownloadError(DownloaderClientError):
-    """Raised when the data provider returns no rows."""
-
-
-class InvalidTickerError(DownloaderClientError):
-    """Raised when the ticker appears invalid or unsupported."""
-
-
-@dataclass(frozen=True)
-class PriceHistoryRequest:
-    ticker: str
-    period: str = "10y"
-    interval: str = "1d"
-    auto_adjust: bool = False
-
+from .schemas import PriceHistoryRequest
+from .exception import DownloaderClientError, EmptyDownloadError, InvalidTickerError
 
 class YahooFinanceClient:
     """

@@ -1,4 +1,5 @@
-from .client import PriceHistoryRequest, YahooFinanceClient
+from .client import YahooFinanceClient
+from .schemas import PriceHistoryRequest
 
 
 def main() -> None:
