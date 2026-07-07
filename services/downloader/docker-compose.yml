@@ -1,0 +1,26 @@
+services:
+  downloader:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: investment-guru-downloader
+    volumes:
+      - ./src:/app/src
+      - ./tests:/app/tests
+      - ./data:/app/data
+    environment:
+      - PYTHONPATH=/app/src
+    command: python -m downloader.main
+
+  downloader-tests:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: investment-guru-downloader-tests
+    volumes:
+      - ./src:/app/src
+      - ./tests:/app/tests
+      - ./data:/app/data
+    environment:
+      - PYTHONPATH=/app/src
+    command: pytest tests -v
