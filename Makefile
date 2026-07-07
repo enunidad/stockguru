@@ -1,4 +1,9 @@
-.PHONY: test test-downloader
+.PHONY: downloader-smoke downloader-test
 
-test-downloader:
+downloader-smoke:
 	$(MAKE) -C services/downloader run
+	$(MAKE) -C services/downloader clean
+
+downloader-test:
+	$(MAKE) -C services/downloader test
+	$(MAKE) -C services/downloader clean
