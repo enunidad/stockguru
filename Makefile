@@ -1,9 +1,10 @@
-.PHONY: downloader-smoke downloader-test
+SERVICE ?=
+CMD ?=
 
-downloader-smoke:
-	$(MAKE) -C services/downloader run
-	$(MAKE) -C services/downloader clean
+.PHONY: service
 
-downloader-test:
-	$(MAKE) -C services/downloader test
-	$(MAKE) -C services/downloader clean
+service:
+	@if "$(SERVICE)"=="" (echo SERVICE is required && exit /b 1)
+	@if "$(CMD)"=="" (echo CMD is required && exit /b 1)
+	$(MAKE) -C services/$(SERVICE) $(CMD)
+	$(MAKE) -C services/$(SERVICE) clean
