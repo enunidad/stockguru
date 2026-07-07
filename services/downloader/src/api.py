@@ -1,0 +1,64 @@
+# services/downloader/src/api.py
+
+from __future__ import annotations
+
+from aiohttp import web
+
+from .exceptions import DownloaderClientError
+from .service import DownloaderService
+
+
+service = DownloaderService()
+
+
+async def health(request: web.Request) -> web.Response:
+    return web.json_response({"status": "ok"})
+
+
+async def get_price_history(request: web.Request) -> web.Response:
+    ticker = request.match_info["ticker"]
+
+    period = request.query.get("period", "10y")
+    interval = request.query.get("interval", "1d")
+
+    try:
+        data = service.get_price_history(
+            ticker=ticker,
+            period=period,
+            interval=interval,
+        )
+
+        records = data.reset_index().tail(10)
+        records["Date"] = records["Date"].astype(str)
+
+        return web.json_response(
+            {
+                "ticker": ticker.upper(),
+                "period": period,
+                "interval": interval,
+                "rows": len(data),
+                "data": records.to_dict(orient="records"),
+            }
+        )
+
+    except DownloaderClientError as exc:
+        return web.json_response(
+            {
+                "error": type(exc).__name__,
+                "message": str(exc),
+            },
+            status=400,
+        )
+
+
+def create_app() -> web.Application:
+    app = web.Application()
+
+    app.router.add_get("/health", health)
+    app.router.add_get("/history/{ticker}", get_price_history)
+
+    return app
+
+
+if __name__ == "__main__":
+    web.run_app(create_app(), host="0.0.0.0", port=8080)

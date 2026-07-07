@@ -1,16 +1,15 @@
-from .client import YahooFinanceClient
-from .schemas import PriceHistoryRequest
+# services/downloader/src/main.py
+
+from .service import DownloaderService
 
 
 def main() -> None:
-    client = YahooFinanceClient()
+    service = DownloaderService()
 
-    request = PriceHistoryRequest(
+    data = service.get_price_history(
         ticker="AAPL",
         period="1mo",
     )
-
-    data = client.download_price_history(request)
 
     print(data.tail())
 
