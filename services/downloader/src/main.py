@@ -1,17 +1,10 @@
-# services/downloader/src/main.py
+from aiohttp import web
 
-from .service import DownloaderService
-
+from api import create_app
 
 def main() -> None:
-    service = DownloaderService()
-
-    data = service.get_price_history(
-        ticker="AAPL",
-        period="1mo",
-    )
-
-    print(data.tail())
+    app = create_app()
+    web.run_app(app, host="0.0.0.0", port=8080)
 
 
 if __name__ == "__main__":

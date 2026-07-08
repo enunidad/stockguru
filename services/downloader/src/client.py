@@ -7,8 +7,8 @@ from typing import Optional
 import pandas as pd
 import yfinance as yf
 
-from .schemas import PriceHistoryRequest
-from .exceptions import DownloaderClientError, EmptyDownloadError, InvalidTickerError
+from schemas import PriceHistoryRequest
+from exceptions import DownloaderClientError, EmptyDownloadError, InvalidTickerError
 
 class YahooFinanceClient:
     """

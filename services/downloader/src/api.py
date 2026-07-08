@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from aiohttp import web
 
-from .exceptions import DownloaderClientError
-from .service import DownloaderService
+from exceptions import DownloaderClientError
+from service import DownloaderService
 
 
 async def health(request: web.Request) -> web.Response:

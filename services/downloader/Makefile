@@ -24,8 +24,8 @@ install:
 test:
 	$(PYTHON) -m pytest tests
 
-run:
-	$(PYTHON) -m src.main
+smoke:
+	powershell -NoProfile -Command "$$server = Start-Process python -ArgumentList 'src/main.py' -PassThru; Start-Sleep -Seconds 2; try { Invoke-RestMethod 'http://localhost:8080/health' | Out-Null; Write-Host 'Smoke test passed' } finally { Stop-Process -Id $$server.Id }"
 
 clean:
 	$(PYTHON) -c "import shutil, pathlib; \

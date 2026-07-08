@@ -6,9 +6,9 @@ import pandas as pd
 from pathlib import Path
 from datetime import timedelta
 
-from .client import YahooFinanceClient
-from .schemas import PriceHistoryRequest
-from .cache import PriceHistoryCache
+from client import YahooFinanceClient
+from schemas import PriceHistoryRequest
+from cache import PriceHistoryCache
 
 
 class DownloaderService:

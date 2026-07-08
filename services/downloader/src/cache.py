@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from src.schemas import PriceHistoryRequest
+from schemas import PriceHistoryRequest
 
 
 class PriceHistoryCache:
