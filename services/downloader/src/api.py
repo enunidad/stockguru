@@ -8,9 +8,6 @@ from .exceptions import DownloaderClientError
 from .service import DownloaderService
 
 
-service = DownloaderService()
-
-
 async def health(request: web.Request) -> web.Response:
     return web.json_response({"status": "ok"})
 
