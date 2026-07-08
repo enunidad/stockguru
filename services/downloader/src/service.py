@@ -50,3 +50,4 @@ class DownloaderService:
         
         data = self.client.download_price_history(request)
         self.cache.save(request,  data)
+        return data
