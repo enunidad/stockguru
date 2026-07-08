@@ -2,3 +2,4 @@ yfinance
 pandas
 pytest
 aiohttp
+pytest-aiohttp

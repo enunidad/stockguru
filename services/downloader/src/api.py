@@ -22,7 +22,7 @@ async def get_price_history(request: web.Request) -> web.Response:
     interval = request.query.get("interval", "1d")
 
     try:
-        data = service.get_price_history(
+        data = request.app["service"].get_price_history(
             ticker=ticker,
             period=period,
             interval=interval,
@@ -51,14 +51,14 @@ async def get_price_history(request: web.Request) -> web.Response:
         )
 
 
-def create_app() -> web.Application:
+def create_app(service_override: DownloaderService | None = None) -> web.Application:
     app = web.Application()
+    app["service"] = service_override or DownloaderService()
 
     app.router.add_get("/health", health)
     app.router.add_get("/history/{ticker}", get_price_history)
 
     return app
-
 
 if __name__ == "__main__":
     web.run_app(create_app(), host="0.0.0.0", port=8080)
