@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import pandas as pd
+from pathlib import Path
+from datetime import timedelta
 
 from .client import YahooFinanceClient
 from .schemas import PriceHistoryRequest
+from .cache import PriceHistoryCache
 
 
 class DownloaderService:
@@ -21,8 +24,11 @@ class DownloaderService:
     - service-level validation
     """
 
-    def __init__(self, client: YahooFinanceClient | None = None) -> None:
+    def __init__(self, client: YahooFinanceClient | None = None,
+                cache: PriceHistoryCache | None = None) -> None:
         self.client = client or YahooFinanceClient()
+        self.cache = cache or PriceHistoryCache(cache_dir=Path("data"),
+                                                ttl=timedelta(days=1),)
 
     def get_price_history(
         self,
@@ -38,4 +44,9 @@ class DownloaderService:
             auto_adjust=auto_adjust,
         )
 
-        return self.client.download_price_history(request)
+        cached = self.cache.get_if_fresh(request)
+        if cached is not None:
+            return cached
+        
+        data = self.client.download_price_history(request)
+        self.cache.save(request,  data)
