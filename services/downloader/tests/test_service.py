@@ -3,6 +3,17 @@ import pandas as pd
 from src.schemas import PriceHistoryRequest
 from src.service import DownloaderService
 
+class FakeCache:
+    def __init__(self):
+        self.saved_request = None
+        self.saved_data = None
+
+    def get_if_fresh(self, request):
+        return None
+
+    def save(self, request, data):
+        self.saved_request = request
+        self.saved_data = data
 
 class FakeYahooFinanceClient:
     def __init__(self):
@@ -21,7 +32,8 @@ class FakeYahooFinanceClient:
 
 def test_get_price_history_builds_request_and_calls_client():
     fake_client = FakeYahooFinanceClient()
-    service = DownloaderService(client=fake_client)
+    fake_cache = FakeCache()
+    service = DownloaderService(client=fake_client, cache=fake_cache)
 
     result = service.get_price_history(
         ticker="AAPL",
@@ -30,18 +42,23 @@ def test_get_price_history_builds_request_and_calls_client():
         auto_adjust=True,
     )
 
-    assert fake_client.received_request == PriceHistoryRequest(
+    expected_request = PriceHistoryRequest(
         ticker="AAPL",
         period="5y",
         interval="1wk",
         auto_adjust=True,
     )
+
+    assert fake_client.received_request == expected_request
+    assert fake_cache.saved_request == expected_request
+    pd.testing.assert_frame_equal(fake_cache.saved_data, fake_client.response)
     pd.testing.assert_frame_equal(result, fake_client.response)
 
 
 def test_get_price_history_uses_default_request_values():
     fake_client = FakeYahooFinanceClient()
-    service = DownloaderService(client=fake_client)
+    fake_cache = FakeCache()
+    service = DownloaderService(client=fake_client, cache=fake_cache)
 
     service.get_price_history(ticker="MSFT")
 
