@@ -1,6 +1,6 @@
 from aiohttp import web
 
-from api import create_app
+from src.api import create_app
 
 def main() -> None:
     app = create_app()
