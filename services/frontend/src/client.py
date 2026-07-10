@@ -1,34 +1,32 @@
 from __future__ import annotations
 
 from typing import Any
+
 import aiohttp
 
-from .exceptions import ApiClientError, ServiceUnavailableError, InvalidResponseError
+from .exceptions import (
+    ApiClientError,
+    InvalidResponseError,
+    ServiceUnavailableError,
+)
 from .schemas import PriceHistoryRequest
+
 
 class DownloaderApiClient:
     """
     Thin HTTP client around the Downloader service.
 
-    This class should not know:
-    - HTML
-    - Templates
-    - JavaScript
-    - Charts
-    - Browser requests
-
-    It only communicates with the Downloader API.
+    This class only handles communication with the Downloader API.
     """
 
-    def __init__(self, base_url: str):
+    def __init__(self, base_url: str) -> None:
         self._base_url = base_url.rstrip("/")
 
     async def get_price_history(
         self,
         request: PriceHistoryRequest,
     ) -> dict[str, Any]:
-
-        url = f"{self._base_url}/prices/{request.ticker}"
+        url = f"{self._base_url}/history/{request.ticker}"
 
         params = {
             "period": request.period,
@@ -37,13 +35,8 @@ class DownloaderApiClient:
 
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.get(
-                    url,
-                    params=params,
-                ) as response:
-
+                async with session.get(url, params=params) as response:
                     response.raise_for_status()
-
                     data = await response.json()
 
         except aiohttp.ClientConnectionError as exc:
@@ -56,9 +49,14 @@ class DownloaderApiClient:
                 f"Downloader returned HTTP {exc.status}."
             ) from exc
 
-        except Exception as exc:
+        except (aiohttp.ContentTypeError, ValueError) as exc:
+            raise InvalidResponseError(
+                "Downloader returned invalid JSON."
+            ) from exc
+
+        except aiohttp.ClientError as exc:
             raise ApiClientError(
-                "Unexpected error calling Downloader."
+                "Unexpected HTTP error calling Downloader."
             ) from exc
 
         self._validate_price_history(data)
@@ -66,11 +64,11 @@ class DownloaderApiClient:
         return data
 
     @staticmethod
-    def _validate_price_history(data: dict[str, Any]) -> None:
-        """
-        Ensure the Downloader returned the minimum
-        structure we expect.
-        """
+    def _validate_price_history(data: Any) -> None:
+        if not isinstance(data, dict):
+            raise InvalidResponseError(
+                "Downloader response must be a JSON object."
+            )
 
         if "ticker" not in data:
             raise InvalidResponseError(
