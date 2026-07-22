@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 import aiohttp
+from json import JSONDecodeError
 
 from .exceptions import (
     ApiClientError,
@@ -39,6 +40,16 @@ class DownloaderApiClient:
                     response.raise_for_status()
                     data = await response.json()
 
+        except aiohttp.ContentTypeError as exc:
+            raise InvalidResponseError(
+                "Downloader returned invalid JSON."
+            ) from exc
+
+        except JSONDecodeError as exc:
+            raise InvalidResponseError(
+                "Downloader returned invalid JSON."
+            ) from exc
+
         except aiohttp.ClientConnectionError as exc:
             raise ServiceUnavailableError(
                 "Unable to connect to Downloader service."
@@ -47,16 +58,6 @@ class DownloaderApiClient:
         except aiohttp.ClientResponseError as exc:
             raise ApiClientError(
                 f"Downloader returned HTTP {exc.status}."
-            ) from exc
-
-        except (aiohttp.ContentTypeError, ValueError) as exc:
-            raise InvalidResponseError(
-                "Downloader returned invalid JSON."
-            ) from exc
-
-        except aiohttp.ClientError as exc:
-            raise ApiClientError(
-                "Unexpected HTTP error calling Downloader."
             ) from exc
 
         self._validate_price_history(data)
