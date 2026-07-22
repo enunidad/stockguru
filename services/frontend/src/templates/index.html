@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+    <title>StocksGuru</title>
+    <link
+        rel="stylesheet"
+        href="/static/styles.css"
+    >
+</head>
+<body>
+    <main class="container">
+        <header>
+            <h1>StocksGuru</h1>
+            <p>View historical stock price data.</p>
+        </header>
+
+```
+    <section class="search-panel">
+        <form id="stock-form">
+            <label for="ticker">Ticker</label>
+
+            <div class="search-row">
+                <input
+                    id="ticker"
+                    name="ticker"
+                    type="text"
+                    value="AAPL"
+                    placeholder="AAPL"
+                    autocomplete="off"
+                    required
+                >
+
+                <button type="submit">
+                    Search
+                </button>
+            </div>
+        </form>
+    </section>
+
+    <section
+        id="status"
+        class="status"
+        aria-live="polite"
+    ></section>
+
+    <section
+        id="summary"
+        class="summary"
+        hidden
+    >
+        <h2 id="summary-title"></h2>
+
+        <dl>
+            <div>
+                <dt>Period</dt>
+                <dd id="summary-period"></dd>
+            </div>
+
+            <div>
+                <dt>Interval</dt>
+                <dd id="summary-interval"></dd>
+            </div>
+
+            <div>
+                <dt>Rows</dt>
+                <dd id="summary-rows"></dd>
+            </div>
+        </dl>
+    </section>
+
+    <section
+        id="results"
+        class="results"
+        hidden
+    >
+        <h2>Recent prices</h2>
+
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Open</th>
+                        <th>High</th>
+                        <th>Low</th>
+                        <th>Close</th>
+                        <th>Volume</th>
+                    </tr>
+                </thead>
+
+                <tbody id="price-table-body"></tbody>
+            </table>
+        </div>
+    </section>
+</main>
+
+<script src="/static/app.js"></script>
+```
+
+</body>
+</html>
