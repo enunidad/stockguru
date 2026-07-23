@@ -76,7 +76,7 @@ async def get_price_history(
     """
     ticker = request.match_info["ticker"].strip().upper()
     period = request.query.get("period", "10y")
-    interval = request.query.get("interval", "1d")
+    interval = request.query.get("interval", "1mo")
 
     if not ticker:
         raise web.HTTPBadRequest(
@@ -171,7 +171,7 @@ async def get_analysis(
 
     interval = request.query.get(
         "interval",
-        "1d",
+        "1mo",
     )
 
     analyzer_client = request.app[
