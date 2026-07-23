@@ -46,8 +46,8 @@ def test_ticker_metadata_accepts_custom_values():
     request = TickerMetadata(
                 ticker='MSFT',
                 currency='USD',
-                exchange='EMX'
-                quote_type='test_quote'
+                exchange='EMX',
+                quote_type='test_quote',
                 raw={'foo': 1, 'bar':2}
     )
 
