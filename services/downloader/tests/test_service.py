@@ -84,7 +84,7 @@ def test_get_price_history_uses_default_request_values():
         ticker="MSFT",
         period="10y",
         interval="1mo",
-        auto_adjust=False,
+        auto_adjust=True,
     )
 
 def test_get_metadata_builds_request_and_calls_client():

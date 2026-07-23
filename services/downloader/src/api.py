@@ -27,21 +27,24 @@ async def get_metadata(request: web.Request) -> web.Response:
             status=400,
         )
 
+def parse_bool(value: str) -> bool:
+    normalized = value.strip().lower()
+
+    if normalized in ['true', '1', 'on', 'yes']:
+        return True
+    if normalized in ['false', '0', 'off', 'no']:
+        return False
+    raise ValueError(f'Invalid boolean value {value}')
 
 async def get_price_history(request: web.Request) -> web.Response:
     ticker = request.match_info["ticker"]
 
     period = request.query.get("period", "10y")
     interval = request.query.get("interval", "1mo")
-    auto_adjust = request.query.get("autoadjust", True)
-    if isinstance(auto_adjust, (int, float)):
-        if auto_adjust in [0, 0.0]:
-            auto_adjust = False
-    elif isinstance(auto_adjust, str):
-        if auto_adjust.lower() == 'false':
-            auto_adjust = False
-    else:
-        auto_adjust = True
+    mid = request.query.get("autoadjust", "True")
+    print(mid)
+    auto_adjust = parse_bool(mid)
+    
 
     try:
         data = request.app["service"].get_price_history(
