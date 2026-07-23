@@ -27,7 +27,7 @@ class DownloaderService:
 
     def __init__(self, client: YahooFinanceClient | None = None,
                 cache: PriceHistoryCache | None = None,
-                metadata: TickerMetadataCache | None = None) -> None:
+                metadata: TickerMetadataCache | None = None, ) -> None:
         self.client = client or YahooFinanceClient()
         self.cache = cache or PriceHistoryCache(cache_dir=Path("data"),
                                                 ttl=timedelta(days=1),)
