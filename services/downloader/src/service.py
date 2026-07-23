@@ -33,6 +33,17 @@ class DownloaderService:
         self.metadata = metadata or TickerMetadataCache(cache_dir=Path("data"),
                                                         ttl=timedelta(days=1),)
 
+    def get_metadata(self, ticker:str, ) -> dict:
+        request = PriceHistoryRequest(ticker=ticker, )
+        
+        cached_metadata = self.metadata.get_if_fresh(ticker)
+        if cached_metadata is not None:
+            return dict(cached_metadata)
+        
+        metadata = self.client.download_metadata(request)
+        self.metadata.save(metadata)
+        return dict(metadata)
+    
     def get_price_history(
         self,
         ticker: str,
@@ -49,10 +60,8 @@ class DownloaderService:
 
         cached_history = self.cache.get_if_fresh(request)
         if cached_history is not None:
-            cached_metadata = self.metadata.get_if_fresh(ticker)
-            return cached_history, cached_metadata
+            return cached_history
         
-        data, metadata = self.client.download_price_history(request)
+        data = self.client.download_price_history(request)
         self.cache.save(request,  data)
-        self.metadata.save(metadata)
-        return data, metadata
+        return data

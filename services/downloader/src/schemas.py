@@ -6,7 +6,7 @@ class PriceHistoryRequest:
     ticker: str
     period: str = "10y"
     interval: str = "1mo"
-    auto_adjust: bool = False
+    auto_adjust: bool = True
 
 @dataclass(frozen=False)
 class TickerMetadata:

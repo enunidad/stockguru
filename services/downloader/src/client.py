@@ -93,6 +93,14 @@ class YahooFinanceClient:
         return json_safe
 
 
+    def download_metadata(self, request:PriceHistoryRequest,) -> TickerMetadata:
+        symbol = self._normalize_ticker(request.ticker)
+        ticker = yf.Ticker(symbol)
+
+        metadata = self._ticker_metadata_helper(ticker)
+
+        return metadata
+    
     def download_price_history(
         self,
         request: PriceHistoryRequest,
@@ -107,17 +115,15 @@ class YahooFinanceClient:
             auto_adjust=request.auto_adjust
         )
 
-        metadata = self._ticker_metadata_helper(ticker)
-
         data = self._flatten_columns(data)
         data = self._standardize_index(data)
 
         if "Close" not in data.columns:
             raise InvalidTickerError(
-                f"Downloaded data for ticker '{ticker}' is missing Close price."
+                f"Downloaded data for ticker '{symbol}' is missing Close price."
             )
 
-        return data, metadata
+        return data
 
     @staticmethod
     def _normalize_ticker(ticker: str) -> str:

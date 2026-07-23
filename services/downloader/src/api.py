@@ -11,6 +11,23 @@ from .service import DownloaderService
 async def health(request: web.Request) -> web.Response:
     return web.json_response({"status": "ok"})
 
+async def get_metadata(request: web.Request) -> web.Response:
+    ticker = request.match_info["ticker"]
+
+    try:
+        metadata = request.app["service"].get_metadata(ticker)
+        response = dict(metadata)
+        return web.json_response(response)
+    
+    except DownloaderClientError as exc:
+        return web.json_response(
+            {
+                "error": type(exc).__name__,
+                "message": str(exc),
+            },
+            status=400,
+        )
+
 
 async def get_price_history(request: web.Request) -> web.Response:
     ticker = request.match_info["ticker"]
@@ -20,7 +37,7 @@ async def get_price_history(request: web.Request) -> web.Response:
     auto_adjust = bool(request.query.get("autoadjust", "True"))
 
     try:
-        data, metadata = request.app["service"].get_price_history(
+        data = request.app["service"].get_price_history(
             ticker=ticker,
             period=period,
             interval=interval,
@@ -33,7 +50,6 @@ async def get_price_history(request: web.Request) -> web.Response:
         return web.json_response(
             {
                 "ticker": ticker.upper(),
-                "metadata": metadata,
                 "period": period,
                 "interval": interval,
                 "rows": len(data),
@@ -57,6 +73,7 @@ def create_app(service_override: DownloaderService | None = None) -> web.Applica
 
     app.router.add_get("/health", health)
     app.router.add_get("/history/{ticker}", get_price_history)
+    app.router.add_get("/metadata/{ticker}", get_metadata)
 
     return app
 
