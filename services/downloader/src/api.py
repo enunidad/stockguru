@@ -41,10 +41,8 @@ async def get_price_history(request: web.Request) -> web.Response:
 
     period = request.query.get("period", "10y")
     interval = request.query.get("interval", "1mo")
-    mid = request.query.get("autoadjust", "True")
-    print(mid)
-    auto_adjust = parse_bool(mid)
-    
+    auto_adjust = request.query.get("autoadjust", "True")
+    auto_adjust = parse_bool(auto_adjust)
 
     try:
         data = request.app["service"].get_price_history(
