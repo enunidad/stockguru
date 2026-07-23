@@ -16,7 +16,7 @@ async def get_price_history(request: web.Request) -> web.Response:
     ticker = request.match_info["ticker"]
 
     period = request.query.get("period", "10y")
-    interval = request.query.get("interval", "1d")
+    interval = request.query.get("interval", "1mo")
 
     try:
         data = request.app["service"].get_price_history(
@@ -25,7 +25,7 @@ async def get_price_history(request: web.Request) -> web.Response:
             interval=interval,
         )
 
-        records = data.reset_index().tail(10)
+        records = data.reset_index()
         records["Date"] = records["Date"].astype(str)
 
         return web.json_response(
