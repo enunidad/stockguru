@@ -80,3 +80,74 @@ class DownloaderApiClient:
             raise InvalidResponseError(
                 "Missing price history."
             )
+
+class AnalyzerApiClient:
+    """Client for the StocksGuru analyzer service."""
+
+    def __init__(
+        self,
+        base_url: str = "http://localhost:8090",
+        *,
+        timeout_seconds: float = 30.0,
+    ) -> None:
+        self._base_url = base_url.rstrip("/")
+        self._timeout = aiohttp.ClientTimeout(
+            total=timeout_seconds,
+        )
+
+    async def get_analysis(
+        self,
+        ticker: str,
+        *,
+        period: str = "10y",
+        interval: str = "1d",
+    ) -> dict[str, Any]:
+        normalized_ticker = ticker.strip().upper()
+
+        url = (
+            f"{self._base_url}/analysis/"
+            f"{normalized_ticker}"
+        )
+
+        params = {
+            "period": period,
+            "interval": interval,
+        }
+
+        try:
+            async with aiohttp.ClientSession(
+                timeout=self._timeout,
+            ) as session:
+                async with session.get(
+                    url,
+                    params=params,
+                ) as response:
+                    if response.status >= 400:
+                        message = await response.text()
+
+                        raise ApiClientError(
+                            f"Analyzer returned HTTP "
+                            f"{response.status}: {message}"
+                        )
+
+                    try:
+                        payload = await response.json()
+                    except (
+                        aiohttp.ContentTypeError,
+                        JSONDecodeError,
+                    ) as exc:
+                        raise InvalidResponseError(
+                            "Analyzer returned invalid JSON."
+                        ) from exc
+
+        except aiohttp.ClientError as exc:
+            raise ApiClientError(
+                "Unable to communicate with analyzer."
+            ) from exc
+
+        if not isinstance(payload, dict):
+            raise InvalidResponseError(
+                "Analyzer response must be a JSON object."
+            )
+
+        return payload

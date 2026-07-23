@@ -1,0 +1,35 @@
+services:
+  analyzer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    container_name: stocksguru-analyzer
+
+    ports:
+      - "8090:8090"
+
+    environment:
+      DOWNLOADER_BASE_URL: http://host.docker.internal:8080
+      ANALYZER_HOST: 0.0.0.0
+      ANALYZER_PORT: 8090
+
+    volumes:
+      - ./src:/app/src
+      - ./tests:/app/tests
+
+    command: python -m src.main
+
+  analyzer-tests:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    environment:
+      DOWNLOADER_BASE_URL: http://host.docker.internal:8080
+
+    volumes:
+      - ./src:/app/src
+      - ./tests:/app/tests
+
+    command: python -m pytest tests -v

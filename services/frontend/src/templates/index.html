@@ -1,107 +1,298 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+
     <meta
         name="viewport"
         content="width=device-width, initial-scale=1.0"
     >
+
     <title>StocksGuru</title>
+
     <link
         rel="stylesheet"
         href="/static/styles.css"
     >
 </head>
+
 <body>
-    <main class="container">
-        <header>
+    <header class="site-header">
+        <div class="page-container">
             <h1>StocksGuru</h1>
-            <p>View historical stock price data.</p>
-        </header>
 
-```
-    <section class="search-panel">
-        <form id="stock-form">
-            <label for="ticker">Ticker</label>
-
-            <div class="search-row">
-                <input
-                    id="ticker"
-                    name="ticker"
-                    type="text"
-                    value="AAPL"
-                    placeholder="AAPL"
-                    autocomplete="off"
-                    required
-                >
-
-                <button type="submit">
-                    Search
-                </button>
-            </div>
-        </form>
-    </section>
-
-    <section
-        id="status"
-        class="status"
-        aria-live="polite"
-    ></section>
-
-    <section
-        id="summary"
-        class="summary"
-        hidden
-    >
-        <h2 id="summary-title"></h2>
-
-        <dl>
-            <div>
-                <dt>Period</dt>
-                <dd id="summary-period"></dd>
-            </div>
-
-            <div>
-                <dt>Interval</dt>
-                <dd id="summary-interval"></dd>
-            </div>
-
-            <div>
-                <dt>Rows</dt>
-                <dd id="summary-rows"></dd>
-            </div>
-        </dl>
-    </section>
-
-    <section
-        id="results"
-        class="results"
-        hidden
-    >
-        <h2>Recent prices</h2>
-
-        <div class="table-wrapper">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Open</th>
-                        <th>High</th>
-                        <th>Low</th>
-                        <th>Close</th>
-                        <th>Volume</th>
-                    </tr>
-                </thead>
-
-                <tbody id="price-table-body"></tbody>
-            </table>
+            <p>
+                View historical stock prices and calculated
+                investment metrics.
+            </p>
         </div>
-    </section>
-</main>
+    </header>
 
-<script src="/static/app.js"></script>
-```
+    <main class="page-container">
+        <section class="search-panel">
+            <form id="stock-form" class="search-form">
+                <label for="ticker">
+                    Ticker
+                </label>
 
+                <div class="search-controls">
+                    <input
+                        id="ticker"
+                        name="ticker"
+                        type="text"
+                        placeholder="AAPL"
+                        autocomplete="off"
+                        required
+                    >
+
+                    <button type="submit">
+                        Search
+                    </button>
+                </div>
+            </form>
+
+            <p
+                id="status"
+                class="status-message"
+                aria-live="polite"
+            ></p>
+        </section>
+
+        <section
+            id="summary"
+            class="summary-panel"
+            hidden
+        >
+            <div class="summary-heading">
+                <div>
+                    <span class="summary-label">
+                        Selected ticker
+                    </span>
+
+                    <h2 id="summary-title">
+                        —
+                    </h2>
+                </div>
+            </div>
+
+            <div class="summary-grid">
+                <article class="summary-item">
+                    <span class="summary-label">
+                        Period
+                    </span>
+
+                    <strong id="summary-period">
+                        —
+                    </strong>
+                </article>
+
+                <article class="summary-item">
+                    <span class="summary-label">
+                        Interval
+                    </span>
+
+                    <strong id="summary-interval">
+                        —
+                    </strong>
+                </article>
+
+                <article class="summary-item">
+                    <span class="summary-label">
+                        Rows
+                    </span>
+
+                    <strong id="summary-rows">
+                        —
+                    </strong>
+                </article>
+            </div>
+        </section>
+
+        <section
+            id="results"
+            class="dashboard"
+            hidden
+        >
+            <section class="historical-panel">
+                <div class="panel-header">
+                    <div>
+                        <h2>Historical prices</h2>
+
+                        <p>
+                            Most recent daily price records returned
+                            by the downloader.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table class="price-table">
+                        <thead>
+                            <tr>
+                                <th scope="col">
+                                    Date
+                                </th>
+
+                                <th scope="col">
+                                    Open
+                                </th>
+
+                                <th scope="col">
+                                    High
+                                </th>
+
+                                <th scope="col">
+                                    Low
+                                </th>
+
+                                <th scope="col">
+                                    Close
+                                </th>
+
+                                <th scope="col">
+                                    Volume
+                                </th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="price-table-body">
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <aside class="metrics-panel">
+                <div class="panel-header">
+                    <div>
+                        <h2>Calculated metrics</h2>
+
+                        <p>
+                            Analysis calculated from the historical
+                            closing prices.
+                        </p>
+                    </div>
+                </div>
+
+                <div
+                    id="metrics-placeholder"
+                    class="metrics-placeholder"
+                >
+                    Metrics will appear after the analysis finishes.
+                </div>
+
+                <div
+                    id="metrics-grid"
+                    class="metrics-grid"
+                    hidden
+                >
+                    <article class="metric-card">
+                        <span class="metric-label">
+                            Current price
+                        </span>
+
+                        <strong
+                            id="current-price"
+                            class="metric-value"
+                        >
+                            —
+                        </strong>
+                    </article>
+
+                    <article class="metric-card">
+                        <span class="metric-label">
+                            Total return
+                        </span>
+
+                        <strong
+                            id="total-return"
+                            class="metric-value"
+                        >
+                            —
+                        </strong>
+                    </article>
+
+                    <article class="metric-card">
+                        <span class="metric-label">
+                            CAGR
+                        </span>
+
+                        <strong
+                            id="cagr"
+                            class="metric-value"
+                        >
+                            —
+                        </strong>
+                    </article>
+
+                    <article class="metric-card">
+                        <span class="metric-label">
+                            Annualized volatility
+                        </span>
+
+                        <strong
+                            id="volatility"
+                            class="metric-value"
+                        >
+                            —
+                        </strong>
+                    </article>
+
+                    <article class="metric-card">
+                        <span class="metric-label">
+                            Maximum drawdown
+                        </span>
+
+                        <strong
+                            id="max-drawdown"
+                            class="metric-value"
+                        >
+                            —
+                        </strong>
+                    </article>
+
+                    <article class="metric-card">
+                        <span class="metric-label">
+                            50-period average
+                        </span>
+
+                        <strong
+                            id="moving-average-50"
+                            class="metric-value"
+                        >
+                            —
+                        </strong>
+                    </article>
+
+                    <article class="metric-card">
+                        <span class="metric-label">
+                            200-period average
+                        </span>
+
+                        <strong
+                            id="moving-average-200"
+                            class="metric-value"
+                        >
+                            —
+                        </strong>
+                    </article>
+
+                    <article class="metric-card">
+                        <span class="metric-label">
+                            Analysis range
+                        </span>
+
+                        <strong
+                            id="analysis-date-range"
+                            class="metric-value metric-value-small"
+                        >
+                            —
+                        </strong>
+                    </article>
+                </div>
+            </aside>
+        </section>
+    </main>
+
+    <script src="/static/app.js"></script>
 </body>
 </html>

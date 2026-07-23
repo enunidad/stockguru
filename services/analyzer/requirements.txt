@@ -1,0 +1,8 @@
+aiohttp
+aiohttp-devtools
+pandas
+numpy
+
+pytest
+pytest-aiohttp
+pytest-asyncio

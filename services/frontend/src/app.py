@@ -7,6 +7,8 @@ from typing import AsyncIterator
 import aiohttp
 from aiohttp import web
 
+from .client import AnalyzerApiClient, DownloaderApiClient
+
 
 BASE_DIR = Path(__file__).resolve().parent
 TEMPLATES_DIR = BASE_DIR / "templates"
@@ -19,6 +21,16 @@ DOWNLOADER_BASE_URL = os.getenv(
 
 FRONTEND_HOST = os.getenv("FRONTEND_HOST", "localhost")
 FRONTEND_PORT = int(os.getenv("FRONTEND_PORT", "8000"))
+
+ANALYZER_CLIENT_KEY = web.AppKey(
+    "analyzer_client",
+    AnalyzerApiClient,
+)
+
+DOWNLOADER_CLIENT_KEY = web.AppKey(
+    "downloader_client",
+    DownloaderApiClient,
+)
 
 HTTP_SESSION_KEY: web.AppKey[aiohttp.ClientSession] = web.AppKey(
     "http_session",
@@ -52,7 +64,9 @@ async def health(request: web.Request) -> web.Response:
     )
 
 
-async def get_price_history(request: web.Request) -> web.Response:
+async def get_price_history(
+    request: web.Request,
+) -> web.Response:
     """
     Proxy a browser request to the downloader service.
 
@@ -69,7 +83,7 @@ async def get_price_history(request: web.Request) -> web.Response:
         )
 
     downloader_url = (
-        f"{DOWNLOADER_BASE_URL}/history/{ticker}"
+        f"{DOWNLOADER_BASE_URL}/prices/{ticker}"
     )
 
     session = request.app[HTTP_SESSION_KEY]
@@ -144,31 +158,79 @@ async def http_session_context(
 
     await app[HTTP_SESSION_KEY].close()
 
+async def get_analysis(
+    request: web.Request,
+) -> web.Response:
+    ticker = request.match_info["ticker"]
 
-def create_app() -> web.Application:
-    """
-    Build and configure the aiohttp frontend application.
-    """
+    period = request.query.get(
+        "period",
+        "10y",
+    )
+
+    interval = request.query.get(
+        "interval",
+        "1d",
+    )
+
+    analyzer_client = request.app[
+        ANALYZER_CLIENT_KEY
+    ]
+
+    try:
+        analysis = await analyzer_client.get_analysis(
+            ticker,
+            period=period,
+            interval=interval,
+        )
+
+    except InvalidResponseError as exc:
+        return web.json_response(
+            {
+                "error": "invalid_analyzer_response",
+                "message": str(exc),
+            },
+            status=502,
+        )
+
+    except ApiClientError as exc:
+        return web.json_response(
+            {
+                "error": "analyzer_unavailable",
+                "message": str(exc),
+            },
+            status=503,
+        )
+
+    return web.json_response(analysis)
+
+def create_app(
+    downloader_client: DownloaderApiClient | None = None,
+    analyzer_client: AnalyzerApiClient | None = None,
+) -> web.Application:
     app = web.Application()
 
-    app.cleanup_ctx.append(http_session_context)
+    if downloader_client is None:
+        downloader_client = DownloaderApiClient(
+            base_url="http://localhost:8080",
+        )
 
-    app.router.add_get("/", index)
-    app.router.add_get("/health", health)
+    if analyzer_client is None:
+        analyzer_client = AnalyzerApiClient(
+            base_url="http://localhost:8090",
+        )
+
+    app[DOWNLOADER_CLIENT_KEY] = downloader_client
+    app[ANALYZER_CLIENT_KEY] = analyzer_client
+
     app.router.add_get(
         "/api/prices/{ticker}",
         get_price_history,
     )
 
-    if not STATIC_DIR.exists():
-        raise RuntimeError(
-            f"Static directory not found: {STATIC_DIR}"
-        )
-
-    app.router.add_static(
-        "/static/",
-        path=STATIC_DIR,
-        name="static",
+    app.router.add_get(
+        "/api/analysis/{ticker}",
+        get_analysis,
     )
 
     return app

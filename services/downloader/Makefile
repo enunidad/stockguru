@@ -27,6 +27,9 @@ test:
 smoke:
 	$(PYTHON) -m src.main
 
+run:
+	$(PYTHON) -m src.main
+
 clean:
 	$(PYTHON) -c "import shutil, pathlib; \
 		root = pathlib.Path('.'); \
