@@ -83,12 +83,11 @@ def test_make_json_safe():
                 {'foo': (1, 2, 3)},
                 {'foo': {'bar': 1}}]
     for obj in objects:
-        result = YahooFinanceClient._make_json_safe(obj)
+        result = YahooFinanceClient()._make_json_safe(obj)
         assert isinstance(result, dict)
         for k, v in result.items():
-            print(k, v)
             assert isinstance(k, str)
-            assert isinstance(v, (str, int, float, bool)) or v is None
+            assert isinstance(v, (str, int, float, bool, tuple, list, dict)) or v is None
 
 def test_ticker_metadata_helper():
     symbol = 'AAPL'

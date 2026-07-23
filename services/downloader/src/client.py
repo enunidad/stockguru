@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Optional, Union
+from typing import Optional, Union, Any
 
 import pandas as pd
 import yfinance as yf
@@ -75,17 +75,23 @@ class YahooFinanceClient:
 
         return str(value)
     
-    @staticmethod
-    def _make_json_safe(values: dict[str, Any], ) -> dict[str, Any]:
-        json_safe: dict[str, Any] = {}
+    def _make_json_safe(self, value: Any, ) -> Any:
+        if value is None or isinstance(value, (str, int, float, bool)):
+            return value
 
-        for key, value in values.items():
-            if value is None or isinstance(value, (str, int, float, bool), ):
-                json_safe[key] = value
-            else:
-                json_safe[key] = str(value)
+        if isinstance(value, dict):
+            return {
+                str(key): self._make_json_safe(item)
+                for key, item in value.items()
+            }
 
-        return json_safe
+        if isinstance(value, (list, tuple, set)):
+            return [
+                self._make_json_safe(item)
+                for item in value
+            ]
+
+        return str(value)
 
 
     def download_metadata(self, request:PriceHistoryRequest, ) -> TickerMetadata:
