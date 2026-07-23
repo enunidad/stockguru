@@ -79,7 +79,7 @@ async def analyze_ticker(
 
     interval = request.query.get(
         "interval",
-        "1d",
+        "1mo",
     )
 
     analyzer_service = request.app[

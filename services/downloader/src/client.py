@@ -7,7 +7,7 @@ from typing import Optional
 import pandas as pd
 import yfinance as yf
 
-from .schemas import PriceHistoryRequest
+from .schemas import PriceHistoryRequest, TickerMetadata
 from .exceptions import DownloaderClientError, EmptyDownloadError, InvalidTickerError
 
 class YahooFinanceClient:
@@ -23,30 +23,91 @@ class YahooFinanceClient:
     It only downloads raw market data.
     """
 
-    def download_price_history(
-        self,
-        request: PriceHistoryRequest,
-    ) -> pd.DataFrame:
-        ticker = self._normalize_ticker(request.ticker)
-
+    @staticmethod
+    def _ticker_history_helper(ticker, period, interval, auto_adjust):
         try:
-            data = yf.download(
-                tickers=ticker,
-                period=request.period,
-                interval=request.interval,
-                auto_adjust=request.auto_adjust,
-                progress=False,
-                threads=False,
+            data = ticker.history(
+                period=period,
+                interval=interval,
+                auto_adjust=auto_adjust,
             )
         except Exception as exc:
             raise DownloaderClientError(
-                f"Failed to download price history for ticker '{ticker}'."
+                f"Failed to download price history for ticker '{ticker.ticker}'."
             ) from exc
 
         if data is None or data.empty:
             raise EmptyDownloadError(
-                f"No price history returned for ticker '{ticker}'."
+                f"No price history returned for ticker '{ticker.ticker}'."
             )
+        
+        return data
+    
+    def _ticker_metadata_helper(self, ticker):
+        try:
+            raw_metadata = dict(ticker.fast_info)
+        except Exception as exc:
+            raise DownloaderClientError(
+                f"Failed to download metadata for ticker '{ticker.ticker}'."
+            ) from exc
+
+        return TickerMetadata(
+            ticker=ticker.ticker,
+            currency=self._as_optional_string(
+                raw_metadata.get("currency"),
+            ),
+            exchange=self._as_optional_string(
+                raw_metadata.get("exchange"),
+            ),
+            timezone=self._as_optional_string(
+                raw_metadata.get("timezone"),
+            ),
+            quote_type=self._as_optional_string(
+                raw_metadata.get("quoteType"),
+            ),
+            raw=self._make_json_safe(raw_metadata),
+        )
+    
+    @staticmethod
+    def _as_optional_string(value: object) -> str | None:
+        if value is None:
+            return None
+
+        return str(value)
+    
+    @staticmethod
+    def _make_json_safe(
+        values: dict[str, Any],
+    ) -> dict[str, Any]:
+        json_safe: dict[str, Any] = {}
+
+        for key, value in values.items():
+            if value is None or isinstance(
+                value,
+                (str, int, float, bool),
+            ):
+                json_safe[key] = value
+            else:
+                json_safe[key] = str(value)
+
+        return json_safe
+
+
+    def download_price_history(
+        self,
+        request: PriceHistoryRequest,
+    ) -> pd.DataFrame:
+        symbol = self._normalize_ticker(request.ticker)
+        ticker = yf.Ticker(symbol)
+
+        data = self._ticker_history_helper(
+            ticker=ticker, 
+            period=request.period, 
+            interval=request.interval, 
+            auto_adjust=request.auto_adjust
+        )
+
+        metadata = self._ticker_metadata_helper(ticker)
 
         data = self._flatten_columns(data)
         data = self._standardize_index(data)
@@ -56,7 +117,7 @@ class YahooFinanceClient:
                 f"Downloaded data for ticker '{ticker}' is missing Close price."
             )
 
-        return data
+        return data, metadata
 
     @staticmethod
     def _normalize_ticker(ticker: str) -> str:

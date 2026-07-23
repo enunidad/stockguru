@@ -53,7 +53,7 @@ stockForm.addEventListener("submit", async (event) => {
 async function loadTicker(
     ticker,
     period = "10y",
-    interval = "1d",
+    interval = "1mo",
 ) {
     setLoadingState(true);
     clearStatus();

@@ -28,7 +28,7 @@ class AnalyzerService:
         ticker: str,
         *,
         period: str = "10y",
-        interval: str = "1d",
+        interval: str = "1mo",
     ) -> AnalysisResult:
         """
         Retrieve historical prices and calculate investment metrics.

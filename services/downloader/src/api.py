@@ -17,12 +17,14 @@ async def get_price_history(request: web.Request) -> web.Response:
 
     period = request.query.get("period", "10y")
     interval = request.query.get("interval", "1mo")
+    auto_adjust = bool(request.query.get("autoadjust", "True"))
 
     try:
-        data = request.app["service"].get_price_history(
+        data, metadata = request.app["service"].get_price_history(
             ticker=ticker,
             period=period,
             interval=interval,
+            auto_adjust=auto_adjust
         )
 
         records = data.reset_index()
@@ -31,6 +33,7 @@ async def get_price_history(request: web.Request) -> web.Response:
         return web.json_response(
             {
                 "ticker": ticker.upper(),
+                "metadata": metadata,
                 "period": period,
                 "interval": interval,
                 "rows": len(data),

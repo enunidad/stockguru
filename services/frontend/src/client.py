@@ -100,7 +100,7 @@ class AnalyzerApiClient:
         ticker: str,
         *,
         period: str = "10y",
-        interval: str = "1d",
+        interval: str = "1mo",
     ) -> dict[str, Any]:
         normalized_ticker = ticker.strip().upper()
 

@@ -1,6 +1,18 @@
 from aiohttp import web
 
 from src.api import create_app
+from src.service import DownloaderService
+
+def two() -> None:
+    svc = DownloaderService()
+    ans = svc.get_price_history(
+        ticker='AAPL',
+        period = "10y",
+        interval= "1mo",
+        auto_adjust= True)
+    print(ans)
+
+
 
 def main() -> None:
     app = create_app()
@@ -8,4 +20,5 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    two()
     main()

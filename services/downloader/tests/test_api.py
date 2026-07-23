@@ -10,7 +10,7 @@ class FakeDownloaderService:
         self,
         ticker: str,
         period: str = "10y",
-        interval: str = "1d",
+        interval: str = "1mo",
         auto_adjust: bool = False,
     ) -> pd.DataFrame:
         data = pd.DataFrame(
@@ -30,7 +30,7 @@ class FailingDownloaderService:
         self,
         ticker: str,
         period: str = "10y",
-        interval: str = "1d",
+        interval: str = "1mo",
         auto_adjust: bool = False,
     ) -> pd.DataFrame:
         raise EmptyDownloadError("No price history returned for ticker 'BAD'.")

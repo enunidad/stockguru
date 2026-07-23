@@ -8,7 +8,7 @@ from datetime import timedelta
 
 from .client import YahooFinanceClient
 from .schemas import PriceHistoryRequest
-from .cache import PriceHistoryCache
+from .cache import PriceHistoryCache, TickerMetadataCache
 
 
 class DownloaderService:
@@ -25,10 +25,13 @@ class DownloaderService:
     """
 
     def __init__(self, client: YahooFinanceClient | None = None,
-                cache: PriceHistoryCache | None = None) -> None:
+                cache: PriceHistoryCache | None = None,
+                metadata: TickerMetadataCache | None = None) -> None:
         self.client = client or YahooFinanceClient()
         self.cache = cache or PriceHistoryCache(cache_dir=Path("data"),
                                                 ttl=timedelta(days=1),)
+        self.metadata = metadata or TickerMetadataCache(cache_dir=Path("data"),
+                                                        ttl=timedelta(days=1),)
 
     def get_price_history(
         self,
@@ -44,10 +47,12 @@ class DownloaderService:
             auto_adjust=auto_adjust,
         )
 
-        cached = self.cache.get_if_fresh(request)
-        if cached is not None:
-            return cached
+        cached_history = self.cache.get_if_fresh(request)
+        if cached_history is not None:
+            cached_metadata = self.metadata.get_if_fresh(ticker)
+            return cached_history, cached_metadata
         
-        data = self.client.download_price_history(request)
+        data, metadata = self.client.download_price_history(request)
         self.cache.save(request,  data)
-        return data
+        self.metadata.save(metadata)
+        return data, metadata

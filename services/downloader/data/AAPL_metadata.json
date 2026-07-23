@@ -1,0 +1,29 @@
+{
+  "currency": "USD",
+  "exchange": "NMS",
+  "quote_type": "EQUITY",
+  "raw": {
+    "currency": "USD",
+    "dayHigh": 329.0,
+    "dayLow": 323.3399963378906,
+    "exchange": "NMS",
+    "fiftyDayAverage": 304.88739990234376,
+    "lastPrice": 325.8900146484375,
+    "lastVolume": 38700500,
+    "marketCap": 4786462661986.816,
+    "open": 327.8699951171875,
+    "previousClose": 324.5,
+    "quoteType": "EQUITY",
+    "regularMarketPreviousClose": 327.739990234375,
+    "shares": 14687356000,
+    "tenDayAverageVolume": 48269410,
+    "threeMonthAverageVolume": 54887251,
+    "timezone": "America/New_York",
+    "twoHundredDayAverage": 275.2805994415283,
+    "yearChange": 0.5245603621963777,
+    "yearHigh": 334.989990234375,
+    "yearLow": 201.5
+  },
+  "ticker": "AAPL",
+  "timezone": "America/New_York"
+}

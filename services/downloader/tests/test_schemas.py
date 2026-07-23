@@ -9,7 +9,7 @@ def test_price_history_request_uses_default_values():
     request = PriceHistoryRequest(ticker="AAPL")
 
     assert request.period == "10y"
-    assert request.interval == "1d"
+    assert request.interval == "1mo"
     assert request.auto_adjust is False
 
 
