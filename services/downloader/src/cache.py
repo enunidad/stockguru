@@ -18,7 +18,7 @@ class PriceHistoryCache:
 
     def get_path(self, request: PriceHistoryRequest) -> Path:
         ticker = request.ticker.strip().upper()
-        filename = f"{request.period}_{request.interval}.csv"
+        filename = f"{request.period}_{request.interval}_{str(request.auto_adjust)}.csv"
         return self.cache_dir / ticker / filename
 
     def exists(self, request: PriceHistoryRequest) -> bool:
