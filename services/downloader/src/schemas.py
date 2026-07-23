@@ -11,9 +11,9 @@ class PriceHistoryRequest:
 @dataclass(frozen=True)
 class TickerMetadata:
     ticker: str
-    currency: Optional[str] = None
-    exchange: Optional[str] = None
-    timezone: Optional[str] = None
-    quote_type: Optional[str] = None
+    currency: str or None = None
+    exchange: str or None = None
+    timezone: str or None = None
+    quote_type: str or None = None
     raw: dict[str, Any] = field(default_factory=dict)
 

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import Optional, Union
 
 import pandas as pd
 import yfinance as yf
@@ -24,7 +24,7 @@ class YahooFinanceClient:
     """
 
     @staticmethod
-    def _ticker_history_helper(ticker, period, interval, auto_adjust):
+    def _ticker_history_helper(ticker: yf.Ticker, period: str = '10y', interval: str = '1mo', auto_adjust: bool = True) -> pd.DataFrame:
         try:
             data = ticker.history(
                 period=period,
@@ -43,7 +43,7 @@ class YahooFinanceClient:
         
         return data
     
-    def _ticker_metadata_helper(self, ticker):
+    def _ticker_metadata_helper(self, ticker: yf.Ticker) -> TickerMetadata:
         try:
             raw_metadata = dict(ticker.fast_info)
         except Exception as exc:
@@ -76,16 +76,11 @@ class YahooFinanceClient:
         return str(value)
     
     @staticmethod
-    def _make_json_safe(
-        values: dict[str, Any],
-    ) -> dict[str, Any]:
+    def _make_json_safe(values: dict[str, Any], ) -> dict[str, Any]:
         json_safe: dict[str, Any] = {}
 
         for key, value in values.items():
-            if value is None or isinstance(
-                value,
-                (str, int, float, bool),
-            ):
+            if value is None or isinstance(value, (str, int, float, bool), ):
                 json_safe[key] = value
             else:
                 json_safe[key] = str(value)
@@ -93,7 +88,7 @@ class YahooFinanceClient:
         return json_safe
 
 
-    def download_metadata(self, request:PriceHistoryRequest,) -> TickerMetadata:
+    def download_metadata(self, request:PriceHistoryRequest, ) -> TickerMetadata:
         symbol = self._normalize_ticker(request.ticker)
         ticker = yf.Ticker(symbol)
 
@@ -101,10 +96,7 @@ class YahooFinanceClient:
 
         return metadata
     
-    def download_price_history(
-        self,
-        request: PriceHistoryRequest,
-    ) -> pd.DataFrame:
+    def download_price_history(self, request: PriceHistoryRequest, ) -> pd.DataFrame:
         symbol = self._normalize_ticker(request.ticker)
         ticker = yf.Ticker(symbol)
 
