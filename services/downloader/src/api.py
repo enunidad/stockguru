@@ -42,7 +42,17 @@ async def get_price_history(request: web.Request) -> web.Response:
     period = request.query.get("period", "10y")
     interval = request.query.get("interval", "1mo")
     auto_adjust = request.query.get("autoadjust", "True")
-    auto_adjust = parse_bool(auto_adjust)
+
+    try:
+        auto_adjust = parse_bool(auto_adjust)
+    except ValueError as exc:
+        return web.json_response(
+            {
+                "error": type(exc).__name__,
+                "message": str(exc),
+            },
+            status=400,
+        )
 
     try:
         data = request.app["service"].get_price_history(
