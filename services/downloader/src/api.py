@@ -16,7 +16,7 @@ async def get_metadata(request: web.Request) -> web.Response:
 
     try:
         metadata = request.app["service"].get_metadata(ticker)
-        return web.json_response(response)
+        return web.json_response(metadata)
     
     except DownloaderClientError as exc:
         return web.json_response(
