@@ -8,6 +8,7 @@ import aiohttp
 from aiohttp import web
 
 from .client import AnalyzerApiClient, DownloaderApiClient
+from .exceptions import ApiClientError, InvalidResponseError
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -83,7 +84,7 @@ async def get_price_history(
         )
 
     downloader_url = (
-        f"{DOWNLOADER_BASE_URL}/prices/{ticker}"
+        f"{DOWNLOADER_BASE_URL}/history/{ticker}"
     )
 
     session = request.app[HTTP_SESSION_KEY]
@@ -210,6 +211,8 @@ def create_app(
 ) -> web.Application:
     app = web.Application()
 
+    app.cleanup_ctx.append(http_session_context)
+
     if downloader_client is None:
         downloader_client = DownloaderApiClient(
             base_url="http://localhost:8080",
@@ -232,6 +235,16 @@ def create_app(
         "/api/analysis/{ticker}",
         get_analysis,
     )
+
+    app.router.add_get(
+        "/", 
+        index)
+
+    app.router.add_static(
+        "/static/",
+        path=STATIC_DIR,
+        name="static",
+) 
 
     return app
 
