@@ -4,10 +4,11 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import json
 from typing import Optional
+from dataclasses import asdict
 
 import pandas as pd
 
-from .schemas import PriceHistoryRequest
+from .schemas import PriceHistoryRequest, TickerMetadata
 
 
 class PriceHistoryCache:
@@ -93,7 +94,7 @@ class TickerMetadataCache:
         path.parent.mkdir(parents=True, exist_ok=True, )
 
         with path.open("w", encoding="utf-8", ) as file:
-            json.dump(dict(metadata), file, indent=2, sort_keys=True, )
+            json.dump(asdict(metadata), file, indent=2, sort_keys=True, )
 
         return path
 

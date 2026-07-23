@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import asdict
 import pandas as pd
 from pathlib import Path
 from datetime import timedelta
@@ -38,11 +39,11 @@ class DownloaderService:
         
         cached_metadata = self.metadata.get_if_fresh(ticker)
         if cached_metadata is not None:
-            return dict(cached_metadata)
+            return asdict(cached_metadata)
         
         metadata = self.client.download_metadata(request)
         self.metadata.save(metadata)
-        return dict(metadata)
+        return asdict(metadata)
     
     def get_price_history(
         self,
