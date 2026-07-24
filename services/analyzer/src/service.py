@@ -128,22 +128,25 @@ class AnalyzerService:
             )
 
     @staticmethod
-    def _parse_date(
-        value: str,
-    ) -> date:
+    def _parse_date(value: str) -> date:
         """
         Parse a downloader date into a date object.
 
         Supports plain ISO dates such as ``2026-07-22`` and ISO
         datetimes such as ``2026-07-22T16:00:00``.
         """
+        if not isinstance(value, str) or not value.strip():
+            raise InvalidPriceHistoryError(
+                f"Invalid price history date: {value!r}."
+            )
+
         try:
             return datetime.fromisoformat(
                 value.replace("Z", "+00:00")
             ).date()
-        except (TypeError, ValueError) as exc:
+        except ValueError as exc:
             raise InvalidPriceHistoryError(
-                f"Invalid price-history date: {value!r}."
+                f"Invalid price history date: {value!r}."
             ) from exc
 
     @staticmethod
