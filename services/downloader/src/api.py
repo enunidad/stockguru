@@ -61,9 +61,9 @@ async def get_price_history(request: web.Request) -> web.Response:
             interval=interval,
             auto_adjust=auto_adjust
         )
-
-        records = data.reset_index()
-        records["Date"] = records["Date"].astype(str)
+        # print(data.head())
+        # records = data.reset_index()
+        # records["Date"] = records["Date"].dt.strftime("%Y-%m-%d")
 
         return web.json_response(
             {
@@ -71,7 +71,7 @@ async def get_price_history(request: web.Request) -> web.Response:
                 "period": period,
                 "interval": interval,
                 "rows": len(data),
-                "data": records.to_dict(orient="records"),
+                "data": data.to_dict(orient="records"),
             }
         )
 

@@ -156,4 +156,6 @@ class YahooFinanceClient:
         data.index.name = "Date"
         data.reset_index(inplace=True)
         data["Date"] = data["Date"].dt.strftime("%Y-%m-%d")
+        data.set_index(['Date'])
+        data.index.name = 'Date'
         return data

@@ -27,6 +27,8 @@ class FakeDownloaderService:
         )
 
         data.index.name = "Date"
+        data.reset_index(inplace=True)
+        data['Date'] = data['Date'].dt.strftime('%Y-%m-%d')
         return data
 
     def get_metadata(self, ticker: str) -> dict:
@@ -153,7 +155,7 @@ async def test_get_price_history_rejects_invalid_auto_adjust(
     client = await aiohttp_client(app)
 
     response = await client.get(
-        "/history/aapl?autoadjust=banana"
+        "/history/AAPL?autoadjust=banana"
     )
 
     body = await response.json()

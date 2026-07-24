@@ -40,6 +40,8 @@ class PriceHistoryCache:
         data = pd.read_csv(path, parse_dates=["Date"])
         data = data.set_index("Date")
         data.index.name = "Date"
+        # data.reset_index(inplace=True)
+        # data['Date'] = data['Date'].dt.strftime("%Y-%m-%d")
 
         return data
 
@@ -49,8 +51,8 @@ class PriceHistoryCache:
 
         output = data.copy()
 
-        if output.index.name != "Date":
-            output.index.name = "Date"
+        # output['Date'] = output['Date'].dt.strftime('%Y-%m-%d')
+        # output.set_index(['Date'])
 
         output.to_csv(path)
 
