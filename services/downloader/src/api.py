@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from aiohttp import web
+import pandas as pd
 
 from .exceptions import DownloaderClientError
 from .service import DownloaderService
@@ -61,9 +62,10 @@ async def get_price_history(request: web.Request) -> web.Response:
             interval=interval,
             auto_adjust=auto_adjust
         )
-        # print(data.head())
-        # records = data.reset_index()
-        # records["Date"] = records["Date"].dt.strftime("%Y-%m-%d")
+
+        records = data.reset_index()
+
+        records["Date"] = pd.to_datetime(records["Date"], utc=True).dt.strftime("%Y-%m-%d")
 
         return web.json_response(
             {

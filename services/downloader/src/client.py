@@ -148,14 +148,13 @@ class YahooFinanceClient:
         return data
 
     @staticmethod
-    def _standardize_index(data: pd.DataFrame) -> pd.DataFrame:
+    def _standardize_index(data: pd.DataFrame, ) -> pd.DataFrame:
         """
-        Keep the raw data mostly untouched, but make the index predictable.
+        Keep the date as the DataFrame index and give it
+        a predictable name.
         """
         data = data.copy()
+        data.index = pd.to_datetime(data.index)
         data.index.name = "Date"
-        data.reset_index(inplace=True)
-        data["Date"] = data["Date"].dt.strftime("%Y-%m-%d")
-        data.set_index(['Date'])
-        data.index.name = 'Date'
+
         return data
