@@ -1,5 +1,7 @@
 SVC ?=
 CMD ?=
+SVCS ?= downloader analyzer frontend
+PORT ?= 8000
 
 .PHONY: service run stop
 
@@ -23,12 +25,19 @@ run-all-tests:
 	@echo All tests passed.
 	@echo ========================================
 
+start-one-service:
+	powershell -NoProfile -Command "Start-Process powershell -ArgumentList '-Command','make service SVC=$(SVC) CMD=run'"
+	powershell -NoProfile -Command "Start-Sleep -Seconds 2"
+
+start-many-services:
+	powershell -NoProfile -Command "foreach ($$svc in '$(SVCS)'.Split(' ')) { Write-Host \"Starting $$svc...\"; & make start-one-service SVC=$$svc }"
+
+start-web-port:
+	powershell -NoProfile -Command "Start-Process 'http://localhost:$(PORT)/'"
 
 run:
-	powershell -NoProfile -Command "Start-Process powershell -ArgumentList '-Command','make service SVC=downloader CMD=run'"
-	powershell -NoProfile -Command "Start-Sleep 2; Start-Process powershell -ArgumentList '-Command','make service SVC=analyzer CMD=run'"
-	powershell -NoProfile -Command "Start-Sleep 4; Start-Process powershell -ArgumentList '-Command','make service SVC=frontend CMD=run'"
-	powershell -NoProfile -Command "Start-Sleep 6; Start-Process 'http://localhost:8000/'"
+	$(MAKE) start-many-services SVCS="$(SVCS)"
+	$(MAKE) start-web-port PORT=$(PORT)
 
 stop:
 	powershell -NoProfile -Command "$$ports = 8000,8080,8090; foreach ($$port in $$ports) { $$conns = Get-NetTCPConnection -LocalPort $$port -State Listen -ErrorAction SilentlyContinue; foreach ($$conn in $$conns) { if ($$conn.OwningProcess -gt 0) { Stop-Process -Id $$conn.OwningProcess -Force -ErrorAction SilentlyContinue } } }"
