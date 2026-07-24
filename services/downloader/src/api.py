@@ -73,7 +73,7 @@ async def get_price_history(request: web.Request) -> web.Response:
                 "period": period,
                 "interval": interval,
                 "rows": len(data),
-                "data": data.to_dict(orient="records"),
+                "data": records.to_dict(orient="records"),
             }
         )
 

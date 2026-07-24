@@ -27,8 +27,6 @@ class FakeDownloaderService:
         )
 
         data.index.name = "Date"
-        data.reset_index(inplace=True)
-        data['Date'] = data['Date'].dt.strftime('%Y-%m-%d')
         return data
 
     def get_metadata(self, ticker: str) -> dict:
