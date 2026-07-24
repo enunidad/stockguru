@@ -154,4 +154,6 @@ class YahooFinanceClient:
         """
         data = data.copy()
         data.index.name = "Date"
+        data.reset_index(inplace=True)
+        data["Date"] = data["Date"].dt.strftime("%Y-%m-%d")
         return data
