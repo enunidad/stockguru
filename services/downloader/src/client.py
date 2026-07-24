@@ -45,7 +45,8 @@ class YahooFinanceClient:
     
     def _ticker_metadata_helper(self, ticker: yf.Ticker) -> TickerMetadata:
         try:
-            raw_metadata = dict(ticker.fast_info)
+            fast_info = dict(ticker.fast_info)
+            info = ticker.info or {}
         except Exception as exc:
             raise DownloaderClientError(
                 f"Failed to download metadata for ticker '{ticker.ticker}'."
@@ -53,19 +54,42 @@ class YahooFinanceClient:
 
         return TickerMetadata(
             ticker=ticker.ticker,
+
             currency=self._as_optional_string(
-                raw_metadata.get("currency"),
+                fast_info.get("currency")
+                or info.get("currency"),
             ),
             exchange=self._as_optional_string(
-                raw_metadata.get("exchange"),
+                fast_info.get("exchange")
+                or info.get("exchange"),
             ),
             timezone=self._as_optional_string(
-                raw_metadata.get("timezone"),
+                fast_info.get("timezone")
+                or info.get("exchangeTimezoneName"),
             ),
             quote_type=self._as_optional_string(
-                raw_metadata.get("quoteType"),
+                fast_info.get("quoteType")
+                or info.get("quoteType"),
             ),
-            raw=self._make_json_safe(raw_metadata),
+
+            name=self._as_optional_string(
+                info.get("longName")
+                or info.get("shortName"),
+            ),
+            sector=self._as_optional_string(
+                info.get("sector"),
+            ),
+            industry=self._as_optional_string(
+                info.get("industry"),
+            ),
+            country=self._as_optional_string(
+                info.get("country"),
+            ),
+
+            raw=self._make_json_safe({
+                "fast_info": fast_info,
+                "info": info,
+            }),
         )
     
     @staticmethod
