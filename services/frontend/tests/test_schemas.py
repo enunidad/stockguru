@@ -10,7 +10,7 @@ def test_price_history_request_defaults() -> None:
 
     assert request.ticker == "AAPL"
     assert request.period == "10y"
-    assert request.interval == "1d"
+    assert request.interval == "1mo"
 
 
 def test_price_history_request_accepts_custom_values() -> None:

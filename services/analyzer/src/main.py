@@ -5,36 +5,14 @@ import os
 from aiohttp import web
 
 from .api import create_app
+from .config import DOWNLOADER_BASE_URL, HOST, PORT
 
 
 def main() -> None:
     """Start the analyzer HTTP service."""
-    downloader_base_url = os.getenv(
-        "DOWNLOADER_BASE_URL",
-        "http://localhost:8080",
-    )
+    app = create_app(downloader_base_url=DOWNLOADER_BASE_URL, )
 
-    host = os.getenv(
-        "ANALYZER_HOST",
-        "0.0.0.0",
-    )
-
-    port = int(
-        os.getenv(
-            "ANALYZER_PORT",
-            "8090",
-        )
-    )
-
-    app = create_app(
-        downloader_base_url=downloader_base_url,
-    )
-
-    web.run_app(
-        app,
-        host=host,
-        port=port,
-    )
+    web.run_app(app, host=host, port=port, )
 
 
 if __name__ == "__main__":

@@ -1,25 +1,23 @@
 from __future__ import annotations
 
-import asyncio
-import json
+from aiohttp import web
 
-from .client import DownloaderApiClient
-from .schemas import PriceHistoryRequest
+from .app import create_app
+from .client import AnalyzerApiClient, DownloaderApiClient
+from .config import ANALYZER_BASE_URL, DOWNLOADER_BASE_URL, HOST, PORT
 
 
-async def main() -> None:
-    client = DownloaderApiClient(
-        base_url="http://localhost:8080",
-    )
+def main() -> None:
+    """Configure and start the frontend HTTP service."""
 
-    request = PriceHistoryRequest(
-        ticker="AAPL",
-    )
+    downloader_client = DownloaderApiClient(base_url=DOWNLOADER_BASE_URL, )
 
-    response = await client.get_price_history(request)
+    analyzer_client = AnalyzerApiClient(base_url=ANALYZER_BASE_URL, )
 
-    print(json.dumps(response, indent=4))
+    app = create_app(downloader_client=downloader_client, analyzer_client=analyzer_client, )
+
+    web.run_app(app, host=HOST, port=PORT, )
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

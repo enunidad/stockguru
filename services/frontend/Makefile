@@ -3,7 +3,7 @@ PYTHON ?= python
 .PHONY: run test clean
 
 run:
-	$(PYTHON) -m src.app
+	$(PYTHON) -m src.main
 
 test:
 	$(PYTHON) -m pytest tests -v
