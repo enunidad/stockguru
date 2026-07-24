@@ -10,9 +10,16 @@ service:
 	$(MAKE) -C services/$(SVC) clean
 
 run-all-tests:
+	@echo ========================================
+	@echo Running all service tests...
+	@echo ========================================
 	$(MAKE) service SVC=downloader CMD=test
 	$(MAKE) service SVC=analyzer CMD=test
 	$(MAKE) service SVC=frontend CMD=test
+	@echo.
+	@echo ========================================
+	@echo All tests passed.
+	@echo ========================================
 
 
 run:
