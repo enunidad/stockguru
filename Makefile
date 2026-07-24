@@ -9,13 +9,15 @@ service:
 	$(MAKE) -C services/$(SVC) $(CMD)
 	$(MAKE) -C services/$(SVC) clean
 
+test-service:
+	$(MAKE) service SVC=$(SVC) CMD=test
+	$(MAKE) service SVC=$(SVC) CMD=clean
+
 run-all-tests:
 	@echo ========================================
 	@echo Running all service tests...
 	@echo ========================================
-	$(MAKE) service SVC=downloader CMD=test
-	$(MAKE) service SVC=analyzer CMD=test
-	$(MAKE) service SVC=frontend CMD=test
+	@for %%s in (downloader analyzer frontend) do @$(MAKE) test-service SVC=%%s || exit /b 1
 	@echo.
 	@echo ========================================
 	@echo All tests passed.
