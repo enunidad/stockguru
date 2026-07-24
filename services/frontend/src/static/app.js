@@ -1,53 +1,85 @@
 "use strict";
 
-const stockForm = document.getElementById("stock-form");
-const tickerInput = document.getElementById("ticker");
-const statusElement = document.getElementById("status");
+
+const DEFAULT_CURRENCY = "USD";
+const NUMBER_LOCALE = "en-CA";
+const CURRENCY_LOCALE = "en-US";
+
+
+const stockForm =
+    document.getElementById("stock-form");
+
+const tickerInput =
+    document.getElementById("ticker");
+
+const statusElement =
+    document.getElementById("status");
+
 const submitButton = stockForm.querySelector(
     'button[type="submit"]',
 );
 
-const summarySection = document.getElementById("summary");
-const resultsSection = document.getElementById("results");
 
-const summaryTitle = document.getElementById("summary-title");
-const summaryPeriod = document.getElementById("summary-period");
-const summaryInterval = document.getElementById(
-    "summary-interval",
+const summarySection =
+    document.getElementById("summary");
+
+const resultsSection =
+    document.getElementById("results");
+
+const summaryTitle =
+    document.getElementById("summary-title");
+
+const summaryPeriod =
+    document.getElementById("summary-period");
+
+const summaryInterval =
+    document.getElementById("summary-interval");
+
+const summaryRows =
+    document.getElementById("summary-rows");
+
+
+const priceTableBody =
+    document.getElementById("price-table-body");
+
+const metricsPlaceholder =
+    document.getElementById("metrics-placeholder");
+
+const metricsGrid =
+    document.getElementById("metrics-grid");
+
+
+/*
+ * Store the active ticker metadata so all rendering functions
+ * use the same currency and identifying information.
+ */
+let activeMetadata = createDefaultMetadata();
+
+
+stockForm.addEventListener(
+    "submit",
+    async (event) => {
+        event.preventDefault();
+
+        const ticker = tickerInput.value
+            .trim()
+            .toUpperCase();
+
+        if (!ticker) {
+            showStatus(
+                "Enter a ticker symbol.",
+                "error",
+            );
+
+            tickerInput.focus();
+            return;
+        }
+
+        tickerInput.value = ticker;
+
+        await loadTicker(ticker);
+    },
 );
-const summaryRows = document.getElementById("summary-rows");
-
-const priceTableBody = document.getElementById(
-    "price-table-body",
-);
-
-const metricsPlaceholder = document.getElementById(
-    "metrics-placeholder",
-);
-const metricsGrid = document.getElementById("metrics-grid");
-
-
-stockForm.addEventListener("submit", async (event) => {
-    event.preventDefault();
-
-    const ticker = tickerInput.value
-        .trim()
-        .toUpperCase();
-
-    if (!ticker) {
-        showStatus(
-            "Enter a ticker symbol.",
-            "error",
-        );
-
-        tickerInput.focus();
-        return;
-    }
-
-    tickerInput.value = ticker;
-
-    await loadTicker(ticker);
-});
 
 
 async function loadTicker(
@@ -65,35 +97,54 @@ async function loadTicker(
     });
 
     try {
-        const pricePromise = fetchJson(
-            `/api/prices/${encodeURIComponent(ticker)}?${query}`,
-        );
-
-        const analysisPromise = fetchJson(
-            `/api/analysis/${encodeURIComponent(ticker)}?${query}`,
-        );
-
         const [
             priceResult,
             analysisResult,
+            metadataResult,
         ] = await Promise.allSettled([
-            pricePromise,
-            analysisPromise,
+            fetchJson(
+                `/api/prices/${encodeURIComponent(ticker)}?${query}`,
+            ),
+            fetchJson(
+                `/api/analysis/${encodeURIComponent(ticker)}?${query}`,
+            ),
+            fetchJson(
+                `/api/metadata/${encodeURIComponent(ticker)}`,
+            ),
         ]);
 
-        if (priceResult.status === "rejected") {
-            throw priceResult.reason;
+        /*
+         * Metadata failure should not prevent the historical
+         * prices from being displayed.
+         */
+        activeMetadata = createDefaultMetadata(ticker);
+
+        if (metadataResult.status === "fulfilled") {
+            activeMetadata = normalizeMetadata(
+                metadataResult.value,
+                ticker,
+            );
         }
 
-        renderPriceHistory(priceResult.value);
+        if (priceResult.status !== "fulfilled") {
+            throw new Error(
+                getErrorMessage(
+                    priceResult.reason,
+                    "Unable to load price history.",
+                ),
+            );
+        }
 
-        /*
-         * The historical data remains useful even if analysis fails.
-         * In that case, display the table and show the metrics error
-         * separately instead of discarding the successful price request.
-         */
+        renderPriceHistory(
+            priceResult.value,
+            activeMetadata,
+        );
+
         if (analysisResult.status === "fulfilled") {
-            renderAnalysis(analysisResult.value);
+            renderAnalysis(
+                analysisResult.value,
+                activeMetadata,
+            );
 
             showStatus(
                 `Loaded ${ticker} historical prices and analysis.`,
@@ -101,7 +152,10 @@ async function loadTicker(
             );
         } else {
             renderAnalysisError(
-                analysisResult.reason.message,
+                getErrorMessage(
+                    analysisResult.reason,
+                    "Calculated metrics are unavailable.",
+                ),
             );
 
             showStatus(
@@ -114,8 +168,10 @@ async function loadTicker(
         hideResults();
 
         showStatus(
-            error.message
-            || "Unable to load ticker information.",
+            getErrorMessage(
+                error,
+                "Unable to load ticker information.",
+            ),
             "error",
         );
     } finally {
@@ -173,6 +229,91 @@ async function fetchJson(url) {
 }
 
 
+function createDefaultMetadata(ticker = "") {
+    return {
+        ticker,
+        currency: DEFAULT_CURRENCY,
+        exchange: null,
+        timezone: null,
+        quote_type: null,
+        name: null,
+        sector: null,
+        industry: null,
+        country: null,
+        raw: {},
+    };
+}
+
+
+function normalizeMetadata(
+    metadata,
+    fallbackTicker,
+) {
+    return {
+        ticker:
+            metadata.ticker
+            || fallbackTicker,
+
+        currency:
+            normalizeCurrency(metadata.currency),
+
+        exchange:
+            metadata.exchange
+            || null,
+
+        timezone:
+            metadata.timezone
+            || null,
+
+        quote_type:
+            metadata.quote_type
+            || null,
+
+        name:
+            metadata.name
+            || null,
+
+        sector:
+            metadata.sector
+            || null,
+
+        industry:
+            metadata.industry
+            || null,
+
+        country:
+            metadata.country
+            || null,
+
+        raw:
+            isPlainObject(metadata.raw)
+                ? metadata.raw
+                : {},
+    };
+}
+
+
+function normalizeCurrency(currency) {
+    if (
+        typeof currency !== "string"
+        || currency.trim().length !== 3
+    ) {
+        return DEFAULT_CURRENCY;
+    }
+
+    return currency.trim().toUpperCase();
+}
+
+
+function isPlainObject(value) {
+    return (
+        value !== null
+        && typeof value === "object"
+        && !Array.isArray(value)
+    );
+}
+
+
 function prepareResultsForLoading() {
     summarySection.hidden = true;
     resultsSection.hidden = false;
@@ -191,7 +332,10 @@ function prepareResultsForLoading() {
 }
 
 
-function renderPriceHistory(history) {
+function renderPriceHistory(
+    history,
+    metadata,
+) {
     const rows = Array.isArray(history.data)
         ? history.data
         : [];
@@ -202,31 +346,27 @@ function renderPriceHistory(history) {
         );
     }
 
-    summaryTitle.textContent =
-        history.ticker || tickerInput.value;
+    renderMetadataSummary(
+        history,
+        metadata,
+        rows.length,
+    );
 
-    summaryPeriod.textContent =
-        history.period || "—";
-
-    summaryInterval.textContent =
-        history.interval || "—";
-
-    summaryRows.textContent =
-        Number.isFinite(Number(history.rows))
-            ? Number(history.rows).toLocaleString("en-CA")
-            : rows.length.toLocaleString("en-CA");
-
-    const fragment = document.createDocumentFragment();
+    const fragment =
+        document.createDocumentFragment();
 
     /*
-     * The downloader typically returns oldest-to-newest rows.
-     * Reverse a copy so the newest records display first.
+     * Downloader data is normally oldest-to-newest.
+     * Reverse a copy so newest records display first.
      */
     const displayRows = [...rows].reverse();
 
     for (const row of displayRows) {
         fragment.appendChild(
-            createPriceRow(row),
+            createPriceRow(
+                row,
+                metadata.currency,
+            ),
         );
     }
 
@@ -237,42 +377,92 @@ function renderPriceHistory(history) {
 }
 
 
-function createPriceRow(row) {
-    const tableRow = document.createElement("tr");
+function renderMetadataSummary(
+    history,
+    metadata,
+    fallbackRowCount,
+) {
+    /*
+     * Until additional metadata elements are added to the HTML,
+     * show the company name and ticker together in the title.
+     */
+    if (metadata.name) {
+        summaryTitle.textContent =
+            `${metadata.name} (${metadata.ticker})`;
+    } else {
+        summaryTitle.textContent =
+            metadata.ticker
+            || history.ticker
+            || tickerInput.value;
+    }
 
-    tableRow.appendChild(
-        createTableCell(
-            row.Date ?? row.date ?? "—",
+    summaryPeriod.textContent =
+        history.period || "—";
+
+    summaryInterval.textContent =
+        history.interval || "—";
+
+    const rowCount = Number(history.rows);
+
+    summaryRows.textContent =
+        Number.isFinite(rowCount)
+            ? rowCount.toLocaleString(NUMBER_LOCALE)
+            : fallbackRowCount.toLocaleString(
+                NUMBER_LOCALE,
+            );
+}
+
+
+function createPriceRow(
+    row,
+    currency,
+) {
+    const tableRow =
+        document.createElement("tr");
+
+    appendCell(
+        tableRow,
+        row.Date
+        || row.date
+        || "—",
+    );
+
+    appendCell(
+        tableRow,
+        formatCurrency(
+            row.Open ?? row.open,
+            currency,
         ),
     );
 
-    tableRow.appendChild(
-        createTableCell(
-            formatPrice(row.Open ?? row.open),
+    appendCell(
+        tableRow,
+        formatCurrency(
+            row.High ?? row.high,
+            currency,
         ),
     );
 
-    tableRow.appendChild(
-        createTableCell(
-            formatPrice(row.High ?? row.high),
+    appendCell(
+        tableRow,
+        formatCurrency(
+            row.Low ?? row.low,
+            currency,
         ),
     );
 
-    tableRow.appendChild(
-        createTableCell(
-            formatPrice(row.Low ?? row.low),
+    appendCell(
+        tableRow,
+        formatCurrency(
+            row.Close ?? row.close,
+            currency,
         ),
     );
 
-    tableRow.appendChild(
-        createTableCell(
-            formatPrice(row.Close ?? row.close),
-        ),
-    );
-
-    tableRow.appendChild(
-        createTableCell(
-            formatVolume(row.Volume ?? row.volume),
+    appendCell(
+        tableRow,
+        formatVolume(
+            row.Volume ?? row.volume,
         ),
     );
 
@@ -280,19 +470,30 @@ function createPriceRow(row) {
 }
 
 
-function createTableCell(value) {
-    const cell = document.createElement("td");
-    cell.textContent = value;
+function appendCell(
+    row,
+    value,
+) {
+    const cell =
+        document.createElement("td");
 
-    return cell;
+    cell.textContent = value;
+    row.appendChild(cell);
 }
 
 
-function createMessageRow(message, className) {
-    const row = document.createElement("tr");
+function createMessageRow(
+    message,
+    className,
+) {
+    const row =
+        document.createElement("tr");
+
     row.className = className;
 
-    const cell = document.createElement("td");
+    const cell =
+        document.createElement("td");
+
     cell.colSpan = 6;
     cell.textContent = message;
 
@@ -302,13 +503,23 @@ function createMessageRow(message, className) {
 }
 
 
-function renderAnalysis(analysis) {
+function renderAnalysis(
+    analysis,
+    metadata,
+) {
     metricsPlaceholder.hidden = true;
     metricsGrid.hidden = false;
 
+    const currency =
+        metadata.currency
+        || DEFAULT_CURRENCY;
+
     setMetric(
         "current-price",
-        formatCurrency(analysis.current_price),
+        formatCurrency(
+            analysis.current_price,
+            currency,
+        ),
     );
 
     setDirectionalPercentageMetric(
@@ -337,6 +548,7 @@ function renderAnalysis(analysis) {
         "moving-average-50",
         formatOptionalCurrency(
             analysis.moving_average_50,
+            currency,
         ),
     );
 
@@ -344,6 +556,7 @@ function renderAnalysis(analysis) {
         "moving-average-200",
         formatOptionalCurrency(
             analysis.moving_average_200,
+            currency,
         ),
     );
 
@@ -360,13 +573,19 @@ function renderAnalysis(analysis) {
 function renderAnalysisError(message) {
     metricsGrid.hidden = true;
     metricsPlaceholder.hidden = false;
+
     metricsPlaceholder.textContent =
-        message || "Calculated metrics are unavailable.";
+        message
+        || "Calculated metrics are unavailable.";
 }
 
 
-function setMetric(elementId, displayValue) {
-    const element = document.getElementById(elementId);
+function setMetric(
+    elementId,
+    displayValue,
+) {
+    const element =
+        document.getElementById(elementId);
 
     if (!element) {
         return;
@@ -385,17 +604,18 @@ function setDirectionalPercentageMetric(
     elementId,
     value,
 ) {
-    const element = document.getElementById(elementId);
+    const element =
+        document.getElementById(elementId);
 
     if (!element) {
         return;
     }
 
-    const numericValue = Number(value);
+    const numericValue =
+        Number(value);
 
-    element.textContent = formatPercentage(
-        numericValue,
-    );
+    element.textContent =
+        formatPercentage(numericValue);
 
     element.classList.remove(
         "metric-positive",
@@ -407,67 +627,85 @@ function setDirectionalPercentageMetric(
     }
 
     if (numericValue > 0) {
-        element.classList.add("metric-positive");
+        element.classList.add(
+            "metric-positive",
+        );
     } else if (numericValue < 0) {
-        element.classList.add("metric-negative");
+        element.classList.add(
+            "metric-negative",
+        );
     }
 }
 
 
-function formatPrice(value) {
-    const numericValue = Number(value);
+function formatCurrency(
+    value,
+    currency = DEFAULT_CURRENCY,
+) {
+    const numericValue =
+        Number(value);
 
     if (!Number.isFinite(numericValue)) {
         return "—";
     }
 
-    return numericValue.toLocaleString(
-        "en-CA",
-        {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-        },
+    const normalizedCurrency =
+        normalizeCurrency(currency);
+
+    try {
+        return new Intl.NumberFormat(
+            CURRENCY_LOCALE,
+            {
+                style: "currency",
+                currency: normalizedCurrency,
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+            },
+        ).format(numericValue);
+    } catch {
+        /*
+         * Protect the whole page from an unexpected or unsupported
+         * currency code returned by the metadata provider.
+         */
+        return `${normalizedCurrency} ${numericValue.toLocaleString(
+            NUMBER_LOCALE,
+            {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+            },
+        )}`;
+    }
+}
+
+
+function formatOptionalCurrency(
+    value,
+    currency,
+) {
+    if (
+        value === null
+        || value === undefined
+    ) {
+        return "Not enough history";
+    }
+
+    return formatCurrency(
+        value,
+        currency,
     );
 }
 
 
-function formatCurrency(value) {
-    const numericValue = Number(value);
-
-    if (!Number.isFinite(numericValue)) {
-        return "—";
-    }
-
-    return new Intl.NumberFormat(
-        "en-CA",
-        {
-            style: "currency",
-            currency: "USD",
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-        },
-    ).format(numericValue);
-}
-
-
-function formatOptionalCurrency(value) {
-    if (value === null || value === undefined) {
-        return "Not enough history";
-    }
-
-    return formatCurrency(value);
-}
-
-
 function formatPercentage(value) {
-    const numericValue = Number(value);
+    const numericValue =
+        Number(value);
 
     if (!Number.isFinite(numericValue)) {
         return "—";
     }
 
     return new Intl.NumberFormat(
-        "en-CA",
+        NUMBER_LOCALE,
         {
             style: "percent",
             minimumFractionDigits: 2,
@@ -478,24 +716,44 @@ function formatPercentage(value) {
 
 
 function formatVolume(value) {
-    const numericValue = Number(value);
+    const numericValue =
+        Number(value);
 
     if (!Number.isFinite(numericValue)) {
         return "—";
     }
 
-    return Math.round(numericValue).toLocaleString(
-        "en-CA",
-    );
+    return Math.round(
+        numericValue,
+    ).toLocaleString(NUMBER_LOCALE);
 }
 
 
-function formatDateRange(startDate, endDate) {
+function formatDateRange(
+    startDate,
+    endDate,
+) {
     if (!startDate || !endDate) {
         return "—";
     }
 
     return `${startDate} to ${endDate}`;
+}
+
+
+function getErrorMessage(
+    error,
+    fallbackMessage,
+) {
+    if (
+        error
+        && typeof error.message === "string"
+        && error.message.trim()
+    ) {
+        return error.message;
+    }
+
+    return fallbackMessage;
 }
 
 
@@ -509,7 +767,10 @@ function setLoadingState(isLoading) {
 }
 
 
-function showStatus(message, type) {
+function showStatus(
+    message,
+    type,
+) {
     statusElement.textContent = message;
 
     statusElement.classList.remove(
@@ -518,7 +779,9 @@ function showStatus(message, type) {
     );
 
     if (type === "error") {
-        statusElement.classList.add("status-error");
+        statusElement.classList.add(
+            "status-error",
+        );
     }
 
     if (type === "success") {

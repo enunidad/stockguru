@@ -102,6 +102,19 @@ async def get_price_history(
 
     return web.json_response(payload)
 
+async def get_metadata(request: web.Request) -> web.Response:
+    ticker = request.match_info["ticker"]
+
+    downloader_client = request.app[
+        DOWNLOADER_CLIENT_KEY
+    ]
+
+    metadata = await downloader_client.get_metadata(
+        ticker,
+    )
+
+    return web.json_response(metadata)
+
 
 async def get_analysis(
     request: web.Request,
@@ -178,6 +191,11 @@ def create_app(
     app.router.add_get(
         "/",
         index,
+    )
+
+    app.router.add_get(
+        "/api/metadata/{ticker}",
+        get_metadata,
     )
 
     app.router.add_static(
