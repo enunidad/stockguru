@@ -23,6 +23,9 @@ smoke:
 run:
 	$(PYTHON) -m src.main
 
+test:
+	$(PYTHON) -m pytest tests
+
 clean:
 	$(PYTHON) -c "import shutil, pathlib; \
 		root = pathlib.Path('.'); \

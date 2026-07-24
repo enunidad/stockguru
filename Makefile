@@ -9,6 +9,12 @@ service:
 	$(MAKE) -C services/$(SVC) $(CMD)
 	$(MAKE) -C services/$(SVC) clean
 
+run-all-tests:
+	$(MAKE) service SVC=downloader CMD=test
+	$(MAKE) service SVC=analyzer CMD=test
+	$(MAKE) service SVC=frontend CMD=test
+
+
 run:
 	powershell -NoProfile -Command "Start-Process powershell -ArgumentList '-Command','make service SVC=downloader CMD=run'"
 	powershell -NoProfile -Command "Start-Sleep 2; Start-Process powershell -ArgumentList '-Command','make service SVC=analyzer CMD=run'"

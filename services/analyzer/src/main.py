@@ -12,7 +12,7 @@ def main() -> None:
     """Start the analyzer HTTP service."""
     app = create_app(downloader_base_url=DOWNLOADER_BASE_URL, )
 
-    web.run_app(app, host=host, port=port, )
+    web.run_app(app, host=HOST, port=PORT, )
 
 
 if __name__ == "__main__":
