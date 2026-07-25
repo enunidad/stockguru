@@ -5,7 +5,7 @@ from typing import Any, Optional
 class PriceHistoryRequest:
     ticker: str
     period: str = "10y"
-    interval: str = "1mo"
+    interval: str = "1d"
     auto_adjust: bool = True
 
 @dataclass(frozen=True)
@@ -22,6 +22,6 @@ class TickerMetadata:
     sector: Optional[str] = None
     industry: Optional[str] = None
     country: Optional[str] = None
-    
+
     raw: dict[str, Any] = field(default_factory=dict)
 

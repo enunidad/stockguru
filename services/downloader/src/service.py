@@ -49,7 +49,7 @@ class DownloaderService:
         self,
         ticker: str,
         period: str = "10y",
-        interval: str = "1mo",
+        interval: str = "1d",
         auto_adjust: bool = True,
     ) -> pd.DataFrame:
         request = PriceHistoryRequest(

@@ -83,7 +83,7 @@ def test_get_price_history_uses_default_request_values():
     assert fake_client.received_request == PriceHistoryRequest(
         ticker="MSFT",
         period="10y",
-        interval="1mo",
+        interval="1d",
         auto_adjust=True,
     )
 

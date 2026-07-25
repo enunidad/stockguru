@@ -24,7 +24,7 @@ class YahooFinanceClient:
     """
 
     @staticmethod
-    def _ticker_history_helper(ticker: yf.Ticker, period: str = '10y', interval: str = '1mo', auto_adjust: bool = True) -> pd.DataFrame:
+    def _ticker_history_helper(ticker: yf.Ticker, period: str = '10y', interval: str = '1d', auto_adjust: bool = True) -> pd.DataFrame:
         try:
             data = ticker.history(
                 period=period,
