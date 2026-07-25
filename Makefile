@@ -2,6 +2,7 @@ SVC ?=
 CMD ?=
 SVCS ?= downloader analyzer frontend
 PORT ?= 8000
+MSG ?= dev update
 
 .PHONY: service run stop
 
@@ -41,3 +42,8 @@ run:
 
 stop:
 	powershell -NoProfile -Command "$$ports = 8000,8080,8090; foreach ($$port in $$ports) { $$conns = Get-NetTCPConnection -LocalPort $$port -State Listen -ErrorAction SilentlyContinue; foreach ($$conn in $$conns) { if ($$conn.OwningProcess -gt 0) { Stop-Process -Id $$conn.OwningProcess -Force -ErrorAction SilentlyContinue } } }"
+
+push-to-remote:
+	git add .
+	git commit -m '$(MSG)'
+	git push
