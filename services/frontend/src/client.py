@@ -27,22 +27,21 @@ class DownloaderApiClient:
         self,
         ticker: str,
     ) -> dict:
-        url = (
-            f"{self._base_url}/metadata/{ticker}"
-        )
+        url = f"{self._base_url}/metadata/{ticker}"
 
-        async with self.session.get(url) as response:
-            payload = await response.json()
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                payload = await response.json()
 
-            if response.status != 200:
-                raise RuntimeError(
-                    payload.get(
-                        "message",
-                        "Unable to retrieve ticker metadata.",
-                    ),
-                )
+                if response.status != 200:
+                    raise RuntimeError(
+                        payload.get(
+                            "message",
+                            "Unable to retrieve ticker metadata.",
+                        ),
+                    )
 
-            return payload
+                return payload
     
     async def get_price_history(
         self,
