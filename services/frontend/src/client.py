@@ -26,22 +26,40 @@ class DownloaderApiClient:
     async def get_metadata(
         self,
         ticker: str,
-    ) -> dict:
-        url = f"{self._base_url}/metadata/{ticker}"
+    ) -> dict[str, Any]:
+        normalized_ticker = ticker.strip().upper()
+        url = (
+            f"{self._base_url}/metadata/"
+            f"{normalized_ticker}"
+        )
 
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url) as response:
-                payload = await response.json()
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url) as response:
+                    payload = await response.json()
 
-                if response.status != 200:
-                    raise RuntimeError(
-                        payload.get(
-                            "message",
-                            "Unable to retrieve ticker metadata.",
-                        ),
-                    )
+                    if response.status >= 400:
+                        raise ApiClientError(
+                            f"Downloader returned HTTP "
+                            f"{response.status}: "
+                            f"{payload.get('message', '')}"
+                        )
 
-                return payload
+        except aiohttp.ContentTypeError as exc:
+            raise InvalidResponseError(
+                "Downloader returned invalid metadata JSON."
+            ) from exc
+        except aiohttp.ClientConnectionError as exc:
+            raise ServiceUnavailableError(
+                "Unable to connect to Downloader service."
+            ) from exc
+
+        if not isinstance(payload, dict):
+            raise InvalidResponseError(
+                "Downloader metadata response must be a JSON object."
+            )
+
+        return payload
     
     async def get_price_history(
         self,

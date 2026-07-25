@@ -102,19 +102,46 @@ async def get_price_history(
 
     return web.json_response(payload)
 
-async def get_metadata(request: web.Request) -> web.Response:
-    ticker = request.match_info["ticker"]
+async def get_metadata(
+    request: web.Request,
+) -> web.Response:
+    ticker = (
+        request.match_info["ticker"]
+        .strip()
+        .upper()
+    )
+
+    if not ticker:
+        raise web.HTTPBadRequest(
+            reason="Ticker cannot be empty.",
+        )
 
     downloader_client = request.app[
         DOWNLOADER_CLIENT_KEY
     ]
 
-    metadata = await downloader_client.get_metadata(
-        ticker,
-    )
+    try:
+        metadata = await downloader_client.get_metadata(
+            ticker,
+        )
+    except InvalidResponseError as exc:
+        return web.json_response(
+            {
+                "error": "invalid_downloader_response",
+                "message": str(exc),
+            },
+            status=502,
+        )
+    except ApiClientError as exc:
+        return web.json_response(
+            {
+                "error": "downloader_unavailable",
+                "message": str(exc),
+            },
+            status=503,
+        )
 
     return web.json_response(metadata)
-
 
 async def get_analysis(
     request: web.Request,
