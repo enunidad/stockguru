@@ -8,6 +8,7 @@ from pathlib import Path
 from datetime import timedelta
 
 from .client import YahooFinanceClient
+from .aggregator import HistoricalAggregator
 from .schemas import PriceHistoryRequest
 from .cache import PriceHistoryCache, TickerMetadataCache
 
@@ -49,20 +50,27 @@ class DownloaderService:
         self,
         ticker: str,
         period: str = "10y",
-        interval: str = "1d",
+        interval: str = "1mo",
         auto_adjust: bool = True,
+        aggregate: bool = False,
     ) -> pd.DataFrame:
         request = PriceHistoryRequest(
             ticker=ticker,
-            period=period,
-            interval=interval,
+            period='10y',
+            interval='1d',
             auto_adjust=auto_adjust,
         )
 
         cached_history = self.cache.get_if_fresh(request)
         if cached_history is not None:
-            return cached_history
+            to_return = cached_history
+        else:
+            data = self.client.download_price_history(request)
+            self.cache.save(request,  data)
+            to_return = data
         
-        data = self.client.download_price_history(request)
-        self.cache.save(request,  data)
-        return data
+        if aggregate:
+            aggregator = HistoricalAggregator()
+            to_return = aggregator.aggregate(df=to_return, interval=interval)
+
+        return to_return

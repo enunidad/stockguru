@@ -8,3 +8,6 @@ class EmptyDownloadError(DownloaderClientError):
 
 class InvalidTickerError(DownloaderClientError):
     """Raised when the ticker appears invalid or unsupported."""
+
+class PriceAggregationError(Exception):
+    """Raised when price history cannot be aggregated."""

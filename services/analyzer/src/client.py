@@ -33,6 +33,7 @@ class DownloaderApiClient:
         *,
         period: str = "10y",
         interval: str = "1mo",
+        aggregate: bool = True
     ) -> PriceHistory:
         """
         Retrieve historical price data from the downloader service.
