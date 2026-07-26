@@ -10,9 +10,15 @@ from .service import DownloaderService
 
 
 async def health(request: web.Request) -> web.Response:
+    """
+    health handler
+    """
     return web.json_response({"status": "ok"})
 
 async def get_metadata(request: web.Request) -> web.Response:
+    """
+    metadata handler
+    """
     ticker = request.match_info["ticker"]
 
     try:
@@ -20,15 +26,18 @@ async def get_metadata(request: web.Request) -> web.Response:
         return web.json_response(metadata)
     
     except DownloaderClientError as exc:
-        return web.json_response(
-            {
-                "error": type(exc).__name__,
-                "message": str(exc),
-            },
-            status=400,
-        )
+        return web.json_response({"error": type(exc).__name__, "message": str(exc), }, status=400, )
 
 def parse_bool(value: str) -> bool:
+    """
+    helper function to parse string booleans properly
+
+    Args:
+        value (str): the string to be evaluated into a boolean
+    
+    Returns:
+        bool: The parsed value as a boolean
+    """
     normalized = value.strip().lower()
 
     if normalized in ['true', '1', 'on', 'yes']:
@@ -38,6 +47,9 @@ def parse_bool(value: str) -> bool:
     raise ValueError(f'Invalid boolean value {value}')
 
 async def get_price_history(request: web.Request) -> web.Response:
+    """
+    price history handler
+    """
     ticker = request.match_info["ticker"]
 
     period = request.query.get("period", "10y")
@@ -47,13 +59,7 @@ async def get_price_history(request: web.Request) -> web.Response:
     try:
         auto_adjust = parse_bool(auto_adjust)
     except ValueError as exc:
-        return web.json_response(
-            {
-                "error": type(exc).__name__,
-                "message": str(exc),
-            },
-            status=400,
-        )
+        return web.json_response({"error": type(exc).__name__, "message": str(exc), }, status=400, )
 
     try:
         data = request.app["service"].get_price_history(
@@ -78,16 +84,13 @@ async def get_price_history(request: web.Request) -> web.Response:
         )
 
     except DownloaderClientError as exc:
-        return web.json_response(
-            {
-                "error": type(exc).__name__,
-                "message": str(exc),
-            },
-            status=400,
-        )
+        return web.json_response({"error": type(exc).__name__, "message": str(exc), }, status=400, )
 
 
 def create_app(service_override: DownloaderService | None = None) -> web.Application:
+    """
+    starting an application for history and metadata
+    """
     app = web.Application()
     app["service"] = service_override or DownloaderService()
 
