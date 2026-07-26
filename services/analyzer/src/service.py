@@ -29,6 +29,7 @@ class AnalyzerService:
         *,
         period: str = "10y",
         interval: str = "1mo",
+        aggregate:bool = False,
     ) -> AnalysisResult:
         """
         Retrieve historical prices and calculate investment metrics.
