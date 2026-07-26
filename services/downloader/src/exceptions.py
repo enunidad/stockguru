@@ -1,3 +1,8 @@
+"""
+Collection of exceptions in the downloader service. This is just for clarity
+of expected errors. Specificity in debugging is very valuable.
+"""
+
 class DownloaderClientError(Exception):
     """Base exception for downloader client errors."""
 
