@@ -16,14 +16,6 @@ from .cache import PriceHistoryCache, TickerMetadataCache
 class DownloaderService:
     """
     Orchestration layer for the downloader service.
-
-    For now, this simply delegates to the Yahoo Finance client.
-    Later, this will handle:
-    - cache checks
-    - cache writes
-    - ETL/cleaning
-    - provider selection
-    - service-level validation
     """
 
     def __init__(self, client: YahooFinanceClient | None = None,
@@ -36,6 +28,15 @@ class DownloaderService:
                                                         ttl=timedelta(days=1),)
 
     def get_metadata(self, ticker:str, ) -> dict:
+        """
+        metadata cache and retrieval
+
+        Args:
+            ticker (str): the ticker being requested
+        
+        Returns:
+            dict: the metadata dataclass as a dict foreasy use by api
+        """
         request = PriceHistoryRequest(ticker=ticker, )
         
         cached_metadata = self.metadata.get_if_fresh(ticker)
@@ -46,20 +47,25 @@ class DownloaderService:
         self.metadata.save(metadata)
         return asdict(metadata)
     
-    def get_price_history(
-        self,
-        ticker: str,
-        period: str = "10y",
-        interval: str = "1mo",
-        auto_adjust: bool = True,
-        aggregate: bool = False,
-    ) -> pd.DataFrame:
-        request = PriceHistoryRequest(
-            ticker=ticker,
-            period='10y',
-            interval='1d',
-            auto_adjust=auto_adjust,
-        )
+    def get_price_history(self, ticker: str, period: str = "10y",  interval: str = "1mo", 
+                            auto_adjust: bool = True, aggregate: bool = False, ) -> pd.DataFrame:
+        """
+        price history cache and retrieval
+
+        Args:
+            ticker (str): the ticker name being requested
+            period (str): how far back the data comes from. Default "10y"
+            interval (str): How the data should be reported. Default "1mo"
+            auto_adjust (bool): adjust if the stock went through splits. Default True.
+            aggregate (bool): flag for aggregating interval data. if False, the returned
+                                data will just be the boundaries of periods. Default True.
+                                e.g.: interval = "1mo", aggregate = False returns just the
+                                OHLC for the start of the month. aggregate = True will return
+                                OHLC values for the month itself regardles of when it 
+                                happens during the month
+        """
+        request = PriceHistoryRequest(ticker=ticker, period='10y', 
+                                        interval='1d', auto_adjust=auto_adjust, )
 
         cached_history = self.cache.get_if_fresh(request)
         if cached_history is not None:
