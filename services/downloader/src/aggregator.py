@@ -42,6 +42,9 @@ class HistoricalAggregator:
         
         Returns:
             pd.DataFrame: the new dataframe of aggregated data
+        
+        Raises:
+            PriceAggregationError: If the aggregation operation cannot be performed
         """
         if df.empty:
             raise PriceAggregationError('Dataframe is empty')

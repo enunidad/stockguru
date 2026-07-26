@@ -24,6 +24,10 @@ class YahooFinanceClient:
         
         Returns:
             pd.DataFrame: the ticker history requested
+        
+        Raises:
+            DownloaderClientError: If unable to get ticker data
+            EmptyDownloadError: If data gathered is empty or None
         """
         try:
             data = ticker.history(
@@ -53,6 +57,9 @@ class YahooFinanceClient:
 
         Returns:
             TickerMetadata (object): the metadata information
+        
+        Raises:
+            DownloaderClientError: If unable to get ticker's metadata
         """
         try:
             fast_info = dict(ticker.fast_info)
@@ -171,6 +178,9 @@ class YahooFinanceClient:
         
         Returns:
             str: normalized string.
+        
+        Raises:
+            InvalidTickerError: If the ticker is not of expected form
         """
         cleaned = ticker.strip().upper()
 

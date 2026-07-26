@@ -18,6 +18,9 @@ async def health(request: web.Request) -> web.Response:
 async def get_metadata(request: web.Request) -> web.Response:
     """
     metadata handler
+
+    Raises:
+        DownloaderClientError: If service is unable to get metadata for the requested ticker
     """
     ticker = request.match_info["ticker"]
 
@@ -37,6 +40,9 @@ def parse_bool(value: str) -> bool:
     
     Returns:
         bool: The parsed value as a boolean
+    
+    Raises:
+        ValueError: is the value to be parsed is not expected
     """
     normalized = value.strip().lower()
 
@@ -49,6 +55,10 @@ def parse_bool(value: str) -> bool:
 async def get_price_history(request: web.Request) -> web.Response:
     """
     price history handler
+
+    Raises:
+        ValueError: If auto_adjust is not an expected value to be parsed as boolean
+        DownloaderClientError: If service is unable to get the ticker price history
     """
     ticker = request.match_info["ticker"]
 
