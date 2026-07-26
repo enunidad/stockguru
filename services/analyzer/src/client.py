@@ -16,46 +16,37 @@ from .schemas import PriceHistory
 class DownloaderApiClient:
     """HTTP client for the StocksGuru downloader service."""
 
-    def __init__(
-        self,
-        base_url: str = "http://localhost:8080",
-        *,
-        timeout_seconds: float = 30.0,
-    ) -> None:
-        self._base_url = base_url.rstrip("/")
-        self._timeout = aiohttp.ClientTimeout(
-            total=timeout_seconds,
-        )
+    def __init__(self, base_url: str = "http://localhost:8080", *, timeout_seconds: float = 30.0, ) -> None:
+        """
+        initializes the connection to downloader
 
-    async def get_price_history(
-        self,
-        ticker: str,
-        *,
-        period: str = "10y",
-        interval: str = "1mo",
-        aggregate: bool = True,
-    ) -> PriceHistory:
+        Args:
+            base_url (str): The root url where the downloader api is active
+            timeout_seconds (float): duration to wait for a response
+
+        Returns:
+            None
+        """
+        self._base_url = base_url.rstrip("/")
+        self._timeout = aiohttp.ClientTimeout(total=timeout_seconds, )
+
+    async def get_price_history(self, ticker: str, *, period: str = "10y", 
+                                interval: str = "1mo", aggregate: bool = True, ) -> PriceHistory:
         """
         Retrieve historical price data from the downloader service.
 
         Args:
-            ticker:
-                Stock ticker symbol, such as ``AAPL``.
-            period:
-                Requested historical period, such as ``1y`` or ``10y``.
-            interval:
-                Requested observation interval, such as ``1d``.
+            ticker (str): Stock ticker symbol, such as ``AAPL``.
+            period (str): Requested historical period, such as ``1y`` or ``10y``.
+            interval (str): Requested observation interval, such as ``1d``.
 
         Returns:
             Parsed and validated price history.
 
         Raises:
-            DownloaderClientError:
-                If the downloader cannot be reached.
-            DownloaderResponseError:
-                If the downloader returns an unsuccessful HTTP status.
-            InvalidDownloaderResponseError:
-                If the downloader returns malformed or unexpected data.
+            DownloaderClientError: If the downloader cannot be reached.
+            DownloaderResponseError: If the downloader returns an unsuccessful HTTP status.
+            InvalidDownloaderResponseError: If the downloader returns malformed or unexpected data.
         """
         normalized_ticker = self._normalize_ticker(ticker)
 
