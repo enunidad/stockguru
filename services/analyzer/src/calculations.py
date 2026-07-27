@@ -11,13 +11,17 @@ from .exceptions import (
 )
 
 
-def _to_price_array(
-    prices: Sequence[float],
-    *,
-    minimum_length: int = 1,
-) -> np.ndarray:
+def _to_price_array(prices: Sequence[float], *, minimum_length: int = 1, ) -> np.ndarray:
     """
     Convert price history into a validated one-dimensional NumPy array.
+
+    Args:
+        prices (Sequence[float]): The iterable cntaining all the prices
+        minimum_length (int): helps validate that the data to be transformed is 
+                                at least an expected length
+
+    Returns:
+        np.ndarray: The numPy array of prices
 
     Raises:
         InvalidPriceHistoryError:
@@ -28,29 +32,19 @@ def _to_price_array(
     try:
         values = np.asarray(prices, dtype=float)
     except (TypeError, ValueError) as exc:
-        raise InvalidPriceHistoryError(
-            "Price history must contain numeric values."
-        ) from exc
+        raise InvalidPriceHistoryError("Price history must contain numeric values.") from exc
 
     if values.ndim != 1:
-        raise InvalidPriceHistoryError(
-            "Price history must be one-dimensional."
-        )
+        raise InvalidPriceHistoryError("Price history must be one-dimensional.")
 
     if len(values) < minimum_length:
-        raise InvalidPriceHistoryError(
-            f"At least {minimum_length} price values are required."
-        )
+        raise InvalidPriceHistoryError(f"At least {minimum_length} price values are required.")
 
     if not np.all(np.isfinite(values)):
-        raise InvalidPriceHistoryError(
-            "Price history must contain only finite values."
-        )
+        raise InvalidPriceHistoryError("Price history must contain only finite values.")
 
     if np.any(values <= 0):
-        raise InvalidPriceHistoryError(
-            "Price values must be greater than zero."
-        )
+        raise InvalidPriceHistoryError("Price values must be greater than zero.")
 
     return values
 
