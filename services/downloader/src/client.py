@@ -11,7 +11,7 @@ from .exceptions import DownloaderClientError, EmptyDownloadError, InvalidTicker
 class YahooFinanceClient:
 
     @staticmethod
-    def _ticker_history_helper(ticker: yf.Ticker, period: str = '10y', 
+    def _ticker_history_helper(ticker: yf.Ticker, period: str = '10y',
                                 auto_adjust: bool = True, ) -> pd.DataFrame:
         """
         helper method. this one will aconnect with yfinance to get back the data
@@ -156,7 +156,6 @@ class YahooFinanceClient:
         data = self._ticker_history_helper(
             ticker=ticker, 
             period=request.period, 
-            interval='1d', 
             auto_adjust=request.auto_adjust
         )
 
