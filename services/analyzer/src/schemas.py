@@ -6,6 +6,18 @@ from typing import Any
 
 @dataclass(frozen=True)
 class PriceRecord:
+    """
+    dataclass for standardizing the data
+
+    Args:
+        date (str): The date of this price record
+        close (float): THe closing value of the stockin a given period
+        adjusted_close (Optional[float]): the adjusted value after splits
+        open (Optional[float]): The opening value of the stock in a given period
+        high (Optional[float]): The highest value of the stock in a given period
+        low (Optional[float]): The lowest value of the stock in a given period
+        volume (Optional[int]): THe total amount of trades in a given period 
+    """
     date: str
     close: float
     adjusted_close: float | None = None
@@ -15,10 +27,16 @@ class PriceRecord:
     volume: int | None = None
 
     @classmethod
-    def from_dict(
-        cls,
-        data: dict[str, Any],
-    ) -> "PriceRecord":
+    def from_dict(cls, data: dict[str, Any], ) -> "PriceRecord":
+        """
+        helper method to convert a dictionary into this dataclass
+
+        Args:
+            data (dict[str, Any]): the data to be converted
+
+        Returns:
+            PriceRecord: this dataclass
+        """
         return cls(
             date=str(data["Date"]),
             close=float(data["Close"]),
@@ -42,16 +60,32 @@ class PriceRecord:
 
 @dataclass(frozen=True)
 class PriceHistory:
+    """
+    dataclass schema for the whole history
+
+    Args:
+        ticker (str): the symbol for this stock
+        period (str): the historical length
+        interval (str): the reported interval
+        rows (tuple[PriceRecord, ...]): the data that will be put into rows
+    """
     ticker: str
     period: str
     interval: str
     rows: tuple[PriceRecord, ...]
 
     @classmethod
-    def from_dict(
-        cls,
-        data: dict[str, Any],
-    ) -> "PriceHistory":
+    def from_dict(cls, data: dict[str, Any], ) -> "PriceHistory":
+        """
+        helper method to turn a dictionary into this dataclass schema
+
+        Args:
+            data (dict[str, Any]): the data to be converted
+
+        Returns:
+            PriceHistory: the data converted to this class
+
+        """
         raw_rows = data.get("data", [])
 
         return cls(
@@ -66,14 +100,17 @@ class PriceHistory:
 
     @property
     def closing_prices(self) -> tuple[float, ...]:
-        return tuple(
-            row.close
-            for row in self.rows
-        )
+        """
+        easy accessor for getting closing prices
+        """
+        return tuple(row.close for row in self.rows)
 
 
 @dataclass(frozen=True)
 class AnalysisResult:
+    """
+    analysis dataclass schema
+    """
     ticker: str
     period: str
     interval: str
@@ -90,6 +127,9 @@ class AnalysisResult:
     moving_average_200: float | None
 
     def to_dict(self) -> dict[str, Any]:
+        """
+        helper method to turn this dataclass schema into a dictionary
+        """
         return {
             "ticker": self.ticker,
             "period": self.period,
@@ -114,18 +154,20 @@ class AnalysisResult:
         }
 
 
-def _optional_float(
-    value: Any,
-) -> float | None:
+def _optional_float(value: Any, ) -> float | None:
+    """
+    helper method to validate expected float values
+    """
     if value is None:
         return None
 
     return float(value)
 
 
-def _optional_int(
-    value: Any,
-) -> int | None:
+def _optional_int(value: Any, ) -> int | None:
+    """
+    helper metod to validate expected int values
+    """
     if value is None:
         return None
 
