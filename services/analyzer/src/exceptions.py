@@ -1,3 +1,8 @@
+"""
+Collection of exceptions in the analyzer service. This is just for clarity
+of expected errors. Specificity in debugging is very valuable.
+"""
+
 class AnalyzerError(Exception):
     """Base exception for the analyzer service."""
 
