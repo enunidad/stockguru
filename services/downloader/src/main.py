@@ -1,8 +1,7 @@
 from aiohttp import web
 import os
 
-from src.api import create_app
-from src.service import DownloaderService
+from .api import create_app
 
 from .config import HOST, PORT
 
