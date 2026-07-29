@@ -1,0 +1,32 @@
+steps:
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      - "build"
+      - "-t"
+      - "gcr.io/$PROJECT_ID/stocksguru-downloader:$COMMIT_SHA"
+      - "services/downloader"
+
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      - "push"
+      - "gcr.io/$PROJECT_ID/stocksguru-downloader:$COMMIT_SHA"
+
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    entrypoint: "gcloud"
+    args:
+      - "run"
+      - "deploy"
+      - "stocksguru"
+      - "--image"
+      - "gcr.io/$PROJECT_ID/stocksguru-downloader:$COMMIT_SHA"
+      - "--region"
+      - "northamerica-northeast2"
+      - "--platform"
+      - "managed"
+      - "--quiet"
+
+images:
+  - "gcr.io/$PROJECT_ID/stocksguru-downloader:$COMMIT_SHA"
+
+options:
+  logging: CLOUD_LOGGING_ONLY
