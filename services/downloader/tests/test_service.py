@@ -55,18 +55,20 @@ def test_get_price_history_builds_request_and_calls_client():
 
     result = service.get_price_history(
         ticker="AAPL",
-        period="5y",
-        interval="1wk",
+        period="10y",
+        interval="1d",
         auto_adjust=True,
     )
 
     expected_request = PriceHistoryRequest(
         ticker="AAPL",
-        period="5y",
-        interval="1wk",
+        period="10y",
+        interval="1d",
         auto_adjust=True,
     )
 
+    print(fake_client.received_request)
+    print(expected_request)
     assert fake_client.received_request == expected_request
     assert fake_cache.saved_request == expected_request
     pd.testing.assert_frame_equal(fake_cache.saved_data, fake_client.response)
