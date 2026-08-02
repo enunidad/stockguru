@@ -76,7 +76,8 @@ async def get_price_history(request: web.Request) -> web.Response:
             ticker=ticker,
             period=period,
             interval=interval,
-            auto_adjust=auto_adjust
+            auto_adjust=auto_adjust,
+            aggregate=True
         )
 
         records = data.reset_index()
