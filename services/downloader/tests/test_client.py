@@ -101,7 +101,6 @@ def test_ticker_history_helper():
     ticker = yf.Ticker(symbol)
     result = YahooFinanceClient()._ticker_history_helper(ticker=ticker,
                                                             period='10y',
-                                                            interval='1mo',
                                                             auto_adjust=True)
     assert isinstance(result, pd.DataFrame)
 
