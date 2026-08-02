@@ -166,6 +166,7 @@ async def get_analysis(
             ticker,
             period=period,
             interval=interval,
+            aggregate=True,
         )
 
     except InvalidResponseError as exc:
