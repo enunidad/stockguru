@@ -68,7 +68,7 @@ async def test_index_returns_html(
 
     assert response.status == 200
     assert response.content_type == "text/html"
-    assert "StocksGuru" in body
+    assert "StockGuru" in body
     assert 'id="stock-form"' in body
 
 
