@@ -85,7 +85,7 @@ class PriceHistoryCache:
         path = self.get_path(request)
         data = pd.read_csv(path)
 
-        data["Date"] = pd.to_datetime(data["Date"], errors="raise",)
+        data["Date"] = pd.to_datetime(data["Date"], errors="raise", utc=True,)
 
         data = data.set_index("Date")
         data.index.name = "Date"
