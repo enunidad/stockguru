@@ -11,11 +11,13 @@ class PriceHistoryRequest:
         period (str): The length of history requested. any of product(['1', '2', '3', ...], ['d', 'wk', 'm', 'y'])
         interval (str): The interval for reporting history. any of product(['1', '2', '3', ...], ['d', 'wk', 'm', 'y'])
         auto_adjust (bool): Flag for adjusting prices if stock went through splits.
+        aggregate (bool): flag for displaying monthly stats instead of daily, reducing space required on the frontend
     """
     ticker: str
     period: str = "10y"
     interval: str = "1d"
     auto_adjust: bool = True
+    aggregate: bool = True
 
 @dataclass(frozen=True)
 class TickerMetadata:

@@ -61,6 +61,7 @@ async def get_price_history(
     ticker = request.match_info["ticker"].strip().upper()
     period = request.query.get("period", "10y")
     interval = request.query.get("interval", "1mo")
+    aggregate = request.query.get("interval", False)
 
     if not ticker:
         raise web.HTTPBadRequest(

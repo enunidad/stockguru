@@ -31,7 +31,7 @@ class DownloaderApiClient:
         self._timeout = aiohttp.ClientTimeout(total=timeout_seconds, )
 
     async def get_price_history(self, ticker: str, *, period: str = "10y", 
-                                interval: str = "1mo", aggregate: bool = True, ) -> PriceHistory:
+                                interval: str = "1mo", aggregate: bool = False, ) -> PriceHistory:
         """
         Retrieve historical price data from the downloader service.
 
@@ -52,7 +52,7 @@ class DownloaderApiClient:
 
         url = (f"{self._base_url}/history/{normalized_ticker}")
 
-        params = {"period": period, "interval": interval, }
+        params = {"period": period, "interval": interval, "aggregate":aggregate, }
 
         try:
             async with aiohttp.ClientSession(timeout=self._timeout, ) as session:

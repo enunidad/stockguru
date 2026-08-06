@@ -59,6 +59,7 @@ class AnalyzerService:
             ticker,
             period=period,
             interval=interval,
+            aggregate=aggregate,
         )
 
         return self._analyze_history(history)

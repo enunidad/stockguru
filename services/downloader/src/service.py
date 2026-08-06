@@ -48,7 +48,7 @@ class DownloaderService:
         return asdict(metadata)
     
     def get_price_history(self, ticker: str, period: str = "10y",  interval: str = "1mo", 
-                            auto_adjust: bool = True, aggregate: bool = False, ) -> pd.DataFrame:
+                            auto_adjust: bool = True, aggregate: bool = True, ) -> pd.DataFrame:
         """
         price history cache and retrieval
 
@@ -65,7 +65,7 @@ class DownloaderService:
                                 happens during the month
         """
         request = PriceHistoryRequest(ticker=ticker, period='10y', 
-                                        interval='1d', auto_adjust=auto_adjust, )
+                                        interval='1d', auto_adjust=auto_adjust, aggregate=aggregate)
 
         cached_history = self.cache.get_if_fresh(request)
         if cached_history is not None:
