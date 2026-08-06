@@ -28,8 +28,6 @@ class AnalyzerService:
         ticker: str,
         *,
         period: str = "10y",
-        interval: str = "1mo",
-        aggregate:bool = False,
     ) -> AnalysisResult:
         """
         Retrieve historical prices and calculate investment metrics.
@@ -39,8 +37,6 @@ class AnalyzerService:
                 Stock ticker symbol, such as ``AAPL``.
             period:
                 Historical period requested from the downloader.
-            interval:
-                Price observation interval.
 
         Returns:
             AnalysisResult containing the calculated metrics.
@@ -58,7 +54,8 @@ class AnalyzerService:
         history = await self._downloader_client.get_price_history(
             ticker,
             period=period,
-            interval=interval,
+            interval="1d",
+            aggregate=False,
         )
 
         return self._analyze_history(history)

@@ -83,8 +83,10 @@ class PriceHistoryCache:
             pd.DataFrame: stored cache as a dataframe
         """
         path = self.get_path(request)
+        data = pd.read_csv(path)
 
-        data = pd.read_csv(path, parse_dates=["Date"])
+        data["Date"] = pd.to_datetime(data["Date"], errors="raise", utc=True,)
+
         data = data.set_index("Date")
         data.index.name = "Date"
 

@@ -90,7 +90,6 @@ async def analyze_ticker(
         result = await analyzer_service.analyze_ticker(
             ticker,
             period=period,
-            interval=interval,
         )
 
     except DownloaderResponseError as exc:

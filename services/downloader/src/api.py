@@ -64,10 +64,12 @@ async def get_price_history(request: web.Request) -> web.Response:
 
     period = request.query.get("period", "10y")
     interval = request.query.get("interval", "1d")
-    auto_adjust = request.query.get("autoadjust", "True")
+    auto_adjust_value = request.query.get("autoadjust", "true")
+    aggregate_value = request.query.get("aggregate", "true")
 
     try:
-        auto_adjust = parse_bool(auto_adjust)
+        auto_adjust = parse_bool(auto_adjust_value)
+        aggregate = parse_bool(aggregate_value)
     except ValueError as exc:
         return web.json_response({"error": type(exc).__name__, "message": str(exc), }, status=400, )
 
@@ -77,7 +79,7 @@ async def get_price_history(request: web.Request) -> web.Response:
             period=period,
             interval=interval,
             auto_adjust=auto_adjust,
-            aggregate=True
+            aggregate=aggregate,
         )
 
         records = data.reset_index()

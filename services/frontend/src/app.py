@@ -56,15 +56,13 @@ async def health(
 async def get_price_history(
     request: web.Request,
 ) -> web.Response:
-    """Proxy a browser request to the downloader service."""
+    """Proxy a monthly price-history request to the downloader service."""
 
     ticker = request.match_info["ticker"].strip().upper()
-    period = request.query.get("period", "10y")
-    interval = request.query.get("interval", "1mo")
 
     if not ticker:
         raise web.HTTPBadRequest(
-            reason="Ticker cannot be empty."
+            reason="Ticker cannot be empty.",
         )
 
     downloader_client = request.app[
@@ -73,13 +71,13 @@ async def get_price_history(
 
     price_request = PriceHistoryRequest(
         ticker=ticker,
-        period=period,
-        interval=interval,
+        period="10y",
+        interval="1mo",
     )
 
     try:
         payload = await downloader_client.get_price_history(
-            price_request
+            price_request,
         )
 
     except InvalidResponseError as exc:
@@ -150,11 +148,10 @@ async def get_analysis(
 
     ticker = request.match_info["ticker"].strip().upper()
     period = request.query.get("period", "10y")
-    interval = request.query.get("interval", "1mo")
 
     if not ticker:
         raise web.HTTPBadRequest(
-            reason="Ticker cannot be empty."
+            reason="Ticker cannot be empty.",
         )
 
     analyzer_client = request.app[
@@ -165,8 +162,6 @@ async def get_analysis(
         analysis = await analyzer_client.get_analysis(
             ticker,
             period=period,
-            interval=interval,
-            aggregate=True,
         )
 
     except InvalidResponseError as exc:

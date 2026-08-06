@@ -70,6 +70,7 @@ class DownloaderApiClient:
         params = {
             "period": request.period,
             "interval": request.interval,
+            "aggregate": "true",
         }
 
         try:
