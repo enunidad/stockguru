@@ -1,6 +1,6 @@
 aiohttp
 aiohttp-devtools
-pandas
+pandas==2.2.3
 numpy
 
 pytest
