@@ -381,6 +381,7 @@ function renderAnalysis(analysis, metadata) {
     volatilityElement.textContent = formatPercentage(
         getValue(
             metrics,
+            "annualized_volatility",
             "volatility",
             "Volatility",
         ),
@@ -398,9 +399,7 @@ function renderAnalysis(analysis, metadata) {
     smaElement.textContent = formatCurrency(
         getValue(
             metrics,
-            "sma",
-            "simple_moving_average",
-            "SMA",
+            "moving_average_50",
         ),
         metadata.currency,
     );
@@ -408,9 +407,7 @@ function renderAnalysis(analysis, metadata) {
     emaElement.textContent = formatCurrency(
         getValue(
             metrics,
-            "ema",
-            "exponential_moving_average",
-            "EMA",
+            "moving_average_200",
         ),
         metadata.currency,
     );
