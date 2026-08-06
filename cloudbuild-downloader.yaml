@@ -16,7 +16,7 @@ steps:
     args:
       - "run"
       - "deploy"
-      - "stocksguru"
+      - "stocksguru-downloader"
       - "--image"
       - "gcr.io/$PROJECT_ID/stocksguru-downloader:$COMMIT_SHA"
       - "--region"
