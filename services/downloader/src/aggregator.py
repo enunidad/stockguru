@@ -3,7 +3,7 @@ import pandas as pd
 from .exceptions import PriceAggregationError
 
 class HistoricalAggregator:
-    _SUPPORTED_INTERVALS = {'1d':None, '1wk':"W-FRI", '2wk':"2W-FRI", '1mo':'ME', '2mo':'2ME', '3mo':'3ME'}
+    _SUPPORTED_INTERVALS = {'1d':None, '1wk':"W-FRI", '2wk':"2W-FRI", '1mo':'M', '2mo':'2M', '3mo':'3M'}
     
     @staticmethod
     def _reformat_dates(df:pd.DataFrame, interval:str='1mo') -> pd.DataFrame:

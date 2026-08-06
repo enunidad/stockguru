@@ -1,133 +1,235 @@
-<main class="page-container">
-    <header class="page-header panel">
-        <div>
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1"
+    >
+
+    <title>Investment Guru</title>
+
+    <link
+        rel="stylesheet"
+        href="/static/styles.css"
+    >
+
+    <script
+        src="/static/app.js"
+        defer
+    ></script>
+</head>
+
+<body>
+    <main class="page-container">
+        <header class="intro-panel panel">
             <h1>Investment Guru</h1>
+
             <p>
-                Explore historical stock prices and key investment metrics.
+                Search for a publicly traded company to review its
+                historical prices and investment metrics.
             </p>
-        </div>
-    </header>
+        </header>
 
-    <section class="search-panel panel">
-        <form id="stock-form" class="search-form">
-            <label for="ticker">Ticker symbol</label>
+        <section class="search-panel panel">
+            <form
+                id="stock-form"
+                class="search-form"
+            >
+                <label for="ticker">
+                    Ticker symbol
+                </label>
 
-            <div class="search-controls">
-                <input
-                    id="ticker"
-                    name="ticker"
-                    type="text"
-                    placeholder="For example: AAPL or BCE.TO"
-                    autocomplete="off"
-                    required
-                >
+                <div class="search-controls">
+                    <input
+                        id="ticker"
+                        name="ticker"
+                        type="text"
+                        placeholder="For example: AAPL or BCE.TO"
+                        autocomplete="off"
+                        required
+                    >
 
-                <button type="submit">
-                    Analyze
-                </button>
-            </div>
-        </form>
+                    <button type="submit">
+                        Analyze
+                    </button>
+                </div>
+            </form>
 
-        <p id="status" class="status-message"></p>
-    </section>
+            <p
+                id="status"
+                class="status-message"
+                aria-live="polite"
+            ></p>
+        </section>
 
-    <section
-        id="metadata-section"
-        class="metadata-panel panel"
-        hidden
-    >
-        <div class="section-heading">
-            <h2>Company Information</h2>
-        </div>
-
-        <div class="metadata-grid">
-            <div class="metadata-item">
-                <span class="metadata-label">Company</span>
-                <span id="company-name">—</span>
-            </div>
-
-            <div class="metadata-item">
-                <span class="metadata-label">Ticker</span>
-                <span id="metadata-ticker">—</span>
-            </div>
-
-            <div class="metadata-item">
-                <span class="metadata-label">Currency</span>
-                <span id="currency">—</span>
-            </div>
-
-            <div class="metadata-item">
-                <span class="metadata-label">Industry</span>
-                <span id="industry">—</span>
-            </div>
-        </div>
-    </section>
-
-    <section
-        id="results-section"
-        class="results-layout"
-        hidden
-    >
-        <div class="history-panel panel">
+        <section
+            id="metadata-section"
+            class="metadata-panel panel"
+            hidden
+        >
             <div class="section-heading">
-                <div>
-                    <h2>Historical Prices</h2>
-                    <p id="history-description">
-                        Historical market data
-                    </p>
+                <h2>Company Information</h2>
+            </div>
+
+            <div class="metadata-grid">
+                <div class="metadata-item">
+                    <span class="metadata-label">
+                        Company
+                    </span>
+
+                    <span id="company-name">
+                        —
+                    </span>
+                </div>
+
+                <div class="metadata-item">
+                    <span class="metadata-label">
+                        Ticker
+                    </span>
+
+                    <span id="metadata-ticker">
+                        —
+                    </span>
+                </div>
+
+                <div class="metadata-item">
+                    <span class="metadata-label">
+                        Currency
+                    </span>
+
+                    <span id="currency">
+                        —
+                    </span>
+                </div>
+
+                <div class="metadata-item">
+                    <span class="metadata-label">
+                        Industry
+                    </span>
+
+                    <span id="industry">
+                        —
+                    </span>
+                </div>
+            </div>
+        </section>
+
+        <section
+            id="results-section"
+            class="results-layout"
+            hidden
+        >
+            <div class="history-panel panel">
+                <div class="section-heading">
+                    <div>
+                        <h2>Historical Prices</h2>
+
+                        <p id="history-description">
+                            Historical market data
+                        </p>
+                    </div>
+                </div>
+
+                <div class="history-scroll">
+                    <table class="price-table">
+                        <thead>
+                            <tr>
+                                <th scope="col">
+                                    Date
+                                </th>
+
+                                <th scope="col">
+                                    Open
+                                </th>
+
+                                <th scope="col">
+                                    High
+                                </th>
+
+                                <th scope="col">
+                                    Low
+                                </th>
+
+                                <th scope="col">
+                                    Close
+                                </th>
+
+                                <th scope="col">
+                                    Average
+                                </th>
+
+                                <th scope="col">
+                                    Volume
+                                </th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="price-table-body">
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
-            <div class="history-scroll">
-                <table class="price-table">
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Open</th>
-                            <th>High</th>
-                            <th>Low</th>
-                            <th>Close</th>
-                            <th>Average</th>
-                            <th>Volume</th>
-                        </tr>
-                    </thead>
-
-                    <tbody id="price-table-body"></tbody>
-                </table>
-            </div>
-        </div>
-
-        <aside class="metrics-panel panel">
-            <div class="section-heading">
-                <h2>Metrics</h2>
-            </div>
-
-            <div class="metrics-list">
-                <div class="metric-item">
-                    <span class="metric-label">CAGR</span>
-                    <strong id="cagr">—</strong>
+            <aside class="metrics-panel panel">
+                <div class="section-heading">
+                    <h2>Metrics</h2>
                 </div>
 
-                <div class="metric-item">
-                    <span class="metric-label">Volatility</span>
-                    <strong id="volatility">—</strong>
-                </div>
+                <div class="metrics-list">
+                    <div class="metric-item">
+                        <span class="metric-label">
+                            CAGR
+                        </span>
 
-                <div class="metric-item">
-                    <span class="metric-label">Max Drawdown</span>
-                    <strong id="max-drawdown">—</strong>
-                </div>
+                        <strong id="cagr">
+                            —
+                        </strong>
+                    </div>
 
-                <div class="metric-item">
-                    <span class="metric-label">SMA</span>
-                    <strong id="sma">—</strong>
-                </div>
+                    <div class="metric-item">
+                        <span class="metric-label">
+                            Volatility
+                        </span>
 
-                <div class="metric-item">
-                    <span class="metric-label">EMA</span>
-                    <strong id="ema">—</strong>
+                        <strong id="volatility">
+                            —
+                        </strong>
+                    </div>
+
+                    <div class="metric-item">
+                        <span class="metric-label">
+                            Max Drawdown
+                        </span>
+
+                        <strong id="max-drawdown">
+                            —
+                        </strong>
+                    </div>
+
+                    <div class="metric-item">
+                        <span class="metric-label">
+                            SMA
+                        </span>
+
+                        <strong id="sma">
+                            —
+                        </strong>
+                    </div>
+
+                    <div class="metric-item">
+                        <span class="metric-label">
+                            EMA
+                        </span>
+
+                        <strong id="ema">
+                            —
+                        </strong>
+                    </div>
                 </div>
-            </div>
-        </aside>
-    </section>
-</main>
+            </aside>
+        </section>
+    </main>
+</body>
+</html>

@@ -336,6 +336,8 @@ function createPriceRow(row, currency) {
         formatCurrency(
             getValue(
                 row,
+                "Price",
+                "price",
                 "Average",
                 "average",
             ),
