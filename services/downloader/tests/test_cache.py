@@ -10,14 +10,20 @@ from src.schemas import PriceHistoryRequest, TickerMetadata
 def make_price_data() -> pd.DataFrame:
     data = pd.DataFrame(
         {
-            "Open": [100.0, 101.0],
-            "Close": [110.0, 111.0],
+            "Date": ["2024-01-01", "2024-01-02", ],
+            "Open": [100.0, 101.0, ],
+            "High": [112.0, 113.0, ],
+            "Low": [98.0, 99.0, ],
+            "Close": [110.0, 111.0, ],
+            "Volume": [1_000, 1_200, ],
         },
-        index=pd.to_datetime(
-            ["2024-01-01", "2024-01-02"]
-        ),
     )
+
+    data["Date"] = pd.to_datetime(data["Date"], errors="raise", utc=True, )
+
+    data = data.set_index("Date")
     data.index.name = "Date"
+
     return data
 
 

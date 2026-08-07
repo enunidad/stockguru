@@ -22,7 +22,7 @@ install:
 	$(PIP) install -r requirements.txt
 
 test:
-	$(PYTHON) -m pytest tests
+	$(PYTHON) -m pytest tests -v
 
 smoke:
 	$(PYTHON) -m src.main

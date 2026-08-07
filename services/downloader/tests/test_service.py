@@ -31,10 +31,17 @@ class FakeYahooFinanceClient:
         self.received_request = None
         self.response = pd.DataFrame(
             {
-                "Close": [100.0, 101.0],
+                "Date": ["2024-01-01", "2024-01-02", ],
+                "Open": [100.0, 101.0, ],
+                "High": [112.0, 113.0, ],
+                "Low": [98.0, 99.0, ],
+                "Close": [110.0, 111.0, ],
+                "Volume": [1_000, 1_200, ],
             },
-            index=pd.to_datetime(["2024-01-01", "2024-01-02"]),
         )
+        self.response["Date"] = pd.to_datetime(self.response["Date"], errors="raise", utc=True, )
+        self.response = self.response.set_index("Date")
+        self.response.index.name = "Date"
         self.recieved_metadata_request = None
         self.metadata = TickerMetadata(ticker = 'AAPL')
 
@@ -58,6 +65,7 @@ def test_get_price_history_builds_request_and_calls_client():
         period="10y",
         interval="1d",
         auto_adjust=True,
+        aggregate=False,
     )
 
     expected_request = PriceHistoryRequest(
@@ -65,6 +73,7 @@ def test_get_price_history_builds_request_and_calls_client():
         period="10y",
         interval="1d",
         auto_adjust=True,
+        aggregate=False,
     )
 
     print(fake_client.received_request)

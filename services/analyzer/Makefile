@@ -24,7 +24,7 @@ run:
 	$(PYTHON) -m src.main
 
 test:
-	$(PYTHON) -m pytest tests
+	$(PYTHON) -m pytest tests -v
 
 clean:
 	$(PYTHON) -c "import shutil, pathlib; \

@@ -138,8 +138,8 @@ async def test_price_proxy_returns_downloader_response(
     )
 
     assert request.ticker == "AAPL"
-    assert request.period == "5y"
-    assert request.interval == "1wk"
+    assert request.period == "10y"
+    assert request.interval == "1mo"
 
 
 @pytest.mark.asyncio
