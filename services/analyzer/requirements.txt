@@ -1,5 +1,7 @@
 aiohttp
 aiohttp-devtools
+numexpr>=2.8.4
+Bottleneck>=1.3.6
 pandas==2.2.3
 numpy
 

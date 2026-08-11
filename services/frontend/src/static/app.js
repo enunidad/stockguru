@@ -37,6 +37,12 @@ const currencyElement = document.getElementById(
 const industryElement = document.getElementById(
     "industry",
 );
+const countryElement = document.getElementById(
+    "country",
+);
+const exchangeElement = document.getElementById(
+    "exchange",
+);
 
 
 /*
@@ -237,6 +243,12 @@ function renderMetadata(metadata, fallbackTicker) {
 
     industryElement.textContent =
         metadata.industry ||
+        "—";
+    exchangeElement.textContent = 
+        metadata.exchange ||
+        "—";
+    countryElement.textContent = 
+        metadata.country ||
         "—";
 }
 
@@ -553,6 +565,8 @@ function hideResults() {
     metadataTickerElement.textContent = "—";
     currencyElement.textContent = "—";
     industryElement.textContent = "—";
+    exchangeElement.textContent = "—";
+    countryElement.textContent = "—";
 
     cagrElement.textContent = "—";
     volatilityElement.textContent = "—";
