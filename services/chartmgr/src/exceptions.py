@@ -1,3 +1,18 @@
+class AnalyzerError(Exception):
+    """Base exception for the analyzer service."""
+
+
+class CalculationError(AnalyzerError):
+    """Base exception for financial calculation failures."""
+
+
+class InvalidPriceHistoryError(CalculationError):
+    """Raised when price history is missing or invalid."""
+
+
+class InvalidCalculationParameterError(CalculationError):
+    """Raised when a calculation parameter is invalid."""
+    
 class DownloaderClientError(AnalyzerError):
     """Raised when communication with the downloader fails."""
 

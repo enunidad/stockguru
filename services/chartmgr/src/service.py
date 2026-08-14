@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date, datetime
 
 from .client import DownloaderApiClient, AnalyzerApiClient
-from .exceptions import DownloaderResponseError, DownloaderClientError
+from .exceptions import DownloaderResponseError, DownloaderClientError, InvalidDownloaderResponseError
 from .schemas import ChartResponse, ChartRequest
 
 class ChartMgrService:
@@ -17,10 +17,10 @@ class ChartMgrService:
         if not isinstance(payload, list):
             raise DownloaderResponseError('Data format is not recognized. Must be a list.')
         if not payload:
-            raise DownloaderResponseError('Data requested is empty.')
+            raise InvalidDownloaderResponseError('Data requested is empty.')
         for itm in payload:
             if not isinstance(itm, dict):
-                raise DownloaderResponseError('Data object is not recognized. Objects must be dictionaries.')
+                raise InvalidDownloaderResponseError('Data object is not recognized. Objects must be dictionaries.')
             if not set(expected).issubset(itm):
                 raise DownloaderResponseError('Some data missing required values.')
     
@@ -40,7 +40,7 @@ class ChartMgrService:
         y_values = {key: [] for key in expected[1:]}
 
         for row in data:
-            x_values.append[row[expected[0]]]
+            x_values.append(row[expected[0]])
             for key in y_values:
                 y_values[key].append(row[key])
 

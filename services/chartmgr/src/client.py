@@ -77,6 +77,64 @@ class DownloaderApiClient:
             raise DownloaderClientError("The downloader request failed.") from exc
 
         return payload['data']
+    
+    @staticmethod
+    async def _read_response(response: aiohttp.ClientResponse, ) -> dict[str, Any]:
+        """
+        helper method on validating expected datatype return
+
+        Args:
+            response (aiohttp.ClientResponse): The response to be validated
+        
+        Returns:
+            dict[str, Any]: The validated response
+        
+        Raises:
+            DownloaderResponseError: If the response status to be validated is less than 400
+            InvalidDownloaderResponseError: If the response is an invalid json or is not a json.
+        """
+        if response.status >= 400:
+            message = await DownloaderApiClient._read_error_message(response, )
+
+            raise DownloaderResponseError(status=response.status, message=message, )
+
+        try:
+            payload = await response.json()
+
+        except (aiohttp.ContentTypeError, JSONDecodeError, ) as exc:
+            raise InvalidDownloaderResponseError("Downloader returned invalid JSON.") from exc
+
+        if not isinstance(payload, dict):
+            raise InvalidDownloaderResponseError("Downloader response must be a JSON object.")
+
+        return payload
+    
+    @staticmethod
+    async def _read_error_message(response: aiohttp.ClientResponse, ) -> str:
+        """
+        helper method in reading error responses
+
+        Args:
+            response (aiohttp:ClientResponse): the error response to be read
+
+        Returns:
+            str: The message for the error that occured
+        """
+        try:
+            payload = await response.json()
+
+        except (aiohttp.ContentTypeError, JSONDecodeError, ):
+            text = await response.text()
+
+            return (text.strip() or "Downloader returned an error.")
+
+        if isinstance(payload, dict):
+            message = (payload.get("message") or payload.get("error"))
+
+            if message:
+                return str(message)
+
+        return "Downloader returned an error."
 
 class AnalyzerApiClient:
     """HTTP client for the StocksGuru downloader service."""
