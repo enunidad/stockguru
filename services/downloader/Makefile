@@ -40,7 +40,7 @@ clean:
 clean-cache:
 	$(PYTHON) -c "import shutil, pathlib; \
 		data = pathlib.Path('data'); \
-		[shutil.rmtree(p, ignore_errors=True) for p in data.iterdir() if p.is_dir()]"
+		[shutil.rmtree(p, ignore_errors=True) for p in data.iterdir() if p.is_dir()] if data.exists() else None"
 
 docker-build:
 	docker compose build
