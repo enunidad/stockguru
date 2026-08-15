@@ -15,14 +15,14 @@ class ChartMgrService:
     @staticmethod
     def _validate_data(payload: list, expected: list[str]) -> None:
         if not isinstance(payload, list):
-            raise DownloaderResponseError('Data format is not recognized. Must be a list.')
+            raise InvalidDownloaderResponseError('Data format is not recognized. Must be a list.')
         if not payload:
             raise InvalidDownloaderResponseError('Data requested is empty.')
         for itm in payload:
             if not isinstance(itm, dict):
                 raise InvalidDownloaderResponseError('Data object is not recognized. Objects must be dictionaries.')
             if not set(expected).issubset(itm):
-                raise DownloaderResponseError('Some data missing required values.')
+                raise InvalidDownloaderResponseError('Some data missing required values.')
     
     async def _read_history(self, ticker, expected, *, period='10y', interval='1mo', 
                                 auto_adjust=True, aggregate=True) -> list[dict]:

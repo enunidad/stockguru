@@ -8,11 +8,11 @@ smoke:
 		Start-Sleep -Seconds 2; \
 		try { \
 			$$response = Invoke-RestMethod \
-				'http://localhost:8090/health'; \
+				'http://localhost:8050/health'; \
 			if ($$response.status -ne 'ok') { \
-				throw 'Analyzer health check failed' \
+				throw 'Chartmgr health check failed' \
 			}; \
-			Write-Host 'Analyzer smoke test passed' \
+			Write-Host 'Chartmgr smoke test passed' \
 		} finally { \
 			if (Get-Process -Id $$server.Id \
 				-ErrorAction SilentlyContinue) { \

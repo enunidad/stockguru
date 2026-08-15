@@ -60,7 +60,7 @@ class DownloaderApiClient:
         url = (f"{self._base_url}/history/{normalized_ticker}")
 
         params = {"period": req.period, "interval": req.interval, 
-                    "aggregate":str(req.aggregate).lower(), "auto_adjust": str(req.auto_adjust).lower(), }
+                    "aggregate":str(req.aggregate).lower(), "autoadjust": str(req.auto_adjust).lower(), }
 
         try:
             async with aiohttp.ClientSession(timeout=self._timeout, ) as session:
@@ -76,6 +76,10 @@ class DownloaderApiClient:
         except aiohttp.ClientError as exc:
             raise DownloaderClientError("The downloader request failed.") from exc
 
+        data = payload.get('data')
+        if not isinstnace(data, list):
+            raise InvalidDownloaderResponseError("Downloader response 'data' must be a list.")
+        
         return payload['data']
     
     @staticmethod
