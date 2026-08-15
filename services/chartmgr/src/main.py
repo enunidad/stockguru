@@ -9,7 +9,7 @@ from .config import DOWNLOADER_BASE_URL, ANALYZER_BASE_URL, HOST, PORT
 
 
 def main() -> None:
-    """Start the analyzer HTTP service."""
+    """Start the ChartMgr HTTP service."""
     app = create_app(downloader_base_url=DOWNLOADER_BASE_URL, 
                         analyzer_base_url=ANALYZER_BASE_URL)
 
