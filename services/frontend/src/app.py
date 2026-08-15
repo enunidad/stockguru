@@ -4,7 +4,7 @@ from pathlib import Path
 
 from aiohttp import web
 
-from .client import AnalyzerApiClient, DownloaderApiClient
+from .client import AnalyzerApiClient, DownloaderApiClient, ChartMgrApiClient
 from .exceptions import ApiClientError, InvalidResponseError
 from .schemas import PriceHistoryRequest
 
@@ -22,6 +22,11 @@ ANALYZER_CLIENT_KEY = web.AppKey(
 DOWNLOADER_CLIENT_KEY = web.AppKey(
     "downloader_client",
     DownloaderApiClient,
+)
+
+CHARTMGR_CLIENT_KEY = web.AppKey(
+    "chartmgr_client",
+    ChartMgrApiClient,
 )
 
 
@@ -52,6 +57,43 @@ async def health(
         }
     )
 
+async def get_price_history_chart(request: web.Request, ) -> web.Response:
+    ticker = request.match_info["ticker"].strip().upper()
+
+    if not ticker:
+        raise web.HTTPBadRequest(
+            reason="Ticker cannot be empty.",
+        )
+    
+    chartmgr_client = request.app[
+        CHARTMGR_CLIENT_KEY
+    ]
+
+    period = request.query.get("period", "10y")
+    interval = request.query.get("interval", "1mo")
+
+    try:
+        payload = await chartmgr_client.get_history_chart(ticker, period=period, interval=interval, )
+
+    except InvalidResponseError as exc:
+        return web.json_response(
+            {
+                "error": "invalid_chartmgr_response",
+                "message": str(exc),
+            },
+            status=502,
+        )
+
+    except ApiClientError as exc:
+        return web.json_response(
+            {
+                "error": "chartmgr_unavailable",
+                "message": str(exc),
+            },
+            status=503,
+        )
+
+    return web.json_response(payload)
 
 async def get_price_history(
     request: web.Request,
@@ -188,6 +230,7 @@ async def get_analysis(
 def create_app(
     downloader_client: DownloaderApiClient,
     analyzer_client: AnalyzerApiClient,
+    chartmgr_client: ChartMgrApiClient
 ) -> web.Application:
     """Create and configure the frontend application."""
 
@@ -195,6 +238,7 @@ def create_app(
 
     app[DOWNLOADER_CLIENT_KEY] = downloader_client
     app[ANALYZER_CLIENT_KEY] = analyzer_client
+    app[CHARTMGR_CLIENT_KEY] = chartmgr_client
 
     app.router.add_get(
         "/health",
@@ -214,6 +258,11 @@ def create_app(
     app.router.add_get(
         "/",
         index,
+    )
+
+    app.router.add_get(
+        "/api/charting/price_history/{ticker}",
+        get_price_history_chart,
     )
 
     app.router.add_get(

@@ -190,3 +190,68 @@ class AnalyzerApiClient:
             )
 
         return payload
+
+class ChartMgrApiClient:
+    """Client for the StocksGuru chartmgr service."""
+
+    def __init__(
+        self,
+        base_url: str = "http://localhost:8050",
+        *,
+        timeout_seconds: float = 30.0,
+    ) -> None:
+        self._base_url = base_url.rstrip("/")
+        self._timeout = aiohttp.ClientTimeout(
+            total=timeout_seconds,
+        )
+
+    async def get_history_chart(self, ticker: str, *, period: str = "10y", interval: str = "1mo", ) -> dict[str, Any]:
+        normalized_ticker = ticker.strip().upper()
+
+        url = (
+            f"{self._base_url}/charting/price_history/"
+            f"{normalized_ticker}"
+        )
+
+        params = {
+            "period": period,
+            "interval": interval,
+        }
+
+        try:
+            async with aiohttp.ClientSession(
+                timeout=self._timeout,
+            ) as session:
+                async with session.get(
+                    url,
+                    params=params,
+                ) as response:
+                    if response.status >= 400:
+                        message = await response.text()
+
+                        raise ApiClientError(
+                            f"ChartMgr returned HTTP "
+                            f"{response.status}: {message}"
+                        )
+
+                    try:
+                        payload = await response.json()
+                    except (
+                        aiohttp.ContentTypeError,
+                        JSONDecodeError,
+                    ) as exc:
+                        raise InvalidResponseError(
+                            "ChartMgr returned invalid JSON."
+                        ) from exc
+
+        except aiohttp.ClientError as exc:
+            raise ApiClientError(
+                "Unable to communicate with ChartMgr."
+            ) from exc
+
+        if not isinstance(payload, dict):
+            raise InvalidResponseError(
+                "ChartMgr response must be a JSON object."
+            )
+
+        return payload

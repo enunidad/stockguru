@@ -4,6 +4,7 @@ from json import JSONDecodeError
 from typing import Any
 
 import aiohttp
+import math
 
 from .exceptions import (
     DownloaderClientError,
@@ -166,8 +167,38 @@ class DownloaderApiClient:
         Raises:
             InvalidDownloaderResponseError: If the response is invalid or there are no rows returned
         """
+        cleaned_payload = payload.copy()
+
+        data = payload.get("data")
+
+        if not isinstance(data, list):
+            raise InvalidDownloaderResponseError(
+                "Downloader price-history data must be a list."
+            )
+
+        valid_rows = []
+
+        for row in data:
+            if not isinstance(row, dict):
+                continue
+
+            close = row.get("Close")
+
+            try:
+                close_value = float(close)
+            except (TypeError, ValueError):
+                continue
+
+            if not math.isfinite(close_value):
+                continue
+
+            valid_rows.append(row)
+
+        cleaned_payload["data"] = valid_rows
+        cleaned_payload["rows"] = len(valid_rows)
+
         try:
-            history = PriceHistory.from_dict(payload)
+            history = PriceHistory.from_dict(cleaned_payload)
 
         except (KeyError, TypeError, ValueError, ) as exc:
             raise InvalidDownloaderResponseError("Downloader returned an invalid price-history response.") from exc

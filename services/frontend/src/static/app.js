@@ -55,9 +55,11 @@ const resultsSection = document.getElementById(
 const historyDescriptionElement = document.getElementById(
     "history-description",
 );
-const priceTableBody = document.getElementById(
-    "price-table-body",
+const priceHistoryChartElement = document.getElementById(
+    "price-history-chart",
 );
+
+let priceHistoryChart = null;
 
 
 /*
@@ -106,7 +108,7 @@ async function handleStockSearch(event) {
         );
 
         const metadataPromise = loadMetadata(ticker);
-        const historyPromise = loadPrices(ticker);
+        const chartPromise = loadHistoryChart(ticker);
         const analysisPromise = loadAnalysis(ticker);
 
         /*
@@ -120,8 +122,8 @@ async function handleStockSearch(event) {
             }),
         );
 
-        const [history, analysis] = await Promise.all([
-            historyPromise,
+        const [chartData, analysis] = await Promise.all([
+            chartPromise,
             analysisPromise,
         ]);
 
@@ -130,8 +132,11 @@ async function handleStockSearch(event) {
             ticker,
         );
 
-        renderPriceHistory(
-            history,
+        metadataSection.hidden = false;
+        resultsSection.hidden = false;
+
+        renderHistoryChart(
+            chartData,
             metadata,
         );
 
@@ -139,9 +144,6 @@ async function handleStockSearch(event) {
             analysis,
             metadata,
         );
-
-        metadataSection.hidden = false;
-        resultsSection.hidden = false;
 
         setStatus(
             `Showing analysis for ${ticker}.`,
@@ -170,14 +172,14 @@ async function loadMetadata(ticker) {
 }
 
 
-async function loadPrices(ticker) {
+async function loadHistoryChart(ticker) {
     const query = new URLSearchParams({
         period: DEFAULT_PERIOD,
         interval: DEFAULT_INTERVAL,
     });
 
     return fetchJson(
-        `/api/prices/${encodeURIComponent(ticker)}?${query}`,
+        `/api/charting/price_history/${encodeURIComponent(ticker)}?${query}`,
     );
 }
 
@@ -252,126 +254,62 @@ function renderMetadata(metadata, fallbackTicker) {
         "—";
 }
 
+function renderHistoryChart(chartData, metadata) {
+    const data = chartData.data || {};
+    const xValues = data.x_values || [];
+    const yValues = data.y_values || {};
 
-function renderPriceHistory(history, metadata) {
-    const rows = Array.isArray(history.data)
-        ? history.data
-        : [];
+    const openValues = yValues.Open || [];
+    const highValues = yValues.High || [];
+    const lowValues = yValues.Low || [];
+    const closeValues = yValues.Close || [];
 
-    if (rows.length === 0) {
+    if (xValues.length === 0) {
         throw new Error(
-            "The downloader returned no historical price rows.",
+            "ChartMgr returned no historical price data.",
         );
     }
 
+    if (priceHistoryChart !== null) {
+        priceHistoryChart.remove();
+        priceHistoryChart = null;
+    }
+
+    priceHistoryChart = LightweightCharts.createChart(
+        priceHistoryChartElement,
+        {
+            autoSize: true,
+            height: 500,
+        },
+    );
+
+    const candlestickSeries =
+        priceHistoryChart.addSeries(
+            LightweightCharts.CandlestickSeries,
+        );
+
+    const candles = xValues.map(
+        (time, index) => ({
+            time: normalizeChartTime(time),
+            open: Number(openValues[index]),
+            high: Number(highValues[index]),
+            low: Number(lowValues[index]),
+            close: Number(closeValues[index]),
+        }),
+    );
+
+    candlestickSeries.setData(candles);
+
+    priceHistoryChart
+        .timeScale()
+        .fitContent();
+
     const ticker =
-        history.ticker ||
         metadata.ticker ||
         tickerInput.value.trim().toUpperCase();
 
-    const period =
-        history.period ||
-        DEFAULT_PERIOD;
-
-    const interval =
-        history.interval ||
-        DEFAULT_INTERVAL;
-
     historyDescriptionElement.textContent =
-        `${ticker} · ${period} · ${interval} · ` +
-        `${rows.length.toLocaleString("en-CA")} rows`;
-
-    const fragment = document.createDocumentFragment();
-
-    /*
-     * The downloader normally returns oldest-to-newest data.
-     * Reverse a copy so the newest row appears first.
-     */
-    const displayRows = [...rows].reverse();
-
-    for (const row of displayRows) {
-        fragment.appendChild(
-            createPriceRow(
-                row,
-                metadata.currency,
-            ),
-        );
-    }
-
-    priceTableBody.replaceChildren(fragment);
-}
-
-
-function createPriceRow(row, currency) {
-    const tableRow = document.createElement("tr");
-
-    const values = [
-        formatDate(
-            getValue(
-                row,
-                "Date",
-                "date",
-            ),
-        ),
-        formatCurrency(
-            getValue(
-                row,
-                "Open",
-                "open",
-            ),
-            currency,
-        ),
-        formatCurrency(
-            getValue(
-                row,
-                "High",
-                "high",
-            ),
-            currency,
-        ),
-        formatCurrency(
-            getValue(
-                row,
-                "Low",
-                "low",
-            ),
-            currency,
-        ),
-        formatCurrency(
-            getValue(
-                row,
-                "Close",
-                "close",
-            ),
-            currency,
-        ),
-        formatCurrency(
-            getValue(
-                row,
-                "Price",
-                "price",
-                "Average",
-                "average",
-            ),
-            currency,
-        ),
-        formatNumber(
-            getValue(
-                row,
-                "Volume",
-                "volume",
-            ),
-            0,
-        ),
-    ];
-
-    for (const value of values) {
-        const cell = document.createElement("td");
-        cell.textContent = value;
-        tableRow.appendChild(cell);
-    }
-
-    return tableRow;
+        `${ticker} · ${DEFAULT_PERIOD} · ${DEFAULT_INTERVAL}`;
 }
 
 
@@ -445,6 +383,15 @@ function getValue(object, ...keys) {
     return null;
 }
 
+function normalizeChartTime(value) {
+    const time = String(value);
+
+    if (/^\d{4}-\d{2}$/.test(time)) {
+        return `${time}-01`;
+    }
+
+    return time;
+}
 
 function formatCurrency(value, currency) {
     const numericValue = Number(value);
@@ -559,7 +506,10 @@ function hideResults() {
     metadataSection.hidden = true;
     resultsSection.hidden = true;
 
-    priceTableBody.replaceChildren();
+    if (priceHistoryChart !== null) {
+        priceHistoryChart.remove();
+        priceHistoryChart = null;
+    }
 
     companyNameElement.textContent = "—";
     metadataTickerElement.textContent = "—";
