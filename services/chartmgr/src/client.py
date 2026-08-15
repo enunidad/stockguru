@@ -77,7 +77,7 @@ class DownloaderApiClient:
             raise DownloaderClientError("The downloader request failed.") from exc
 
         data = payload.get('data')
-        if not isinstnace(data, list):
+        if not isinstance(data, list):
             raise InvalidDownloaderResponseError("Downloader response 'data' must be a list.")
         
         return payload['data']
