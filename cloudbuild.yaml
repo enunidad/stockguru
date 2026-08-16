@@ -36,6 +36,9 @@ steps:
 
         gcloud "${DEPLOY_ARGS[@]}"
 
+options:
+  logging: CLOUD_LOGGING_ONLY
+  
 substitutions:
   _SERVICE_NAME: ""
   _SERVICE_DIR: ""
