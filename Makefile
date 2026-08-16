@@ -1,6 +1,6 @@
 SVC ?=
 CMD ?=
-SVCS ?= downloader analyzer frontend
+SVCS ?= downloader analyzer chartmgr frontend
 PORT ?= 8000
 MSG ?= dev update
 
@@ -41,9 +41,10 @@ run:
 	$(MAKE) start-web-port PORT=$(PORT)
 
 stop:
-	powershell -NoProfile -Command "$$ports = 8000,8080,8090; foreach ($$port in $$ports) { $$conns = Get-NetTCPConnection -LocalPort $$port -State Listen -ErrorAction SilentlyContinue; foreach ($$conn in $$conns) { if ($$conn.OwningProcess -gt 0) { Stop-Process -Id $$conn.OwningProcess -Force -ErrorAction SilentlyContinue } } }"
+	powershell -NoProfile -Command "$$ports = 8000,8080,8090,8050; foreach ($$port in $$ports) { $$conns = Get-NetTCPConnection -LocalPort $$port -State Listen -ErrorAction SilentlyContinue; foreach ($$conn in $$conns) { if ($$conn.OwningProcess -gt 0) { Stop-Process -Id $$conn.OwningProcess -Force -ErrorAction SilentlyContinue } } }"
 
 push-to-remote:
+	$(MAKE) service SVC=downloader CMD=clean-cache
 	git add .
 	git commit -m '$(MSG)'
 	git push

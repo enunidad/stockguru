@@ -4,14 +4,13 @@ from json import JSONDecodeError
 from typing import Any
 
 import aiohttp
-import math
 
 from .exceptions import (
     DownloaderClientError,
     DownloaderResponseError,
     InvalidDownloaderResponseError,
 )
-from .schemas import PriceHistory
+from .schemas import ChartRequest
 
 
 class DownloaderApiClient:
@@ -30,47 +29,7 @@ class DownloaderApiClient:
         """
         self._base_url = base_url.rstrip("/")
         self._timeout = aiohttp.ClientTimeout(total=timeout_seconds, )
-
-    async def get_price_history(self, ticker: str, *, period: str = "10y", 
-                                interval: str = "1d", aggregate: bool = False, ) -> PriceHistory:
-        """
-        Retrieve historical price data from the downloader service.
-
-        Args:
-            ticker (str): Stock ticker symbol, such as ``AAPL``.
-            period (str): Requested historical period, such as ``1y`` or ``10y``.
-            interval (str): Requested observation interval, such as ``1d``.
-
-        Returns:
-            Parsed and validated price history.
-
-        Raises:
-            DownloaderClientError: If the downloader cannot be reached.
-            DownloaderResponseError: If the downloader returns an unsuccessful HTTP status.
-            InvalidDownloaderResponseError: If the downloader returns malformed or unexpected data.
-        """
-        normalized_ticker = self._normalize_ticker(ticker)
-
-        url = (f"{self._base_url}/history/{normalized_ticker}")
-
-        params = {"period": period, "interval": interval, "aggregate":str(aggregate).lower(), }
-
-        try:
-            async with aiohttp.ClientSession(timeout=self._timeout, ) as session:
-                async with session.get(url, params=params, ) as response:
-                    payload = await self._read_response(response, )
-
-        except aiohttp.ClientConnectionError as exc:
-            raise DownloaderClientError("Unable to connect to the downloader service.") from exc
-
-        except aiohttp.ServerTimeoutError as exc:
-            raise DownloaderClientError("The downloader service timed out.") from exc
-
-        except aiohttp.ClientError as exc:
-            raise DownloaderClientError("The downloader request failed.") from exc
-
-        return self._parse_price_history(payload)
-
+    
     @staticmethod
     def _normalize_ticker(ticker: str, ) -> str:
         """
@@ -94,7 +53,35 @@ class DownloaderApiClient:
             raise InvalidDownloaderResponseError("Ticker cannot be empty.")
 
         return normalized_ticker
+    
+    async def price_history(self, req: ChartRequest) -> list[dict[str, Any]] :
+        normalized_ticker = self._normalize_ticker(req.ticker)
 
+        url = (f"{self._base_url}/history/{normalized_ticker}")
+
+        params = {"period": req.period, "interval": req.interval, 
+                    "aggregate":str(req.aggregate).lower(), "autoadjust": str(req.auto_adjust).lower(), }
+
+        try:
+            async with aiohttp.ClientSession(timeout=self._timeout, ) as session:
+                async with session.get(url, params=params, ) as response:
+                    payload = await self._read_response(response, )
+
+        except aiohttp.ClientConnectionError as exc:
+            raise DownloaderClientError("Unable to connect to the downloader service.") from exc
+
+        except aiohttp.ServerTimeoutError as exc:
+            raise DownloaderClientError("The downloader service timed out.") from exc
+
+        except aiohttp.ClientError as exc:
+            raise DownloaderClientError("The downloader request failed.") from exc
+
+        data = payload.get('data')
+        if not isinstance(data, list):
+            raise InvalidDownloaderResponseError("Downloader response 'data' must be a list.")
+        
+        return payload['data']
+    
     @staticmethod
     async def _read_response(response: aiohttp.ClientResponse, ) -> dict[str, Any]:
         """
@@ -125,7 +112,7 @@ class DownloaderApiClient:
             raise InvalidDownloaderResponseError("Downloader response must be a JSON object.")
 
         return payload
-
+    
     @staticmethod
     async def _read_error_message(response: aiohttp.ClientResponse, ) -> str:
         """
@@ -153,57 +140,19 @@ class DownloaderApiClient:
 
         return "Downloader returned an error."
 
-    @staticmethod
-    def _parse_price_history(payload: dict[str, Any], ) -> PriceHistory:
+class AnalyzerApiClient:
+    """HTTP client for the StocksGuru downloader service."""
+
+    def __init__(self, base_url: str = "http://localhost:8090", *, timeout_seconds: float = 30.0, ) -> None:
         """
-        helper method in converting the dict payload into the dataclass schemas.PriceHistory
+        initializes the connection to analyzer
 
         Args:
-            payload (dict[str, Any]): the payload to be formatted into PriceHistory schema
+            base_url (str): The root url where the downloader api is active
+            timeout_seconds (float): duration to wait for a response
 
         Returns:
-            PriceHistory: The schema for easy parsing downstream. refer to schemas.PriceHistory
-
-        Raises:
-            InvalidDownloaderResponseError: If the response is invalid or there are no rows returned
+            None
         """
-        cleaned_payload = payload.copy()
-
-        data = payload.get("data")
-
-        if not isinstance(data, list):
-            raise InvalidDownloaderResponseError(
-                "Downloader price-history data must be a list."
-            )
-
-        valid_rows = []
-
-        for row in data:
-            if not isinstance(row, dict):
-                continue
-
-            close = row.get("Close")
-
-            try:
-                close_value = float(close)
-            except (TypeError, ValueError):
-                continue
-
-            if not math.isfinite(close_value):
-                continue
-
-            valid_rows.append(row)
-
-        cleaned_payload["data"] = valid_rows
-        cleaned_payload["rows"] = len(valid_rows)
-
-        try:
-            history = PriceHistory.from_dict(cleaned_payload)
-
-        except (KeyError, TypeError, ValueError, ) as exc:
-            raise InvalidDownloaderResponseError("Downloader returned an invalid price-history response.") from exc
-
-        if not history.rows:
-            raise InvalidDownloaderResponseError("Downloader returned no price-history rows.")
-
-        return history
+        self._base_url = base_url.rstrip("/")
+        self._timeout = aiohttp.ClientTimeout(total=timeout_seconds, )

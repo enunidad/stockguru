@@ -1,0 +1,44 @@
+steps:
+  # Build the Docker image
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      - "build"
+      - "-t"
+      - "gcr.io/$PROJECT_ID/${_SERVICE_NAME}:$COMMIT_SHA"
+      - "${_SERVICE_DIR}"
+
+  # Push the Docker image
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      - "push"
+      - "gcr.io/$PROJECT_ID/${_SERVICE_NAME}:$COMMIT_SHA"
+
+  # Deploy to Cloud Run
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    entrypoint: "bash"
+    args:
+      - "-c"
+      - |
+        DEPLOY_ARGS=(
+          run deploy "${_SERVICE_NAME}"
+          --image "gcr.io/$PROJECT_ID/${_SERVICE_NAME}:$COMMIT_SHA"
+          --region "${_REGION}"
+          --platform managed
+        )
+
+        if [[ "${_ALLOW_UNAUTHENTICATED}" == "true" ]]; then
+          DEPLOY_ARGS+=(--allow-unauthenticated)
+        fi
+
+        if [[ -n "${_ENV_VARS}" ]]; then
+          DEPLOY_ARGS+=(--set-env-vars "${_ENV_VARS}")
+        fi
+
+        gcloud "${DEPLOY_ARGS[@]}"
+
+substitutions:
+  _SERVICE_NAME: ""
+  _SERVICE_DIR: ""
+  _REGION: "northamerica-northeast2"
+  _ALLOW_UNAUTHENTICATED: "true"
+  _ENV_VARS: ""
