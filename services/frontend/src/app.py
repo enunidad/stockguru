@@ -5,7 +5,7 @@ from pathlib import Path
 from aiohttp import web
 
 from .client import AnalyzerApiClient, DownloaderApiClient, ChartMgrApiClient
-from .exceptions import ApiClientError, InvalidResponseError
+from .exceptions import ApiClientError, InvalidResponseError, ApiResponseError, ServiceUnavailableError
 from .schemas import PriceHistoryRequest
 
 
@@ -84,7 +84,25 @@ async def get_price_history_chart(request: web.Request, ) -> web.Response:
             status=502,
         )
 
-    except ApiClientError as exc:
+    except ApiResponseError as exc:
+        if 400 <= exc.status < 500:
+            return web.json_response(
+                {
+                    "error": "chartmgr_request_error",
+                    "message": exc.message,
+                },
+                status=exc.status,
+            )
+
+        return web.json_response(
+            {
+                "error": "chartmgr_error",
+                "message": exc.message,
+            },
+            status=502,
+        )
+
+    except ServiceUnavailableError as exc:
         return web.json_response(
             {
                 "error": "chartmgr_unavailable",

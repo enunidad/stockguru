@@ -242,7 +242,7 @@ def test_format_data_builds_chart_response() -> None:
         data,
         ["Date", "Open", "High", "Low", "Close"],
         "candlestick",
-        "Monthly OHLC",
+        "OHLC Price History",
         "Date",
         "Value",
         True,
@@ -250,7 +250,7 @@ def test_format_data_builds_chart_response() -> None:
 
     assert result == ChartResponse(
         chart_type="candlestick",
-        title="Monthly OHLC",
+        title="OHLC Price History",
         xaxis_label="Date",
         yaxis_label="Value",
         legend=True,
@@ -283,7 +283,7 @@ def test_format_data_uses_first_expected_field_for_x_axis() -> None:
         data,
         ["Date", "Volume"],
         "bar",
-        "Monthly Volume",
+        "Volume History",
         "Date",
         "Volume",
         True,
@@ -332,7 +332,7 @@ async def test_get_price_history_returns_candlestick_chart(
 
     assert result == ChartResponse(
         chart_type="candlestick",
-        title="Monthly OHLC",
+        title="OHLC Price History",
         xaxis_label="Date",
         yaxis_label="Value",
         legend=True,
@@ -407,7 +407,7 @@ async def test_get_volume_history_returns_bar_chart(
 
     assert result == ChartResponse(
         chart_type="bar",
-        title="Monthly Volume",
+        title="Volume History",
         xaxis_label="Date",
         yaxis_label="Volume",
         legend=True,

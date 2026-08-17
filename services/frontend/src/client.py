@@ -9,6 +9,7 @@ from .exceptions import (
     ApiClientError,
     InvalidResponseError,
     ServiceUnavailableError,
+    ApiResponseError,
 )
 from .schemas import PriceHistoryRequest
 
@@ -229,9 +230,9 @@ class ChartMgrApiClient:
                     if response.status >= 400:
                         message = await response.text()
 
-                        raise ApiClientError(
-                            f"ChartMgr returned HTTP "
-                            f"{response.status}: {message}"
+                        raise ApiResponseError(
+                            status=response.status,
+                            message=message,
                         )
 
                     try:
@@ -245,7 +246,7 @@ class ChartMgrApiClient:
                         ) from exc
 
         except aiohttp.ClientError as exc:
-            raise ApiClientError(
+            raise ServiceUnavailableError(
                 "Unable to communicate with ChartMgr."
             ) from exc
 

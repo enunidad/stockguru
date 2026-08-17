@@ -14,7 +14,7 @@ def test_chart_request_defaults() -> None:
     request = ChartRequest(ticker="AAPL")
 
     assert request.period == "10y"
-    assert request.interval == "1d"
+    assert request.interval == "1mo"
     assert request.auto_adjust is True
     assert request.aggregate is True
 

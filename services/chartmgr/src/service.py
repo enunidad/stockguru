@@ -55,7 +55,7 @@ class ChartMgrService:
         data = await self._read_history(ticker, expected, period=period, interval=interval, 
                                         auto_adjust=auto_adjust, aggregate=aggregate)
 
-        return self._format_data(data, expected, 'candlestick', 'Monthly OHLC', 'Date', 'Value', True)
+        return self._format_data(data, expected, 'candlestick', 'OHLC Price History', 'Date', 'Value', True)
     
     async def get_volume_history(self, ticker, *, period='10y', interval='1mo', 
                                 auto_adjust=True, aggregate=True) -> ChartResponse:
@@ -63,4 +63,4 @@ class ChartMgrService:
         data = await self._read_history(ticker, expected, period=period, interval=interval, 
                                         auto_adjust=auto_adjust, aggregate=aggregate)
         
-        return self._format_data(data, expected, 'bar', 'Monthly Volume', 'Date', 'Volume', True)
+        return self._format_data(data, expected, 'bar', 'Volume History', 'Date', 'Volume', True)

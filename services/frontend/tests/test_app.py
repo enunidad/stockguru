@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 import src.app as frontend_app
-from src.exceptions import ApiClientError, InvalidResponseError
+from src.exceptions import ApiClientError, InvalidResponseError, ServiceUnavailableError, ApiResponseError
 
 
 @pytest.fixture
@@ -405,7 +405,7 @@ async def test_chart_proxy_returns_503_when_chartmgr_unavailable(
     chartmgr_client,
 ) -> None:
     chartmgr_client.get_history_chart.side_effect = (
-        ApiClientError(
+        ServiceUnavailableError(
             "Unable to communicate with ChartMgr."
         )
     )

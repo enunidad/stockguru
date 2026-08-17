@@ -7,6 +7,8 @@ from src.client import DownloaderApiClient, ChartMgrApiClient
 from src.exceptions import (
     ApiClientError,
     InvalidResponseError,
+    ServiceUnavailableError,
+    ApiResponseError,
 )
 from src.schemas import PriceHistoryRequest
 
@@ -380,11 +382,11 @@ async def test_get_history_chart_raises_for_http_error(
         base_url=str(server.make_url("")).rstrip("/")
     )
 
-    with pytest.raises(
-        ApiClientError,
-        match="ChartMgr returned HTTP 400",
-    ):
+    with pytest.raises(ApiResponseError) as exc_info:
         await client.get_history_chart("BAD")
+
+    assert exc_info.value.status == 400
+    assert "Ticker was invalid." in exc_info.value.message
 
 
 @pytest.mark.asyncio
