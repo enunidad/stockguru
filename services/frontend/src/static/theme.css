@@ -1,0 +1,118 @@
+/* =========================================================
+   StockGuru Theme
+   Global design tokens for the StockGuru frontend.
+   ========================================================= */
+
+:root {
+
+    /* -----------------------------------------------------
+       Core brand palette
+       ----------------------------------------------------- */
+
+    --sg-navy: #0d2b45;
+    --sg-cream: #f7f2e8;
+    --sg-gold: #d8a646;
+    --sg-teal: #2f8f87;
+    --sg-orange: #c9673f;
+
+    /* -----------------------------------------------------
+       Surfaces
+       ----------------------------------------------------- */
+
+    --sg-background: var(--sg-cream);
+    --sg-surface: #fffaf2;
+    --sg-surface-alt: #eee7da;
+
+    /* -----------------------------------------------------
+       Text
+       ----------------------------------------------------- */
+
+    --sg-text: var(--sg-navy);
+    --sg-text-muted: #68777f;
+    --sg-text-inverse: #fffaf2;
+
+    /* -----------------------------------------------------
+       Borders
+       ----------------------------------------------------- */
+
+    --sg-border: #ded5c6;
+    --sg-border-strong: #c7bba9;
+
+    /* -----------------------------------------------------
+       Semantic colours
+       ----------------------------------------------------- */
+
+    --sg-primary: var(--sg-navy);
+    --sg-accent: var(--sg-gold);
+
+    --sg-positive: var(--sg-teal);
+    --sg-negative: var(--sg-orange);
+
+    /* -----------------------------------------------------
+       Chart colours
+       ----------------------------------------------------- */
+
+    --sg-chart-up: var(--sg-teal);
+    --sg-chart-down: var(--sg-orange);
+
+    --sg-chart-average: var(--sg-gold);
+    --sg-chart-secondary: var(--sg-navy);
+
+    --sg-chart-volume-up: #78b9ae;
+    --sg-chart-volume-down: #d99a7d;
+
+    --sg-chart-grid: #e5ded2;
+    --sg-chart-axis: var(--sg-text-muted);
+    --sg-chart-crosshair: #9b8d79;
+
+    /* -----------------------------------------------------
+       Typography
+       ----------------------------------------------------- */
+
+    --sg-font-display:
+        Georgia,
+        "Times New Roman",
+        serif;
+
+    --sg-font-body:
+        Inter,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+
+    --sg-font-mono:
+        "SFMono-Regular",
+        Consolas,
+        "Liberation Mono",
+        monospace;
+
+    /* -----------------------------------------------------
+       Shape
+       ----------------------------------------------------- */
+
+    --sg-radius-small: 6px;
+    --sg-radius: 12px;
+    --sg-radius-large: 18px;
+
+    /* -----------------------------------------------------
+       Spacing
+       ----------------------------------------------------- */
+
+    --sg-space-xs: 4px;
+    --sg-space-sm: 8px;
+    --sg-space-md: 16px;
+    --sg-space-lg: 24px;
+    --sg-space-xl: 32px;
+
+    /* -----------------------------------------------------
+       Shadows
+       ----------------------------------------------------- */
+
+    --sg-shadow-small:
+        0 2px 6px rgba(13, 43, 69, 0.08);
+
+    --sg-shadow:
+        0 4px 12px rgba(13, 43, 69, 0.10);
+}

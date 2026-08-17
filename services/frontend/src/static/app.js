@@ -5,6 +5,30 @@ const DEFAULT_PERIOD = "10y";
 const DEFAULT_INTERVAL = "1mo";
 const DEFAULT_CURRENCY = "USD";
 
+function getThemeColor(variableName) {
+    return getComputedStyle(
+        document.documentElement,
+    )
+        .getPropertyValue(variableName)
+        .trim();
+}
+
+
+function getChartTheme() {
+    return {
+        background: getThemeColor("--sg-surface"),
+        text: getThemeColor("--sg-text"),
+        muted: getThemeColor("--sg-text-muted"),
+        border: getThemeColor("--sg-border"),
+
+        up: getThemeColor("--sg-chart-up"),
+        down: getThemeColor("--sg-chart-down"),
+        average: getThemeColor("--sg-chart-average"),
+        grid: getThemeColor("--sg-chart-grid"),
+        axis: getThemeColor("--sg-chart-axis"),
+    };
+}
+
 
 /*
  * Search elements
@@ -275,17 +299,54 @@ function renderHistoryChart(chartData, metadata) {
         priceHistoryChart = null;
     }
 
+    const theme = getChartTheme();
+
     priceHistoryChart = LightweightCharts.createChart(
         priceHistoryChartElement,
         {
             autoSize: true,
             height: 500,
+
+            layout: {
+                background: {
+                    type: "solid",
+                    color: theme.background,
+                },
+                textColor: theme.text,
+            },
+
+            grid: {
+                vertLines: {
+                    color: theme.grid,
+                },
+                horzLines: {
+                    color: theme.grid,
+                },
+            },
+
+            rightPriceScale: {
+                borderColor: theme.border,
+            },
+
+            timeScale: {
+                borderColor: theme.border,
+            },
         },
     );
 
     const candlestickSeries =
         priceHistoryChart.addSeries(
             LightweightCharts.CandlestickSeries,
+            {
+                upColor: theme.up,
+                downColor: theme.down,
+
+                borderUpColor: theme.up,
+                borderDownColor: theme.down,
+
+                wickUpColor: theme.up,
+                wickDownColor: theme.down,
+            },
         );
 
     const candles = xValues.map(

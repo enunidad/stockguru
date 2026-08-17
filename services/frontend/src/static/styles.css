@@ -9,33 +9,26 @@ body {
 }
 
 body {
-    font-family:
-        Inter,
-        system-ui,
-        -apple-system,
-        BlinkMacSystemFont,
-        "Segoe UI",
-        sans-serif;
-
-    background: #f4f6f8;
-    color: #1f2933;
+    font-family: var(--sg-font-body);
+    background: var(--sg-background);
+    color: var(--sg-text);
 }
 
-.app-header {
+.app-container {
     padding: 28px 32px;
 }
 
-.app-brand h1 {
-    margin: 0;
-    font-size: 2rem;
-    font-weight: 700;
-    line-height: 1.1;
+.app-brand {
+    display: flex;
+    align-items: center;
 }
 
-.app-brand p {
-    margin: 8px 0 0;
-    color: #64748b;
-    font-size: 0.95rem;
+.brand-logo {
+    display: block;
+    width: auto;
+    height: 120px;
+    max-width: 100%;
+    object-fit: contain;
 }
 
 .top-layout {
@@ -56,11 +49,12 @@ body {
 }
 
 .panel {
-    background: #ffffff;
-    border: 1px solid #dfe3e8;
-    border-radius: 12px;
+    background: var(--sg-surface);
+    border: 1px solid var(--sg-border);
+    border-radius: var(--sg-radius);
     padding: 24px;
     margin-bottom: 20px;
+    box-shadow: var(--sg-shadow-small);
 }
 
 .price-history-chart {
@@ -76,17 +70,19 @@ body {
 
 .page-header h1 {
     margin-bottom: 8px;
+    color: var(--sg-primary);
 }
 
 .page-header p {
     margin: 0;
-    color: #637381;
+    color: var(--sg-text-muted);
 }
 
 .search-form label {
     display: block;
     margin-bottom: 8px;
     font-weight: 600;
+    color: var(--sg-text);
 }
 
 .search-controls {
@@ -99,22 +95,42 @@ body {
     flex: 1;
     min-width: 0;
     padding: 12px 14px;
-    border: 1px solid #c4cdd5;
-    border-radius: 8px;
+
+    background: var(--sg-surface);
+    color: var(--sg-text);
+
+    border: 1px solid var(--sg-border-strong);
+    border-radius: var(--sg-radius-small);
+
     font: inherit;
+}
+
+.search-controls input:focus {
+    outline: none;
+    border-color: var(--sg-accent);
 }
 
 .search-controls button {
     padding: 12px 24px;
+
+    background: var(--sg-accent);
+    color: var(--sg-primary);
+
     border: 0;
-    border-radius: 8px;
+    border-radius: var(--sg-radius-small);
+
     font: inherit;
     font-weight: 600;
     cursor: pointer;
 }
 
+.search-controls button:hover {
+    box-shadow: var(--sg-shadow-small);
+}
+
 .status-message {
     margin-bottom: 0;
+    color: var(--sg-text-muted);
 }
 
 .metadata-grid {
@@ -131,7 +147,7 @@ body {
 
 .metadata-label,
 .metric-label {
-    color: #637381;
+    color: var(--sg-text-muted);
     font-size: 0.85rem;
     font-weight: 600;
     text-transform: uppercase;
@@ -158,8 +174,9 @@ body {
     max-height: 600px;
     overflow-y: auto;
     overflow-x: auto;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
+
+    border: 1px solid var(--sg-border);
+    border-radius: var(--sg-radius-small);
 }
 
 .price-table {
@@ -171,7 +188,7 @@ body {
 .price-table th,
 .price-table td {
     padding: 12px 14px;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid var(--sg-border);
     text-align: right;
 }
 
@@ -183,7 +200,10 @@ body {
 .price-table thead th {
     position: sticky;
     top: 0;
-    background: #f8fafc;
+
+    background: var(--sg-surface-alt);
+    color: var(--sg-text);
+
     z-index: 1;
 }
 
@@ -198,8 +218,9 @@ body {
     justify-content: space-between;
     align-items: center;
     gap: 16px;
+
     padding-bottom: 16px;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid var(--sg-border);
 }
 
 .metric-item:last-child {
@@ -207,7 +228,13 @@ body {
     border-bottom: 0;
 }
 
+
+/* ---------------------------------------------------------
+   Responsive
+   --------------------------------------------------------- */
+
 @media (max-width: 850px) {
+
     .top-layout {
         grid-template-columns: 1fr;
     }
@@ -224,7 +251,9 @@ body {
         max-height: 500px;
     }
 }
+
 @media (max-width: 550px) {
+
     .page-container {
         width: min(100% - 20px, 1400px);
         padding: 10px 0;
