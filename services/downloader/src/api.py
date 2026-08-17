@@ -96,7 +96,7 @@ async def get_price_history(request: web.Request) -> web.Response:
             }
         )
 
-    except DownloaderClientError as exc:
+    except (DownloaderClientError, ValueError) as exc:
         return web.json_response({"error": type(exc).__name__, "message": str(exc), }, status=400, )
 
 

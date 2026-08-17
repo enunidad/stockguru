@@ -4,6 +4,18 @@ import pytest
 from src.api import create_app, parse_bool
 from src.exceptions import EmptyDownloadError
 
+class InvalidPeriodDownloaderService:
+    def get_price_history(
+        self,
+        ticker: str,
+        period: str,
+        interval: str,
+        auto_adjust: bool,
+        aggregate: bool,
+    ):
+        raise ValueError(
+            f"Unsupported period '{period}'."
+        )
 
 class FakeDownloaderService:
     def get_price_history(
@@ -228,3 +240,23 @@ def test_parse_bool_invalid_values(
         match="Invalid boolean",
     ):
         parse_bool(value)
+
+@pytest.mark.asyncio
+async def test_get_price_history_returns_400_for_invalid_period(
+    aiohttp_client,
+):
+    app = create_app(
+        service_override=InvalidPeriodDownloaderService()
+    )
+    client = await aiohttp_client(app)
+
+    response = await client.get(
+        "/history/AAPL?period=banana"
+    )
+    body = await response.json()
+
+    assert response.status == 400
+    assert body == {
+        "error": "ValueError",
+        "message": "Unsupported period 'banana'.",
+    }

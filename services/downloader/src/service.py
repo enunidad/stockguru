@@ -26,6 +26,32 @@ class DownloaderService:
                                                 ttl=timedelta(days=1),)
         self.metadata = metadata or TickerMetadataCache(cache_dir=Path("data"),
                                                         ttl=timedelta(days=1),)
+    
+    @staticmethod
+    def _filter_period(
+        data: pd.DataFrame,
+        period: str,
+    ) -> pd.DataFrame:
+        if period == "10y":
+            return data
+
+        supported_periods = {
+            "1y": 1,
+            "2y": 2,
+            "5y": 5,
+        }
+
+        years = supported_periods.get(period)
+
+        if years is None:
+            raise ValueError(
+                f"Unsupported period '{period}'."
+            )
+
+        latest_date = data.index.max()
+        cutoff_date = latest_date - pd.DateOffset(years=years)
+
+        return data.loc[data.index >= cutoff_date]
 
     def get_metadata(self, ticker:str, ) -> dict:
         """
@@ -74,6 +100,8 @@ class DownloaderService:
             data = self.client.download_price_history(request)
             self.cache.save(request,  data)
             to_return = data
+        
+        to_return = self._filter_period(to_return, period, )
         
         if aggregate:
             aggregator = HistoricalAggregator()

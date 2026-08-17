@@ -1,3 +1,4 @@
+import pytest
 import pandas as pd
 
 from src.schemas import PriceHistoryRequest, TickerMetadata
@@ -110,3 +111,86 @@ def test_get_metadata_builds_request_and_calls_client():
 
     assert fake_client.received_metadata_request.ticker == 'AAPL'
     assert result == expected_result
+
+def test_filter_period_returns_requested_years():
+    dates = pd.to_datetime(
+        [
+            "2020-01-01",
+            "2021-01-01",
+            "2022-01-01",
+            "2023-01-01",
+            "2024-01-01",
+            "2025-01-01",
+            "2026-01-01",
+        ],
+        utc=True,
+    )
+
+    data = pd.DataFrame(
+        {
+            "Close": [
+                100.0,
+                110.0,
+                120.0,
+                130.0,
+                140.0,
+                150.0,
+                160.0,
+            ]
+        },
+        index=dates,
+    )
+
+    result = DownloaderService._filter_period(
+        data,
+        "5y",
+    )
+
+    assert result.index.min() == pd.Timestamp(
+        "2021-01-01",
+        tz="UTC",
+    )
+    assert result.index.max() == pd.Timestamp(
+        "2026-01-01",
+        tz="UTC",
+    )
+
+def test_filter_period_10y_returns_full_data():
+    data = pd.DataFrame(
+        {"Close": [100.0, 200.0]},
+        index=pd.to_datetime(
+            [
+                "2016-01-01",
+                "2026-01-01",
+            ],
+            utc=True,
+        ),
+    )
+
+    result = DownloaderService._filter_period(
+        data,
+        "10y",
+    )
+
+    pd.testing.assert_frame_equal(
+        result,
+        data,
+    )
+
+def test_filter_period_rejects_unsupported_period():
+    data = pd.DataFrame(
+        {"Close": [100.0]},
+        index=pd.to_datetime(
+            ["2026-01-01"],
+            utc=True,
+        ),
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="Unsupported period",
+    ):
+        DownloaderService._filter_period(
+            data,
+            "banana",
+        )

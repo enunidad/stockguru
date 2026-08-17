@@ -20,7 +20,7 @@ run-all-tests:
 	@echo ========================================
 	@echo Running all service tests...
 	@echo ========================================
-	@for %%s in (downloader analyzer frontend) do @$(MAKE) test-service SVC=%%s || exit /b 1
+	@for %%s in (downloader analyzer chartmgr frontend) do @$(MAKE) test-service SVC=%%s || exit /b 1
 	@echo.
 	@echo ========================================
 	@echo All tests passed.

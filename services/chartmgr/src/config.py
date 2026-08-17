@@ -11,4 +11,4 @@ PORT = int(os.getenv("PORT", "8050"))
 
 DEFAULT_PERIOD = os.getenv("DEFAULT_PERIOD", "10y", )
 
-DEFAULT_INTERVAL = os.getenv("DEFAULT_INTERVAL", "1d", )
+DEFAULT_INTERVAL = os.getenv("DEFAULT_INTERVAL", "1mo", )
