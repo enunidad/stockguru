@@ -1,196 +1,398 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8">
-
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="UTF-8">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
     <title>StockGuru</title>
 
-    <link rel="stylesheet" href="/static/theme.css">
-    <link rel="stylesheet" href="/static/styles.css">
-
-    <script
-    src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"
-    defer
-    ></script>
-    <script src="/static/app.js" defer ></script>
-
+    <link
+        rel="stylesheet"
+        href="/static/theme.css"
+    >
+    <link
+        rel="stylesheet"
+        href="/static/sidebar.css"
+    >
+    <link
+        rel="stylesheet"
+        href="/static/landing.css"
+    >
 </head>
 
 <body>
-    <main class="app-container">
-        <header class="app-brand">
-            <img
-                src="/static/logo.png"
-                alt="StockGuru"
-                class="brand-logo"
+
+<div class="app-shell">
+
+    <!-- ==================================================
+         Sidebar
+         ================================================== -->
+    <aside
+        class="app-sidebar"
+        id="app-sidebar"
+    >
+
+        <div class="sidebar-header">
+
+            <a
+                href="/"
+                class="sidebar-brand"
+                aria-label="StockGuru home"
             >
-        </header>
-
-        <div class="top-layout">
-
-            <section class="search-panel panel">
-                <form
-                    id="stock-form"
-                    class="search-form"
-                >
-                    <label for="ticker">
-                        Ticker symbol
-                    </label>
-
-                    <div class="search-controls">
-                        <input
-                            id="ticker"
-                            name="ticker"
-                            type="text"
-                            placeholder="For example: AAPL or BCE.TO"
-                            autocomplete="off"
-                            required
-                        >
-
-                        <button type="submit">
-                            Analyze
-                        </button>
-                    </div>
-                </form>
-
-                <p
-                    id="status"
-                    class="status-message"
-                    aria-live="polite"
-                ></p>
-            </section>
-
-
-            <section
-                id="metadata-section"
-                class="metadata-panel panel"
-                hidden
-            >
-                <div class="section-heading">
-                    <h2>Company Information</h2>
+                <div class="brand-mark">
+                    SG
                 </div>
 
-                <div class="metadata-grid">
-                    <div class="metadata-item">
-                        <span class="metadata-label">
-                            Company
-                        </span>
+                <span class="brand-name">
+                    StockGuru
+                </span>
+            </a>
 
-                        <span id="company-name">
-                            —
-                        </span>
-                    </div>
-
-                    <div class="metadata-item">
-                        <span class="metadata-label">
-                            Ticker
-                        </span>
-
-                        <span id="metadata-ticker">
-                            —
-                        </span>
-                    </div>
-
-                    <div class="metadata-item">
-                        <span class="metadata-label">
-                            Currency
-                        </span>
-
-                        <span id="currency">
-                            —
-                        </span>
-                    </div>
-
-                    <div class="metadata-item">
-                        <span class="metadata-label">
-                            Exchange
-                        </span>
-
-                        <span id="exchange">
-                            —
-                        </span>
-                    </div>
-
-                    <div class="metadata-item">
-                        <span class="metadata-label">
-                            Country
-                        </span>
-
-                        <span id="country">
-                            —
-                        </span>
-                    </div>
-
-                    <div class="metadata-item">
-                        <span class="metadata-label">
-                            Industry
-                        </span>
-
-                        <span id="industry">
-                            —
-                        </span>
-                    </div>
-                </div>
-            </section>
+            <button
+                class="sidebar-toggle"
+                id="sidebar-toggle"
+                type="button"
+                aria-label="Toggle navigation"
+                aria-expanded="true"
+            >
+                <span class="toggle-icon">
+                    ☰
+                </span>
+            </button>
 
         </div>
 
-        <section id="results-section" class="results-layout" hidden>
-            <div class="history-panel panel">
-                <div class="section-heading">
-                    <div>
-                        <h2>Historical Prices</h2>
 
-                        <p id="history-description">Historical market data</p>
-                    </div>
-                </div>
+        <nav class="sidebar-nav">
 
-                <div
-                    id="price-history-chart"
-                    class="price-history-chart"
-                ></div>
+            <a
+                href="/"
+                class="sidebar-link active"
+                title="Home"
+            >
+                <span class="sidebar-icon">
+                   ⌂
+                </span>
+
+                <span class="sidebar-label">
+                    Home
+                </span>
+            </a>
+
+
+            <a
+                href="/analyzer"
+                class="sidebar-link"
+                title="Stock Analyzer"
+            >
+                <span class="sidebar-icon">
+                    ↗
+                </span>
+
+                <span class="sidebar-label">
+                    Stock Analyzer
+                </span>
+            </a>
+
+
+            <div
+                class="sidebar-link disabled"
+                title="Portfolio Forecaster — Coming soon"
+            >
+                <span class="sidebar-icon">
+                    ◴
+                </span>
+
+                <span class="sidebar-label">
+                    Portfolio Forecaster
+                </span>
+
+                <span class="sidebar-badge">
+                    Soon
+                </span>
             </div>
 
-            <aside class="metrics-panel panel">
-                <div class="section-heading">
-                    <h2>Metrics</h2>
+        </nav>
+
+        <div class="sidebar-bottom">
+
+            <a
+                href="/about"
+                class="sidebar-link sidebar-secondary-link"
+                title="About"
+            >
+                <span class="sidebar-icon">
+                    i
+                </span>
+
+                <span class="sidebar-label">
+                    About
+                </span>
+            </a>
+
+            <a
+                href="/docs"
+                class="sidebar-link sidebar-secondary-link"
+                title="Docs"
+            >
+                <span class="sidebar-icon">
+                    ≡
+                </span>
+
+                <span class="sidebar-label">
+                    Docs
+                </span>
+            </a>
+
+        </div>
+
+    </aside>
+
+
+    <!-- ==================================================
+         Main page
+         ================================================== -->
+    <main class="landing-main">
+
+        <section class="landing-hero">
+
+            <div class="hero-content">
+
+                <p class="hero-eyebrow">
+                    INVEST WITH PERSPECTIVE
+                </p>
+
+                <h1>
+                    Understand the past.
+                    <span>Explore the future.</span>
+                </h1>
+
+                <p class="hero-description">
+                    StockGuru gives you simple tools to explore
+                    historical performance, understand investment
+                    behaviour, and test what your portfolio could
+                    look like over time.
+                </p>
+
+                <div class="hero-actions">
+
+                    <a
+                        href="/analyzer"
+                        class="button button-primary"
+                    >
+                        Analyze a Stock
+                    </a>
+
+                    <span
+                        class="button button-secondary disabled-button"
+                        title="Coming soon"
+                    >
+                        Forecast a Portfolio
+                    </span>
+
                 </div>
 
-                <div class="metrics-list">
-                    <div class="metric-item">
-                        <span class="metric-label">CAGR</span>
+            </div>
 
-                        <strong id="cagr"> — </strong>
+
+            <div
+                class="hero-visual"
+                aria-hidden="true"
+            >
+
+                <div class="hero-chart-card">
+
+                    <div class="hero-chart-header">
+                        <div>
+                            <span class="chart-label">
+                                Portfolio perspective
+                            </span>
+
+                            <strong>
+                                Think beyond today's price.
+                            </strong>
+                        </div>
                     </div>
 
-                    <div class="metric-item">
-                        <span class="metric-label">Volatility</span>
 
-                        <strong id="volatility"> — </strong>
+                    <div class="mock-chart">
+
+                        <div class="chart-grid-line line-1"></div>
+                        <div class="chart-grid-line line-2"></div>
+                        <div class="chart-grid-line line-3"></div>
+
+                        <svg
+                            viewBox="0 0 500 220"
+                            preserveAspectRatio="none"
+                        >
+                            <path
+                                class="chart-area"
+                                d="
+                                    M0,190
+                                    C60,180 80,155 130,160
+                                    C180,165 190,115 245,125
+                                    C300,135 320,75 365,90
+                                    C410,105 425,45 500,35
+                                    L500,220
+                                    L0,220
+                                    Z
+                                "
+                            />
+
+                            <path
+                                class="chart-line"
+                                d="
+                                    M0,190
+                                    C60,180 80,155 130,160
+                                    C180,165 190,115 245,125
+                                    C300,135 320,75 365,90
+                                    C410,105 425,45 500,35
+                                "
+                            />
+                        </svg>
+
                     </div>
 
-                    <div class="metric-item">
-                        <span class="metric-label">Max Drawdown</span>
-
-                        <strong id="max-drawdown"> — </strong>
-                    </div>
-
-                    <div class="metric-item">
-                        <span class="metric-label">50-Day SMA</span>
-
-                        <strong id="sma"> — </strong>
-                    </div>
-
-                    <div class="metric-item">
-                        <span class="metric-label">200-Day SMA</span>
-
-                        <strong id="ema"> — </strong>
-                    </div>
                 </div>
-            </aside>
+
+            </div>
+
         </section>
+
+
+        <!-- ==================================================
+             Tools
+             ================================================== -->
+        <section class="tools-section">
+
+            <div class="section-heading">
+
+                <p class="section-eyebrow">
+                    STOCKGURU TOOLS
+                </p>
+
+                <h2>
+                    What would you like to explore?
+                </h2>
+
+            </div>
+
+
+            <div class="tool-grid">
+
+                <a
+                    href="/analyzer"
+                    class="tool-card"
+                >
+
+                    <div class="tool-card-icon analyzer-icon">
+                        ↗
+                    </div>
+
+                    <div class="tool-card-content">
+
+                        <span class="tool-status available">
+                            Available
+                        </span>
+
+                        <h3>
+                            Stock Analyzer
+                        </h3>
+
+                        <p>
+                            Explore historical price performance,
+                            company information, long-term returns,
+                            volatility, drawdowns, and price trends.
+                        </p>
+
+                        <span class="tool-link">
+                            Analyze a stock →
+                        </span>
+
+                    </div>
+
+                </a>
+
+
+                <div class="tool-card upcoming">
+
+                    <div class="tool-card-icon forecaster-icon">
+                        ◴
+                    </div>
+
+                    <div class="tool-card-content">
+
+                        <span class="tool-status coming-soon">
+                            Coming soon
+                        </span>
+
+                        <h3>
+                            Portfolio Forecaster
+                        </h3>
+
+                        <p>
+                            Build a portfolio, add recurring
+                            contributions and dividends, then explore
+                            how those investments could grow over time.
+                        </p>
+
+                        <span class="tool-link muted">
+                            In development
+                        </span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <section class="landing-message">
+
+            <div class="message-content">
+
+                <span class="message-accent">
+                    StockGuru
+                </span>
+
+                <h2>
+                    Numbers are more useful when you understand
+                    where they came from.
+                </h2>
+
+                <p>
+                    StockGuru is designed to make investment data
+                    easier to explore — not to tell you what to buy.
+                </p>
+
+            </div>
+
+        </section>
+
+
+        <footer class="landing-footer">
+
+            <span>
+                StockGuru
+            </span>
+
+            <p>
+                Historical results and projections are informational
+                only and do not guarantee future performance.
+            </p>
+
+        </footer>
+
     </main>
+
+</div>
+
+<script src="/static/sidebar.js"></script>
+
 </body>
 </html>

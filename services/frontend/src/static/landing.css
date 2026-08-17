@@ -1,0 +1,607 @@
+/* =========================================================
+   StocksGuru Landing Page
+   ========================================================= */
+
+* {
+    box-sizing: border-box;
+}
+
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+}
+
+
+body {
+    background: var(--sg-background);
+    color: var(--sg-text);
+
+    font-family:
+        Inter,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+}
+
+
+.landing-main {
+    flex: 1;
+
+    min-width: 0;
+
+    overflow-x: hidden;
+}
+
+
+/* =========================================================
+   Hero
+   ========================================================= */
+
+.landing-hero {
+    min-height: 560px;
+
+    display: grid;
+    grid-template-columns:
+        minmax(0, 1fr)
+        minmax(420px, 0.9fr);
+
+    align-items: center;
+
+    gap: 70px;
+
+    padding:
+        80px
+        clamp(40px, 7vw, 110px);
+
+    background:
+        linear-gradient(
+            135deg,
+            var(--sg-cream) 0%,
+            var(--sg-surface) 100%
+        );
+
+    border-bottom:
+        1px solid var(--sg-border);
+}
+
+
+.hero-content {
+    max-width: 680px;
+}
+
+
+.hero-eyebrow,
+.section-eyebrow {
+    margin: 0 0 14px;
+
+    color: var(--sg-teal);
+
+    font-size: 12px;
+    font-weight: 800;
+
+    letter-spacing: 0.15em;
+}
+
+
+.hero-content h1 {
+    margin: 0;
+
+    font-size:
+        clamp(42px, 5vw, 68px);
+
+    line-height: 1.03;
+
+    letter-spacing: -0.045em;
+}
+
+
+.hero-content h1 span {
+    display: block;
+
+    color: var(--sg-teal);
+}
+
+
+.hero-description {
+    max-width: 640px;
+
+    margin: 26px 0 0;
+
+    color: var(--sg-text-muted);
+
+    font-size: 18px;
+    line-height: 1.7;
+}
+
+
+.hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+
+    gap: 12px;
+
+    margin-top: 34px;
+}
+
+
+/* =========================================================
+   Buttons
+   ========================================================= */
+
+.button {
+    min-height: 48px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 0 22px;
+
+    border-radius: 8px;
+
+    text-decoration: none;
+
+    font-size: 14px;
+    font-weight: 700;
+}
+
+
+.button-primary {
+    background: var(--sg-navy);
+    color: white;
+}
+
+
+.button-primary:hover {
+    opacity: 0.92;
+}
+
+
+.button-secondary {
+    border: 1px solid var(--sg-border-strong);
+
+    background: transparent;
+
+    color: var(--sg-text-muted);
+}
+
+
+.disabled-button {
+    cursor: default;
+}
+
+
+/* =========================================================
+   Hero chart
+   ========================================================= */
+
+.hero-visual {
+    width: 100%;
+}
+
+
+.hero-chart-card {
+    padding: 24px;
+
+    border:
+        1px solid var(--sg-border);
+
+    border-radius: 18px;
+
+    background: var(--sg-surface);
+
+    box-shadow:
+        0 24px 50px
+        rgba(16, 42, 58, 0.10);
+}
+
+
+.hero-chart-header {
+    display: flex;
+    justify-content: space-between;
+
+    margin-bottom: 22px;
+}
+
+
+.chart-label {
+    display: block;
+
+    margin-bottom: 5px;
+
+    color: var(--sg-text-muted);
+
+    font-size: 12px;
+}
+
+
+.hero-chart-header strong {
+    font-size: 18px;
+}
+
+
+.mock-chart {
+    height: 240px;
+
+    position: relative;
+
+    overflow: hidden;
+
+    border-radius: 10px;
+
+    background:
+        linear-gradient(
+            180deg,
+            rgba(79, 143, 136, 0.04),
+            rgba(79, 143, 136, 0.01)
+        );
+}
+
+
+.mock-chart svg {
+    width: 100%;
+    height: 100%;
+
+    position: absolute;
+
+    inset: 0;
+}
+
+
+.chart-grid-line {
+    height: 1px;
+
+    position: absolute;
+
+    left: 0;
+    right: 0;
+
+    background: var(--sg-border);
+}
+
+
+.line-1 {
+    top: 25%;
+}
+
+
+.line-2 {
+    top: 50%;
+}
+
+
+.line-3 {
+    top: 75%;
+}
+
+
+.chart-line {
+    fill: none;
+
+    stroke: var(--sg-teal);
+
+    stroke-width: 4;
+}
+
+
+.chart-area {
+    fill: rgba(79, 143, 136, 0.12);
+}
+
+
+/* =========================================================
+   Tool section
+   ========================================================= */
+
+.tools-section {
+    max-width: 1240px;
+
+    margin: 0 auto;
+
+    padding:
+        80px
+        clamp(28px, 6vw, 80px);
+}
+
+
+.section-heading {
+    max-width: 700px;
+
+    margin-bottom: 32px;
+}
+
+
+.section-heading h2 {
+    margin: 0;
+
+    font-size: 34px;
+
+    letter-spacing: -0.025em;
+}
+
+
+.tool-grid {
+    display: grid;
+
+    grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+
+    gap: 22px;
+}
+
+
+.tool-card {
+    min-height: 260px;
+
+    display: flex;
+
+    gap: 22px;
+
+    padding: 30px;
+
+    border:
+        1px solid var(--sg-border);
+
+    border-radius: 14px;
+
+    background: var(--sg-surface);
+
+    color: inherit;
+    text-decoration: none;
+
+    transition:
+        transform 0.18s ease,
+        box-shadow 0.18s ease,
+        border-color 0.18s ease;
+}
+
+
+a.tool-card:hover {
+    transform: translateY(-3px);
+
+    border-color: var(--sg-teal);
+
+    box-shadow:
+        0 16px 30px
+        rgba(16, 42, 58, 0.08);
+}
+
+
+.tool-card.upcoming {
+    background: var(--sg-surface-alt);
+}
+
+
+.tool-card-icon {
+    width: 52px;
+    height: 52px;
+
+    flex-shrink: 0;
+
+    display: grid;
+    place-items: center;
+
+    border-radius: 12px;
+
+    font-size: 25px;
+    font-weight: 700;
+}
+
+
+.analyzer-icon {
+    background:
+        rgba(79, 143, 136, 0.14);
+
+    color: var(--sg-teal);
+}
+
+
+.forecaster-icon {
+    background:
+        rgba(217, 164, 65, 0.16);
+
+    color: var(--sg-gold);
+}
+
+
+.tool-status {
+    display: inline-block;
+
+    margin-bottom: 10px;
+
+    font-size: 11px;
+    font-weight: 800;
+
+    letter-spacing: 0.07em;
+
+    text-transform: uppercase;
+}
+
+
+.tool-status.available {
+    color: var(--sg-teal);
+}
+
+
+.tool-status.coming-soon {
+    color: var(--sg-gold);
+}
+
+
+.tool-card h3 {
+    margin: 0 0 12px;
+
+    font-size: 24px;
+}
+
+
+.tool-card p {
+    margin: 0;
+
+    color: var(--sg-text-muted);
+
+    line-height: 1.65;
+}
+
+
+.tool-link {
+    display: block;
+
+    margin-top: 24px;
+
+    color: var(--sg-teal);
+
+    font-weight: 700;
+}
+
+
+.tool-link.muted {
+    color: var(--sg-text-muted);
+}
+
+
+/* =========================================================
+   Message
+   ========================================================= */
+
+.landing-message {
+    padding:
+        70px
+        clamp(30px, 8vw, 120px);
+
+    background: var(--sg-navy);
+
+    color: white;
+}
+
+
+.message-content {
+    max-width: 780px;
+}
+
+
+.message-accent {
+    color: var(--sg-gold);
+
+    font-size: 13px;
+    font-weight: 800;
+
+    letter-spacing: 0.08em;
+}
+
+
+.message-content h2 {
+    margin: 12px 0;
+
+    font-size: 34px;
+
+    line-height: 1.2;
+}
+
+
+.message-content p {
+    margin: 0;
+
+    max-width: 630px;
+
+    color: rgba(255, 255, 255, 0.65);
+
+    line-height: 1.6;
+}
+
+
+/* =========================================================
+   Footer
+   ========================================================= */
+
+.landing-footer {
+    display: flex;
+    justify-content: space-between;
+
+    gap: 30px;
+
+    padding:
+        24px
+        clamp(30px, 6vw, 80px);
+
+    border-top:
+        1px solid var(--sg-border);
+
+    color: var(--sg-text-muted);
+
+    font-size: 12px;
+}
+
+
+.landing-footer span {
+    color: var(--sg-text);
+
+    font-weight: 700;
+}
+
+
+.landing-footer p {
+    margin: 0;
+}
+
+
+/* =========================================================
+   Responsive
+   ========================================================= */
+
+@media (max-width: 1050px) {
+
+    .landing-hero {
+        grid-template-columns: 1fr;
+
+        gap: 45px;
+    }
+
+    .hero-visual {
+        max-width: 700px;
+    }
+
+}
+
+
+@media (max-width: 760px) {
+
+    .landing-hero {
+        padding:
+            50px
+            24px;
+
+        min-height: auto;
+    }
+
+    .hero-content h1 {
+        font-size: 40px;
+    }
+
+    .hero-description {
+        font-size: 16px;
+    }
+
+    .tools-section {
+        padding:
+            55px
+            24px;
+    }
+
+    .tool-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .tool-card {
+        padding: 24px;
+    }
+
+    .landing-footer {
+        flex-direction: column;
+    }
+
+}

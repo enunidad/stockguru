@@ -44,6 +44,20 @@ async def index(
 
     return web.FileResponse(index_path)
 
+async def analyzer(
+    request: web.Request,
+) -> web.FileResponse:
+    """Serve the stock analyzer page."""
+
+    analyzer_path = TEMPLATES_DIR / "analyzer.html"
+
+    if not analyzer_path.exists():
+        raise web.HTTPInternalServerError(
+            reason=f"Frontend template not found: {analyzer_path}"
+        )
+
+    return web.FileResponse(analyzer_path)
+
 
 async def health(
     request: web.Request,
@@ -276,6 +290,11 @@ def create_app(
     app.router.add_get(
         "/",
         index,
+    )
+
+    app.router.add_get(
+    "/analyzer",
+    analyzer,
     )
 
     app.router.add_get(
