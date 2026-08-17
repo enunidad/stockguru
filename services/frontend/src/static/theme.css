@@ -9,11 +9,11 @@
        Core brand palette
        ----------------------------------------------------- */
 
-    --sg-navy: #102a3a;
-    --sg-cream: #f5f0e6;
-    --sg-gold: #d9a441;
-    --sg-teal: #4f8f88;
-    --sg-orange: #d66b3d;
+    --sg-navy: #0d2b45;
+    --sg-cream: #f7f2e8;
+    --sg-gold: #d8a646;
+    --sg-teal: #2f8f87;
+    --sg-orange: #c9673f;
 
     /* -----------------------------------------------------
        Surfaces
@@ -28,15 +28,15 @@
        ----------------------------------------------------- */
 
     --sg-text: var(--sg-navy);
-    --sg-text-muted: #69757c;
-    --sg-text-inverse: #ffffff;
+    --sg-text-muted: #68777f;
+    --sg-text-inverse: #fffaf2;
 
     /* -----------------------------------------------------
        Borders
        ----------------------------------------------------- */
 
-    --sg-border: #d9d1c4;
-    --sg-border-strong: #b9afa0;
+    --sg-border: #ded5c6;
+    --sg-border-strong: #c7bba9;
 
     /* -----------------------------------------------------
        Semantic colours
@@ -54,17 +54,39 @@
 
     --sg-chart-up: var(--sg-teal);
     --sg-chart-down: var(--sg-orange);
+
     --sg-chart-average: var(--sg-gold);
-    --sg-chart-grid: #ddd6ca;
+    --sg-chart-secondary: var(--sg-navy);
+
+    --sg-chart-volume-up: #78b9ae;
+    --sg-chart-volume-down: #d99a7d;
+
+    --sg-chart-grid: #e5ded2;
     --sg-chart-axis: var(--sg-text-muted);
+    --sg-chart-crosshair: #9b8d79;
 
     /* -----------------------------------------------------
        Typography
        ----------------------------------------------------- */
 
-    --sg-font-display: Georgia, "Times New Roman", serif;
-    --sg-font-body: Arial, Helvetica, sans-serif;
-    --sg-font-mono: "Courier New", monospace;
+    --sg-font-display:
+        Georgia,
+        "Times New Roman",
+        serif;
+
+    --sg-font-body:
+        Inter,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+
+    --sg-font-mono:
+        "SFMono-Regular",
+        Consolas,
+        "Liberation Mono",
+        monospace;
 
     /* -----------------------------------------------------
        Shape
@@ -88,6 +110,9 @@
        Shadows
        ----------------------------------------------------- */
 
-    --sg-shadow-small: 0 2px 6px rgba(16, 42, 58, 0.08);
-    --sg-shadow: 0 4px 12px rgba(16, 42, 58, 0.10);
+    --sg-shadow-small:
+        0 2px 6px rgba(13, 43, 69, 0.08);
+
+    --sg-shadow:
+        0 4px 12px rgba(13, 43, 69, 0.10);
 }
