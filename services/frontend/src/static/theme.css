@@ -1,0 +1,93 @@
+/* =========================================================
+   StockGuru Theme
+   Global design tokens for the StockGuru frontend.
+   ========================================================= */
+
+:root {
+
+    /* -----------------------------------------------------
+       Core brand palette
+       ----------------------------------------------------- */
+
+    --sg-navy: #102a3a;
+    --sg-cream: #f5f0e6;
+    --sg-gold: #d9a441;
+    --sg-teal: #4f8f88;
+    --sg-orange: #d66b3d;
+
+    /* -----------------------------------------------------
+       Surfaces
+       ----------------------------------------------------- */
+
+    --sg-background: var(--sg-cream);
+    --sg-surface: #fffaf2;
+    --sg-surface-alt: #eee7da;
+
+    /* -----------------------------------------------------
+       Text
+       ----------------------------------------------------- */
+
+    --sg-text: var(--sg-navy);
+    --sg-text-muted: #69757c;
+    --sg-text-inverse: #ffffff;
+
+    /* -----------------------------------------------------
+       Borders
+       ----------------------------------------------------- */
+
+    --sg-border: #d9d1c4;
+    --sg-border-strong: #b9afa0;
+
+    /* -----------------------------------------------------
+       Semantic colours
+       ----------------------------------------------------- */
+
+    --sg-primary: var(--sg-navy);
+    --sg-accent: var(--sg-gold);
+
+    --sg-positive: var(--sg-teal);
+    --sg-negative: var(--sg-orange);
+
+    /* -----------------------------------------------------
+       Chart colours
+       ----------------------------------------------------- */
+
+    --sg-chart-up: var(--sg-teal);
+    --sg-chart-down: var(--sg-orange);
+    --sg-chart-average: var(--sg-gold);
+    --sg-chart-grid: #ddd6ca;
+    --sg-chart-axis: var(--sg-text-muted);
+
+    /* -----------------------------------------------------
+       Typography
+       ----------------------------------------------------- */
+
+    --sg-font-display: Georgia, "Times New Roman", serif;
+    --sg-font-body: Arial, Helvetica, sans-serif;
+    --sg-font-mono: "Courier New", monospace;
+
+    /* -----------------------------------------------------
+       Shape
+       ----------------------------------------------------- */
+
+    --sg-radius-small: 6px;
+    --sg-radius: 12px;
+    --sg-radius-large: 18px;
+
+    /* -----------------------------------------------------
+       Spacing
+       ----------------------------------------------------- */
+
+    --sg-space-xs: 4px;
+    --sg-space-sm: 8px;
+    --sg-space-md: 16px;
+    --sg-space-lg: 24px;
+    --sg-space-xl: 32px;
+
+    /* -----------------------------------------------------
+       Shadows
+       ----------------------------------------------------- */
+
+    --sg-shadow-small: 0 2px 6px rgba(16, 42, 58, 0.08);
+    --sg-shadow: 0 4px 12px rgba(16, 42, 58, 0.10);
+}
