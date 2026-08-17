@@ -58,6 +58,20 @@ async def analyzer(
 
     return web.FileResponse(analyzer_path)
 
+async def forecaster(
+    request: web.Request,
+) -> web.FileResponse:
+    """Serve the portfolio forecaster page."""
+
+    page_path = TEMPLATES_DIR / "forecaster.html"
+
+    if not page_path.exists():
+        raise web.HTTPInternalServerError(
+            reason=f"Frontend template not found: {page_path}"
+        )
+
+    return web.FileResponse(page_path)
+
 
 async def health(
     request: web.Request,
@@ -295,6 +309,11 @@ def create_app(
     app.router.add_get(
     "/analyzer",
     analyzer,
+    )
+
+    app.router.add_get(
+        "/forecaster",
+        forecaster,
     )
 
     app.router.add_get(

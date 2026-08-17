@@ -1,0 +1,868 @@
+/* =========================================================
+   Portfolio Forecaster
+   ========================================================= */
+
+* {
+    box-sizing: border-box;
+}
+
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+}
+
+
+body {
+    background: var(--sg-background);
+    color: var(--sg-text);
+
+    font-family:
+        Inter,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+}
+
+
+button,
+input,
+select {
+    font: inherit;
+}
+
+
+.forecaster-main {
+    flex: 1;
+
+    min-width: 0;
+
+    padding:
+        42px
+        clamp(28px, 4vw, 64px)
+        60px;
+}
+
+
+/* ---------------------------------------------------------
+   Page header
+   --------------------------------------------------------- */
+
+.forecaster-header {
+    max-width: 1400px;
+
+    margin: 0 auto 22px;
+}
+
+
+.page-eyebrow {
+    margin: 0 0 6px;
+
+    color: var(--sg-teal);
+
+    font-size: 12px;
+    font-weight: 800;
+
+    letter-spacing: 0.12em;
+}
+
+
+.forecaster-header h1 {
+    margin: 0;
+
+    font-size: 38px;
+    letter-spacing: -0.03em;
+}
+
+
+.page-description {
+    margin: 8px 0 0;
+
+    color: var(--sg-text-muted);
+
+    font-size: 16px;
+}
+
+
+/* ---------------------------------------------------------
+   Notice
+   --------------------------------------------------------- */
+
+.forecast-notice {
+    max-width: 1400px;
+
+    margin: 0 auto 24px;
+
+    display: flex;
+    align-items: flex-start;
+
+    gap: 12px;
+
+    padding: 14px 16px;
+
+    border:
+        1px solid var(--sg-border);
+
+    border-radius: 10px;
+
+    background: var(--sg-surface);
+}
+
+
+.notice-icon {
+    width: 26px;
+    height: 26px;
+
+    flex-shrink: 0;
+
+    display: grid;
+    place-items: center;
+
+    border-radius: 50%;
+
+    background: var(--sg-teal);
+    color: white;
+
+    font-size: 13px;
+    font-weight: 800;
+}
+
+
+.forecast-notice strong {
+    display: block;
+
+    margin-bottom: 3px;
+}
+
+
+.forecast-notice p {
+    margin: 0;
+
+    color: var(--sg-text-muted);
+
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+
+/* ---------------------------------------------------------
+   Main layout
+   --------------------------------------------------------- */
+
+.forecaster-layout {
+    max-width: 1400px;
+
+    margin: 0 auto;
+
+    display: grid;
+
+    grid-template-columns:
+        360px
+        minmax(0, 1fr);
+
+    gap: 20px;
+
+    align-items: start;
+}
+
+
+.forecast-controls,
+.forecast-results {
+    display: flex;
+    flex-direction: column;
+
+    gap: 18px;
+}
+
+
+.forecast-panel {
+    padding: 22px;
+
+    border:
+        1px solid var(--sg-border);
+
+    border-radius: 12px;
+
+    background: var(--sg-surface);
+}
+
+
+/* ---------------------------------------------------------
+   Panel headings
+   --------------------------------------------------------- */
+
+.panel-heading,
+.section-title,
+.projection-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 15px;
+}
+
+
+.panel-heading {
+    margin-bottom: 20px;
+}
+
+
+.panel-heading > div {
+    display: flex;
+    align-items: center;
+
+    gap: 9px;
+}
+
+
+.panel-number {
+    width: 24px;
+    height: 24px;
+
+    display: grid;
+    place-items: center;
+
+    border-radius: 50%;
+
+    background: var(--sg-navy);
+    color: white;
+
+    font-size: 12px;
+    font-weight: 700;
+}
+
+
+.panel-heading h2,
+.section-title h2 {
+    margin: 0;
+
+    font-size: 17px;
+}
+
+
+.small-action-button {
+    border:
+        1px solid var(--sg-teal);
+
+    border-radius: 7px;
+
+    background: transparent;
+    color: var(--sg-teal);
+
+    padding: 7px 10px;
+
+    cursor: pointer;
+
+    font-size: 12px;
+    font-weight: 700;
+}
+
+
+/* ---------------------------------------------------------
+   Portfolio mode
+   --------------------------------------------------------- */
+
+.portfolio-mode {
+    display: grid;
+
+    grid-template-columns:
+        1fr 1fr;
+
+    margin-bottom: 18px;
+
+    border:
+        1px solid var(--sg-border);
+
+    border-radius: 8px;
+
+    overflow: hidden;
+}
+
+
+.mode-button {
+    min-height: 38px;
+
+    border: 0;
+
+    background: transparent;
+    color: var(--sg-text-muted);
+
+    cursor: pointer;
+
+    font-size: 12px;
+    font-weight: 600;
+}
+
+
+.mode-button.active {
+    background: var(--sg-teal);
+    color: white;
+}
+
+
+/* ---------------------------------------------------------
+   Holdings
+   --------------------------------------------------------- */
+
+.holding-header,
+.holding-row {
+    display: grid;
+
+    grid-template-columns:
+        0.8fr
+        0.7fr
+        1fr;
+
+    gap: 8px;
+}
+
+
+.holding-header {
+    margin-bottom: 6px;
+
+    color: var(--sg-text-muted);
+
+    font-size: 10px;
+    font-weight: 700;
+}
+
+
+.holding-row input,
+.split-field input,
+.split-field select,
+.allocation-row input,
+.input-suffix input,
+.full-field {
+    width: 100%;
+
+    min-height: 38px;
+
+    border:
+        1px solid var(--sg-border);
+
+    border-radius: 7px;
+
+    background: var(--sg-background);
+    color: var(--sg-text);
+
+    padding: 8px 10px;
+}
+
+
+.field-help {
+    margin: 8px 0 0;
+
+    color: var(--sg-text-muted);
+
+    font-size: 10px;
+    line-height: 1.4;
+}
+
+
+/* ---------------------------------------------------------
+   Form controls
+   --------------------------------------------------------- */
+
+.field-label {
+    display: block;
+
+    margin: 17px 0 7px;
+
+    font-size: 12px;
+    font-weight: 700;
+}
+
+
+.split-field {
+    display: grid;
+
+    grid-template-columns:
+        1fr 120px;
+
+    gap: 8px;
+}
+
+
+.allocation-row {
+    display: grid;
+
+    grid-template-columns:
+        1fr
+        85px
+        20px;
+
+    gap: 7px;
+
+    align-items: center;
+
+    font-size: 13px;
+}
+
+
+.percentage-symbol {
+    color: var(--sg-text-muted);
+}
+
+
+.input-suffix {
+    display: grid;
+
+    grid-template-columns:
+        1fr auto;
+
+    align-items: center;
+
+    gap: 10px;
+}
+
+
+.input-suffix span {
+    color: var(--sg-text-muted);
+
+    font-size: 12px;
+}
+
+
+.toggle-row {
+    display: flex;
+
+    align-items: center;
+
+    gap: 9px;
+
+    margin-top: 17px;
+
+    font-size: 12px;
+
+    cursor: pointer;
+}
+
+
+.toggle-row input {
+    accent-color: var(--sg-teal);
+}
+
+
+.run-button {
+    width: 100%;
+
+    min-height: 46px;
+
+    margin-top: 22px;
+
+    border: 0;
+
+    border-radius: 8px;
+
+    background: var(--sg-teal);
+    color: white;
+
+    cursor: pointer;
+
+    font-weight: 700;
+}
+
+
+.run-button:hover {
+    opacity: 0.92;
+}
+
+
+/* ---------------------------------------------------------
+   Projection
+   --------------------------------------------------------- */
+
+.projection-panel {
+    min-height: 410px;
+}
+
+
+.result-label {
+    display: block;
+
+    margin-bottom: 8px;
+
+    color: var(--sg-text-muted);
+
+    font-size: 11px;
+    font-weight: 800;
+
+    letter-spacing: 0.08em;
+}
+
+
+.projected-value {
+    font-size: 42px;
+    font-weight: 800;
+
+    letter-spacing: -0.04em;
+}
+
+
+.projection-heading p {
+    margin: 7px 0 0;
+
+    color: var(--sg-text-muted);
+
+    font-size: 12px;
+}
+
+
+.time-horizon {
+    text-align: right;
+
+    font-size: 11px;
+}
+
+
+.time-horizon span {
+    display: block;
+
+    margin-bottom: 5px;
+
+    color: var(--sg-text-muted);
+}
+
+
+.forecast-chart-placeholder {
+    margin-top: 25px;
+}
+
+
+.placeholder-chart {
+    height: 250px;
+
+    position: relative;
+
+    display: grid;
+    place-items: center;
+
+    overflow: hidden;
+
+    border:
+        1px dashed var(--sg-border-strong);
+
+    border-radius: 9px;
+
+    color: var(--sg-text-muted);
+
+    font-size: 12px;
+
+    background:
+        linear-gradient(
+            180deg,
+            rgba(79, 143, 136, 0.04),
+            transparent
+        );
+}
+
+
+.placeholder-line {
+    height: 1px;
+
+    position: absolute;
+
+    left: 0;
+    right: 0;
+
+    background: var(--sg-border);
+}
+
+
+.line-one {
+    top: 25%;
+}
+
+
+.line-two {
+    top: 50%;
+}
+
+
+.line-three {
+    top: 75%;
+}
+
+
+/* ---------------------------------------------------------
+   Result grids
+   --------------------------------------------------------- */
+
+.results-grid {
+    display: grid;
+
+    grid-template-columns:
+        1.2fr
+        0.8fr;
+
+    gap: 18px;
+}
+
+
+/* ---------------------------------------------------------
+   Donut
+   --------------------------------------------------------- */
+
+.donut-placeholder {
+    display: flex;
+
+    align-items: center;
+
+    gap: 30px;
+
+    padding-top: 25px;
+}
+
+
+.donut-ring {
+    width: 150px;
+    height: 150px;
+
+    flex-shrink: 0;
+
+    display: grid;
+    place-items: center;
+
+    border-radius: 50%;
+
+    background:
+        conic-gradient(
+            var(--sg-teal) 0 25%,
+            var(--sg-gold) 25% 50%,
+            var(--sg-orange) 50% 75%,
+            var(--sg-navy) 75% 100%
+        );
+
+    position: relative;
+}
+
+
+.donut-ring::after {
+    content: "";
+
+    width: 92px;
+    height: 92px;
+
+    position: absolute;
+
+    border-radius: 50%;
+
+    background: var(--sg-surface);
+}
+
+
+.donut-ring span {
+    position: relative;
+
+    z-index: 1;
+
+    font-weight: 700;
+}
+
+
+.source-list {
+    flex: 1;
+
+    display: flex;
+    flex-direction: column;
+
+    gap: 13px;
+}
+
+
+.source-list > div {
+    display: grid;
+
+    grid-template-columns:
+        12px
+        1fr
+        auto;
+
+    gap: 8px;
+
+    align-items: center;
+
+    color: var(--sg-text-muted);
+
+    font-size: 11px;
+}
+
+
+.source-dot {
+    width: 9px;
+    height: 9px;
+
+    border-radius: 50%;
+}
+
+
+.source-dot.invested {
+    background: var(--sg-navy);
+}
+
+
+.source-dot.contributions {
+    background: var(--sg-teal);
+}
+
+
+.source-dot.growth {
+    background: var(--sg-gold);
+}
+
+
+.source-dot.dividends {
+    background: var(--sg-orange);
+}
+
+
+/* ---------------------------------------------------------
+   Key numbers
+   --------------------------------------------------------- */
+
+.key-number-list {
+    margin-top: 18px;
+}
+
+
+.key-number-list > div {
+    display: flex;
+
+    justify-content: space-between;
+
+    gap: 20px;
+
+    padding: 13px 0;
+
+    border-bottom:
+        1px solid var(--sg-border);
+
+    font-size: 12px;
+}
+
+
+.key-number-list > div:last-child {
+    border-bottom: 0;
+}
+
+
+.key-number-list span {
+    color: var(--sg-text-muted);
+}
+
+
+/* ---------------------------------------------------------
+   Table
+   --------------------------------------------------------- */
+
+.table-wrapper {
+    margin-top: 16px;
+
+    overflow-x: auto;
+}
+
+
+table {
+    width: 100%;
+
+    border-collapse: collapse;
+
+    font-size: 11px;
+}
+
+
+th,
+td {
+    padding: 12px 10px;
+
+    text-align: right;
+
+    border-bottom:
+        1px solid var(--sg-border);
+}
+
+
+th:first-child,
+td:first-child {
+    text-align: left;
+}
+
+
+th {
+    color: var(--sg-text-muted);
+
+    font-size: 10px;
+}
+
+
+tbody td[colspan] {
+    padding: 30px;
+
+    text-align: center;
+
+    color: var(--sg-text-muted);
+}
+
+
+/* =========================================================
+   Responsive
+   ========================================================= */
+
+@media (max-width: 1100px) {
+
+    .forecaster-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .forecast-controls {
+        display: grid;
+
+        grid-template-columns:
+            repeat(3, minmax(0, 1fr));
+    }
+
+}
+
+
+@media (max-width: 850px) {
+
+    .forecast-controls,
+    .results-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .donut-placeholder {
+        align-items: flex-start;
+
+        flex-direction: column;
+    }
+
+}
+
+
+@media (max-width: 600px) {
+
+    .forecaster-main {
+        padding:
+            28px
+            18px
+            40px;
+    }
+
+    .forecaster-header h1 {
+        font-size: 30px;
+    }
+
+    .projection-heading {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .time-horizon {
+        text-align: left;
+    }
+
+}
