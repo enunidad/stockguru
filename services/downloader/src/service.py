@@ -10,7 +10,7 @@ from datetime import timedelta
 from .client import YahooFinanceClient
 from .aggregator import HistoricalAggregator
 from .schemas import PriceHistoryRequest
-from .cache import PriceHistoryCache, TickerMetadataCache
+from .cache import PriceHistoryCache, TickerMetadataCache, DividendCache
 
 
 class DownloaderService:
@@ -26,6 +26,8 @@ class DownloaderService:
                                                 ttl=timedelta(days=1),)
         self.metadata = metadata or TickerMetadataCache(cache_dir=Path("data"),
                                                         ttl=timedelta(days=1),)
+        self.divedend = dividend or DividendCache(cache_dir=Path("data"),
+                                                    ttl=timedelta(days=1), )
     
     @staticmethod
     def _filter_period(
@@ -52,6 +54,42 @@ class DownloaderService:
         cutoff_date = latest_date - pd.DateOffset(years=years)
 
         return data.loc[data.index >= cutoff_date]
+    
+    @staticmethod
+    def _filter_dividend_period(
+        dividends: pd.Series,
+        period: str,
+    ) -> pd.Series:
+        """
+        Filter dividend history to the requested period.
+        """
+        if dividends.empty:
+            return dividends
+
+        supported_periods = {
+            "1y": 1,
+            "2y": 2,
+            "5y": 5,
+            "10y": 10,
+        }
+
+        years = supported_periods.get(period)
+
+        if years is None:
+            raise ValueError(
+                f"Unsupported period '{period}'."
+            )
+
+        latest_date = dividends.index.max()
+
+        cutoff_date = (
+            latest_date
+            - pd.DateOffset(years=years)
+        )
+
+        return dividends.loc[
+            dividends.index >= cutoff_date
+        ]
 
     def get_metadata(self, ticker:str, ) -> dict:
         """
@@ -108,3 +146,35 @@ class DownloaderService:
             to_return = aggregator.aggregate(df=to_return, interval=interval)
 
         return to_return
+    
+    def get_dividends(
+        self,
+        ticker: str,
+        period: str = "10y",
+    ) -> pd.Series:
+        """
+        Retrieve dividend history for a ticker.
+
+        Cached dividend history is preferred. If no cached
+        history exists, download it and populate the cache.
+        """
+        ticker = ticker.strip().upper()
+
+        dividends = self.cache.get_dividends(
+            ticker
+        )
+
+        if dividends is None:
+            dividends = self.client.download_dividends(
+                ticker
+            )
+
+            self.cache.save_dividends(
+                ticker,
+                dividends,
+            )
+
+        return self._filter_dividend_period(
+            dividends,
+            period,
+        )

@@ -166,6 +166,20 @@ class YahooFinanceClient:
             raise InvalidTickerError(f"Downloaded data for ticker '{symbol}' is missing Close price.")
 
         return data
+    
+    def download_dividends(self, ticker: str, ) -> pd.Series:
+        ticker = self._normalize_ticker(ticker)
+
+        try:
+            stock = yf.Ticker(ticker)
+            dividends = stock.get_dividends()
+
+        except Exception as exc:
+            raise DownloaderClientError(
+                f"Failed to download dividends for ticker '{ticker}'."
+            ) from exc
+
+        return dividends
 
     @staticmethod
     def _normalize_ticker(ticker: str) -> str:
