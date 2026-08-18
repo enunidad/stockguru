@@ -152,6 +152,62 @@ class DownloaderApiClient:
             )
 
         return close_value
+    
+    async def get_dividends(
+        self,
+        ticker: str,
+        *,
+        period: str = "10y",
+    ) -> list[dict[str, Any]]:
+        """
+        Retrieve dividend history from Downloader.
+        """
+        normalized_ticker = self._normalize_ticker(ticker)
+
+        url = (
+            f"{self._base_url}/dividends/"
+            f"{normalized_ticker}"
+        )
+
+        params = {
+            "period": period,
+        }
+
+        try:
+            async with aiohttp.ClientSession(
+                timeout=self._timeout,
+            ) as session:
+                async with session.get(
+                    url,
+                    params=params,
+                ) as response:
+                    payload = await self._read_response(
+                        response
+                    )
+
+        except aiohttp.ClientConnectionError as exc:
+            raise DownloaderClientError(
+                "Unable to connect to the Downloader service."
+            ) from exc
+
+        except aiohttp.ServerTimeoutError as exc:
+            raise DownloaderClientError(
+                "The Downloader service timed out."
+            ) from exc
+
+        except aiohttp.ClientError as exc:
+            raise DownloaderClientError(
+                "The Downloader request failed."
+            ) from exc
+
+        data = payload.get("data")
+
+        if not isinstance(data, list):
+            raise InvalidDownloaderResponseError(
+                "Downloader dividend response 'data' must be a list."
+            )
+
+        return data
 
     @staticmethod
     async def _read_response(

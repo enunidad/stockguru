@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import math
 from typing import Any
+import pandas as pd
 
 from .client import (
     AnalyzerApiClient,
@@ -197,8 +198,19 @@ class ForecasterService:
             )
         )
 
-        annual_growth_rate = (
-            self._read_cagr(analysis)
+        dividend_data = (
+            await self._downloader_client.get_dividends(
+                ticker,
+                period="10y",
+            )
+        )
+
+        annual_growth_rate = self._read_cagr(
+            analysis
+        )
+
+        annual_dividend = self._read_annual_dividend(
+            dividend_data
         )
 
         monthly_growth_rate = (
@@ -223,6 +235,8 @@ class ForecasterService:
 
         return {
             "ticker": ticker,
+            "shares": holding.shares,
+            "latest_close": latest_close,
             "initial_investment": initial_investment,
             "current_value": current_value,
             "value": current_value,
@@ -233,6 +247,7 @@ class ForecasterService:
             "dividends": 0.0,
             "annual_growth_rate": annual_growth_rate,
             "monthly_growth_rate": monthly_growth_rate,
+            "annual_dividend": annual_dividend,
         }
 
     @staticmethod
@@ -283,6 +298,82 @@ class ForecasterService:
                 2,
             ),
         )
+    
+    @staticmethod
+    def _read_annual_dividend(
+        dividend_data: list[dict[str, Any]],
+    ) -> float:
+        """
+        Calculate trailing 12-month dividends per share.
+
+        Returns zero for stocks with no dividend history.
+        """
+        if not dividend_data:
+            return 0.0
+
+        parsed: list[tuple[pd.Timestamp, float]] = []
+
+        for record in dividend_data:
+            if not isinstance(record, dict):
+                raise ValueError(
+                    "Dividend record must be an object."
+                )
+
+            date = record.get("Date")
+            amount = record.get("Dividend")
+
+            if date is None or amount is None:
+                raise ValueError(
+                    "Dividend record must contain Date and Dividend."
+                )
+
+            try:
+                parsed_date = pd.to_datetime(
+                    date,
+                    utc=True,
+                )
+
+                parsed_amount = float(amount)
+
+            except (TypeError, ValueError) as exc:
+                raise ValueError(
+                    "Dividend record contains invalid data."
+                ) from exc
+
+            if not math.isfinite(parsed_amount):
+                raise ValueError(
+                    "Dividend amount must be finite."
+                )
+
+            if parsed_amount < 0:
+                raise ValueError(
+                    "Dividend amount cannot be negative."
+                )
+
+            parsed.append(
+                (
+                    parsed_date,
+                    parsed_amount,
+                )
+            )
+
+        latest_date = max(
+            date
+            for date, _ in parsed
+        )
+
+        cutoff_date = (
+            latest_date
+            - pd.DateOffset(years=1)
+        )
+
+        annual_dividend = sum(
+            amount
+            for date, amount in parsed
+            if date > cutoff_date
+        )
+
+        return annual_dividend
 
     @staticmethod
     def _read_cagr(
