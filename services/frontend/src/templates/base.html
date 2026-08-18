@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1"
+    >
+
+    <title>
+        {% block title %}
+        StockGuru
+        {% endblock %}
+    </title>
+
+    <!-- ==================================================
+         Shared Styles
+         ================================================== -->
+
+    <link
+        rel="stylesheet"
+        href="/static/theme.css"
+    >
+
+    <link
+        rel="stylesheet"
+        href="/static/sidebar.css"
+    >
+
+    <!-- ==================================================
+         Page-Specific Styles
+         ================================================== -->
+
+    {% block page_styles %}
+    {% endblock %}
+
+    <!-- ==================================================
+         Page-Specific Head Content
+         ================================================== -->
+
+    {% block head %}
+    {% endblock %}
+
+</head>
+
+
+<body>
+
+<div class="app-shell">
+
+    <!-- ==================================================
+         Sidebar
+         ================================================== -->
+
+    <aside
+        class="app-sidebar"
+        id="app-sidebar"
+    >
+
+        <div class="sidebar-header">
+
+            <a
+                href="/"
+                class="sidebar-brand"
+                aria-label="StockGuru home"
+            >
+                <div class="brand-mark">
+                    SG
+                </div>
+
+                <span class="brand-name">
+                    StockGuru
+                </span>
+            </a>
+
+            <button
+                class="sidebar-toggle"
+                id="sidebar-toggle"
+                type="button"
+                aria-label="Toggle navigation"
+                aria-expanded="true"
+            >
+                <span class="toggle-icon">
+                    ☰
+                </span>
+            </button>
+
+        </div>
+
+
+        <!-- ==================================================
+             Primary Navigation
+             ================================================== -->
+
+        <nav class="sidebar-nav">
+
+            <a
+                href="/"
+                class="sidebar-link{% if active_page == 'home' %} active{% endif %}"
+                title="Home"
+            >
+                <span class="sidebar-icon">
+                    ⌂
+                </span>
+
+                <span class="sidebar-label">
+                    Home
+                </span>
+            </a>
+
+
+            <a
+                href="/analyzer"
+                class="sidebar-link{% if active_page == 'analyzer' %} active{% endif %}"
+                title="Stock Analyzer"
+            >
+                <span class="sidebar-icon">
+                    ↗
+                </span>
+
+                <span class="sidebar-label">
+                    Stock Analyzer
+                </span>
+            </a>
+
+
+            <a
+                href="/forecaster"
+                class="sidebar-link{% if active_page == 'forecaster' %} active{% endif %}"
+                title="Portfolio Forecaster"
+            >
+                <span class="sidebar-icon">
+                    ◴
+                </span>
+
+                <span class="sidebar-label">
+                    Portfolio Forecaster
+                </span>
+            </a>
+
+        </nav>
+
+
+        <!-- ==================================================
+             Secondary Navigation
+             ================================================== -->
+
+        <div class="sidebar-bottom">
+
+            <a
+                href="/about"
+                class="sidebar-link sidebar-secondary-link{% if active_page == 'about' %} active{% endif %}"
+                title="About"
+            >
+                <span class="sidebar-icon">
+                    i
+                </span>
+
+                <span class="sidebar-label">
+                    About
+                </span>
+            </a>
+
+
+            <a
+                href="/docs"
+                class="sidebar-link sidebar-secondary-link{% if active_page == 'docs' %} active{% endif %}"
+                title="Docs"
+            >
+                <span class="sidebar-icon">
+                    ≡
+                </span>
+
+                <span class="sidebar-label">
+                    Docs
+                </span>
+            </a>
+
+        </div>
+
+    </aside>
+
+
+    <!-- ==================================================
+         Page Content
+         ================================================== -->
+
+    {% block content %}
+    {% endblock %}
+
+</div>
+
+
+<!-- ==================================================
+     Shared JavaScript
+     ================================================== -->
+
+<script
+    src="/static/sidebar.js"
+    defer
+></script>
+
+
+<!-- ==================================================
+     Page-Specific JavaScript
+     ================================================== -->
+
+{% block page_scripts %}
+{% endblock %}
+
+</body>
+
+</html>

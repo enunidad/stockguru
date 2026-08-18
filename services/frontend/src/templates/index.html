@@ -1,398 +1,296 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+{% extends "base.html" %}
 
-    <title>StockGuru</title>
 
-    <link
-        rel="stylesheet"
-        href="/static/theme.css"
-    >
-    <link
-        rel="stylesheet"
-        href="/static/sidebar.css"
-    >
-    <link
-        rel="stylesheet"
-        href="/static/landing.css"
-    >
-</head>
+{% block title %}
+StockGuru
+{% endblock %}
 
-<body>
 
-<div class="app-shell">
+{% block page_styles %}
+
+<link
+    rel="stylesheet"
+    href="/static/landing.css"
+>
+
+{% endblock %}
+
+
+{% block content %}
+
+<!-- ==================================================
+     Landing Page
+     ================================================== -->
+
+<main class="landing-main">
 
     <!-- ==================================================
-         Sidebar
+         Hero
          ================================================== -->
-    <aside
-        class="app-sidebar"
-        id="app-sidebar"
-    >
 
-        <div class="sidebar-header">
+    <section class="landing-hero">
 
-            <a
-                href="/"
-                class="sidebar-brand"
-                aria-label="StockGuru home"
-            >
-                <div class="brand-mark">
-                    SG
-                </div>
+        <div class="hero-content">
 
-                <span class="brand-name">
-                    StockGuru
-                </span>
-            </a>
+            <p class="hero-eyebrow">
+                INVEST WITH PERSPECTIVE
+            </p>
 
-            <button
-                class="sidebar-toggle"
-                id="sidebar-toggle"
-                type="button"
-                aria-label="Toggle navigation"
-                aria-expanded="true"
-            >
-                <span class="toggle-icon">
-                    ☰
-                </span>
-            </button>
+            <h1>
+                Understand the past.
+                <span>Explore the future.</span>
+            </h1>
 
-        </div>
+            <p class="hero-description">
+                StockGuru gives you simple tools to explore
+                historical performance, understand investment
+                behaviour, and test what your portfolio could
+                look like over time.
+            </p>
 
 
-        <nav class="sidebar-nav">
-
-            <a
-                href="/"
-                class="sidebar-link active"
-                title="Home"
-            >
-                <span class="sidebar-icon">
-                   ⌂
-                </span>
-
-                <span class="sidebar-label">
-                    Home
-                </span>
-            </a>
-
-
-            <a
-                href="/analyzer"
-                class="sidebar-link"
-                title="Stock Analyzer"
-            >
-                <span class="sidebar-icon">
-                    ↗
-                </span>
-
-                <span class="sidebar-label">
-                    Stock Analyzer
-                </span>
-            </a>
-
-
-            <a
-                href="/forecaster"
-                class="sidebar-link"
-                title="Portfolio Forecaster"
-            >
-                <span class="sidebar-icon">
-                    ◴
-                </span>
-
-                <span class="sidebar-label">
-                    Portfolio Forecaster
-                </span>
-            </a>
-
-        </nav>
-
-        <div class="sidebar-bottom">
-
-            <a
-                href="/about"
-                class="sidebar-link sidebar-secondary-link"
-                title="About"
-            >
-                <span class="sidebar-icon">
-                    i
-                </span>
-
-                <span class="sidebar-label">
-                    About
-                </span>
-            </a>
-
-            <a
-                href="/docs"
-                class="sidebar-link sidebar-secondary-link"
-                title="Docs"
-            >
-                <span class="sidebar-icon">
-                    ≡
-                </span>
-
-                <span class="sidebar-label">
-                    Docs
-                </span>
-            </a>
-
-        </div>
-
-    </aside>
-
-
-    <!-- ==================================================
-         Main page
-         ================================================== -->
-    <main class="landing-main">
-
-        <section class="landing-hero">
-
-            <div class="hero-content">
-
-                <p class="hero-eyebrow">
-                    INVEST WITH PERSPECTIVE
-                </p>
-
-                <h1>
-                    Understand the past.
-                    <span>Explore the future.</span>
-                </h1>
-
-                <p class="hero-description">
-                    StockGuru gives you simple tools to explore
-                    historical performance, understand investment
-                    behaviour, and test what your portfolio could
-                    look like over time.
-                </p>
-
-                <div class="hero-actions">
-
-                    <a
-                        href="/analyzer"
-                        class="button button-primary"
-                    >
-                        Analyze a Stock
-                    </a>
-
-                    <a
-                        href="/forecaster"
-                        class="button button-secondary"
-                    >
-                        Forecast a Portfolio
-                    </a>
-
-                </div>
-
-            </div>
-
-
-            <div
-                class="hero-visual"
-                aria-hidden="true"
-            >
-
-                <div class="hero-chart-card">
-
-                    <div class="hero-chart-header">
-                        <div>
-                            <span class="chart-label">
-                                Portfolio perspective
-                            </span>
-
-                            <strong>
-                                Think beyond today's price.
-                            </strong>
-                        </div>
-                    </div>
-
-
-                    <div class="mock-chart">
-
-                        <div class="chart-grid-line line-1"></div>
-                        <div class="chart-grid-line line-2"></div>
-                        <div class="chart-grid-line line-3"></div>
-
-                        <svg
-                            viewBox="0 0 500 220"
-                            preserveAspectRatio="none"
-                        >
-                            <path
-                                class="chart-area"
-                                d="
-                                    M0,190
-                                    C60,180 80,155 130,160
-                                    C180,165 190,115 245,125
-                                    C300,135 320,75 365,90
-                                    C410,105 425,45 500,35
-                                    L500,220
-                                    L0,220
-                                    Z
-                                "
-                            />
-
-                            <path
-                                class="chart-line"
-                                d="
-                                    M0,190
-                                    C60,180 80,155 130,160
-                                    C180,165 190,115 245,125
-                                    C300,135 320,75 365,90
-                                    C410,105 425,45 500,35
-                                "
-                            />
-                        </svg>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        </section>
-
-
-        <!-- ==================================================
-             Tools
-             ================================================== -->
-        <section class="tools-section">
-
-            <div class="section-heading">
-
-                <p class="section-eyebrow">
-                    STOCKGURU TOOLS
-                </p>
-
-                <h2>
-                    What would you like to explore?
-                </h2>
-
-            </div>
-
-
-            <div class="tool-grid">
+            <div class="hero-actions">
 
                 <a
                     href="/analyzer"
-                    class="tool-card"
+                    class="button button-primary"
                 >
-
-                    <div class="tool-card-icon analyzer-icon">
-                        ↗
-                    </div>
-
-                    <div class="tool-card-content">
-
-                        <span class="tool-status available">
-                            Available
-                        </span>
-
-                        <h3>
-                            Stock Analyzer
-                        </h3>
-
-                        <p>
-                            Explore historical price performance,
-                            company information, long-term returns,
-                            volatility, drawdowns, and price trends.
-                        </p>
-
-                        <span class="tool-link">
-                            Analyze a stock →
-                        </span>
-
-                    </div>
-
+                    Analyze a Stock
                 </a>
-
 
                 <a
                     href="/forecaster"
-                    class="tool-card"
+                    class="button button-secondary"
                 >
-
-                    <div class="tool-card-icon forecaster-icon">
-                        ◴
-                    </div>
-
-                    <div class="tool-card-content">
-
-                        <span class="tool-status available">
-                            Available
-                        </span>
-
-                        <h3>
-                            Portfolio Forecaster
-                        </h3>
-
-                        <p>
-                            Build a portfolio, add recurring
-                            contributions and dividends, then explore
-                            how those investments could grow over time.
-                        </p>
-
-                        <span class="tool-link">
-                            Build a forecast →
-                        </span>
-
-                    </div>
-
+                    Forecast a Portfolio
                 </a>
 
             </div>
 
-        </section>
+        </div>
 
 
-        <section class="landing-message">
+        <!-- ==================================================
+             Hero Visual
+             ================================================== -->
 
-            <div class="message-content">
+        <div
+            class="hero-visual"
+            aria-hidden="true"
+        >
 
-                <span class="message-accent">
-                    StockGuru
-                </span>
+            <div class="hero-chart-card">
 
-                <h2>
-                    Numbers are more useful when you understand
-                    where they came from.
-                </h2>
+                <div class="hero-chart-header">
 
-                <p>
-                    StockGuru is designed to make investment data
-                    easier to explore — not to tell you what to buy.
-                </p>
+                    <div>
+
+                        <span class="chart-label">
+                            Portfolio perspective
+                        </span>
+
+                        <strong>
+                            Think beyond today's price.
+                        </strong>
+
+                    </div>
+
+                </div>
+
+
+                <div class="mock-chart">
+
+                    <div class="chart-grid-line line-1"></div>
+
+                    <div class="chart-grid-line line-2"></div>
+
+                    <div class="chart-grid-line line-3"></div>
+
+
+                    <svg
+                        viewBox="0 0 500 220"
+                        preserveAspectRatio="none"
+                    >
+
+                        <path
+                            class="chart-area"
+                            d="
+                                M0,190
+                                C60,180 80,155 130,160
+                                C180,165 190,115 245,125
+                                C300,135 320,75 365,90
+                                C410,105 425,45 500,35
+                                L500,220
+                                L0,220
+                                Z
+                            "
+                        />
+
+                        <path
+                            class="chart-line"
+                            d="
+                                M0,190
+                                C60,180 80,155 130,160
+                                C180,165 190,115 245,125
+                                C300,135 320,75 365,90
+                                C410,105 425,45 500,35
+                            "
+                        />
+
+                    </svg>
+
+                </div>
 
             </div>
 
-        </section>
+        </div>
+
+    </section>
 
 
-        <footer class="landing-footer">
+    <!-- ==================================================
+         Tools
+         ================================================== -->
 
-            <span>
+    <section class="tools-section">
+
+        <div class="section-heading">
+
+            <p class="section-eyebrow">
+                STOCKGURU TOOLS
+            </p>
+
+            <h2>
+                What would you like to explore?
+            </h2>
+
+        </div>
+
+
+        <div class="tool-grid">
+
+            <!-- Stock Analyzer -->
+
+            <a
+                href="/analyzer"
+                class="tool-card"
+            >
+
+                <div class="tool-card-icon analyzer-icon">
+                    ↗
+                </div>
+
+
+                <div class="tool-card-content">
+
+                    <span class="tool-status available">
+                        Available
+                    </span>
+
+                    <h3>
+                        Stock Analyzer
+                    </h3>
+
+                    <p>
+                        Explore historical price performance,
+                        company information, long-term returns,
+                        volatility, drawdowns, and price trends.
+                    </p>
+
+                    <span class="tool-link">
+                        Analyze a stock →
+                    </span>
+
+                </div>
+
+            </a>
+
+
+            <!-- Portfolio Forecaster -->
+
+            <a
+                href="/forecaster"
+                class="tool-card"
+            >
+
+                <div class="tool-card-icon forecaster-icon">
+                    ◴
+                </div>
+
+
+                <div class="tool-card-content">
+
+                    <span class="tool-status available">
+                        Available
+                    </span>
+
+                    <h3>
+                        Portfolio Forecaster
+                    </h3>
+
+                    <p>
+                        Build a portfolio, add recurring
+                        contributions and dividends, then explore
+                        how those investments could grow over time.
+                    </p>
+
+                    <span class="tool-link">
+                        Build a forecast →
+                    </span>
+
+                </div>
+
+            </a>
+
+        </div>
+
+    </section>
+
+
+    <!-- ==================================================
+         Message
+         ================================================== -->
+
+    <section class="landing-message">
+
+        <div class="message-content">
+
+            <span class="message-accent">
                 StockGuru
             </span>
 
+            <h2>
+                Numbers are more useful when you understand
+                where they came from.
+            </h2>
+
             <p>
-                Historical results and projections are informational
-                only and do not guarantee future performance.
+                StockGuru is designed to make investment data
+                easier to explore — not to tell you what to buy.
             </p>
 
-        </footer>
+        </div>
 
-    </main>
+    </section>
 
-</div>
 
-<script src="/static/sidebar.js"></script>
+    <!-- ==================================================
+         Footer
+         ================================================== -->
 
-</body>
-</html>
+    <footer class="landing-footer">
+
+        <span>
+            StockGuru
+        </span>
+
+        <p>
+            Historical results and projections are informational
+            only and do not guarantee future performance.
+        </p>
+
+    </footer>
+
+</main>
+
+{% endblock %}

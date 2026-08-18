@@ -3,6 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 
 from aiohttp import web
+import aiohttp_jinja2
+import jinja2
 
 from .client import AnalyzerApiClient, DownloaderApiClient, ChartMgrApiClient
 from .exceptions import ApiClientError, InvalidResponseError, ApiResponseError, ServiceUnavailableError
@@ -30,47 +32,34 @@ CHARTMGR_CLIENT_KEY = web.AppKey(
 )
 
 
+@aiohttp_jinja2.template("index.html")
 async def index(
     request: web.Request,
-) -> web.FileResponse:
+) -> dict:
     """Serve the main frontend page."""
+    return {
+        "active_page": "home",
+    }
 
-    index_path = TEMPLATES_DIR / "index.html"
 
-    if not index_path.exists():
-        raise web.HTTPInternalServerError(
-            reason=f"Frontend template not found: {index_path}"
-        )
-
-    return web.FileResponse(index_path)
-
+@aiohttp_jinja2.template("analyzer.html")
 async def analyzer(
     request: web.Request,
-) -> web.FileResponse:
+) -> dict:
     """Serve the stock analyzer page."""
+    return {
+        "active_page": "analyzer",
+    }
 
-    analyzer_path = TEMPLATES_DIR / "analyzer.html"
 
-    if not analyzer_path.exists():
-        raise web.HTTPInternalServerError(
-            reason=f"Frontend template not found: {analyzer_path}"
-        )
-
-    return web.FileResponse(analyzer_path)
-
+@aiohttp_jinja2.template("forecaster.html")
 async def forecaster(
     request: web.Request,
-) -> web.FileResponse:
+) -> dict:
     """Serve the portfolio forecaster page."""
-
-    page_path = TEMPLATES_DIR / "forecaster.html"
-
-    if not page_path.exists():
-        raise web.HTTPInternalServerError(
-            reason=f"Frontend template not found: {page_path}"
-        )
-
-    return web.FileResponse(page_path)
+    return {
+        "active_page": "forecaster",
+    }
 
 
 async def health(
@@ -281,6 +270,13 @@ def create_app(
     """Create and configure the frontend application."""
 
     app = web.Application()
+
+    aiohttp_jinja2.setup(
+        app,
+        loader=jinja2.FileSystemLoader(
+            str(TEMPLATES_DIR)
+        ),
+    )
 
     app[DOWNLOADER_CLIENT_KEY] = downloader_client
     app[ANALYZER_CLIENT_KEY] = analyzer_client

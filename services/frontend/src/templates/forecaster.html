@@ -1,757 +1,677 @@
-<!doctype html>
-<html lang="en">
+{% extends "base.html" %}
 
-<head>
-    <meta charset="utf-8">
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1"
-    >
+{% block title %}
+StockGuru - Portfolio Forecaster
+{% endblock %}
 
-    <title>StockGuru - Portfolio Forecaster</title>
 
-    <link
-        rel="stylesheet"
-        href="/static/theme.css"
-    >
+{% block page_styles %}
 
-    <link
-        rel="stylesheet"
-        href="/static/sidebar.css"
-    >
+<link
+    rel="stylesheet"
+    href="/static/forecaster.css"
+>
 
-    <link
-        rel="stylesheet"
-        href="/static/forecaster.css"
-    >
+{% endblock %}
 
-    <script
-        src="/static/sidebar.js"
-        defer
-    ></script>
-</head>
 
-<body>
+{% block content %}
 
-<div class="app-shell">
+<!-- ==================================================
+     Portfolio Forecaster
+     ================================================== -->
+
+<main class="forecaster-main">
+
+    <!-- Page heading -->
+
+    <header class="forecaster-header">
+
+        <div>
+
+            <p class="page-eyebrow">
+                PORTFOLIO PLANNING
+            </p>
+
+            <h1>
+                Portfolio Forecaster
+            </h1>
+
+            <p class="page-description">
+                Build a portfolio and explore how it could grow
+                over time.
+            </p>
+
+        </div>
+
+    </header>
+
+
+    <!-- Disclaimer -->
+
+    <section class="forecast-notice">
+
+        <div class="notice-icon">
+            i
+        </div>
+
+        <div>
+
+            <strong>
+                Projection, not prediction.
+            </strong>
+
+            <p>
+                This tool uses historical data and assumptions to
+                explore potential outcomes. Past performance does
+                not guarantee future results.
+            </p>
+
+        </div>
+
+    </section>
+
 
     <!-- ==================================================
-         Sidebar
+         Main layout
          ================================================== -->
 
-    <aside
-        class="app-sidebar"
-        id="app-sidebar"
-    >
+    <div class="forecaster-layout">
 
-        <div class="sidebar-header">
 
-            <a
-                href="/"
-                class="sidebar-brand"
-                aria-label="StocksGuru home"
-            >
-                <div class="brand-mark">
-                    SG
+        <!-- ==============================================
+             Controls
+             ============================================== -->
+
+        <aside class="forecast-controls">
+
+
+            <!-- Portfolio -->
+
+            <section class="forecast-panel">
+
+                <div class="panel-heading">
+
+                    <div>
+
+                        <span class="panel-number">
+                            1
+                        </span>
+
+                        <h2>
+                            Your Portfolio
+                        </h2>
+
+                    </div>
+
+                    <button
+                        class="small-action-button"
+                        type="button"
+                    >
+                        + Add Stock
+                    </button>
+
                 </div>
 
-                <span class="brand-name">
-                    StocksGuru
-                </span>
-            </a>
 
-            <button
-                class="sidebar-toggle"
-                id="sidebar-toggle"
-                type="button"
-                aria-label="Toggle navigation"
-                aria-expanded="true"
-            >
-                <span class="toggle-icon">
-                    ☰
-                </span>
-            </button>
-
-        </div>
-
-
-        <nav class="sidebar-nav">
-
-            <a
-                href="/"
-                class="sidebar-link"
-                title="Home"
-            >
-                <span class="sidebar-icon">
-                    ⌂
-                </span>
-
-                <span class="sidebar-label">
-                    Home
-                </span>
-            </a>
-
-
-            <a
-                href="/analyzer"
-                class="sidebar-link"
-                title="Stock Analyzer"
-            >
-                <span class="sidebar-icon">
-                    ↗
-                </span>
-
-                <span class="sidebar-label">
-                    Stock Analyzer
-                </span>
-            </a>
-
-
-            <a
-                href="/portfolio-forecaster"
-                class="sidebar-link active"
-                title="Portfolio Forecaster"
-            >
-                <span class="sidebar-icon">
-                    ◴
-                </span>
-
-                <span class="sidebar-label">
-                    Portfolio Forecaster
-                </span>
-            </a>
-
-        </nav>
-
-
-        <div class="sidebar-bottom">
-
-            <div class="sidebar-footer">
-                <span class="sidebar-footer-text">
-                    Investment tools for better perspective.
-                </span>
-            </div>
-
-            <nav class="sidebar-secondary-nav">
-
-                <a
-                    href="/about"
-                    class="sidebar-link sidebar-secondary-link"
-                    title="About"
-                >
-                    <span class="sidebar-icon">
-                        i
-                    </span>
-
-                    <span class="sidebar-label">
-                        About
-                    </span>
-                </a>
-
-                <a
-                    href="/docs"
-                    class="sidebar-link sidebar-secondary-link"
-                    title="Docs"
-                >
-                    <span class="sidebar-icon">
-                        ≡
-                    </span>
-
-                    <span class="sidebar-label">
-                        Docs
-                    </span>
-                </a>
-
-            </nav>
-
-        </div>
-
-    </aside>
-
-
-    <!-- ==================================================
-         Portfolio Forecaster
-         ================================================== -->
-
-    <main class="forecaster-main">
-
-        <!-- Page heading -->
-
-        <header class="forecaster-header">
-
-            <div>
-
-                <p class="page-eyebrow">
-                    PORTFOLIO PLANNING
-                </p>
-
-                <h1>
-                    Portfolio Forecaster
-                </h1>
-
-                <p class="page-description">
-                    Build a portfolio and explore how it could grow
-                    over time.
-                </p>
-
-            </div>
-
-        </header>
-
-
-        <!-- Disclaimer -->
-
-        <section class="forecast-notice">
-
-            <div class="notice-icon">
-                i
-            </div>
-
-            <div>
-                <strong>
-                    Projection, not prediction.
-                </strong>
-
-                <p>
-                    This tool uses historical data and assumptions to
-                    explore potential outcomes. Past performance does
-                    not guarantee future results.
-                </p>
-            </div>
-
-        </section>
-
-
-        <!-- ==================================================
-             Main layout
-             ================================================== -->
-
-        <div class="forecaster-layout">
-
-            <!-- ==============================================
-                 Controls
-                 ============================================== -->
-
-            <aside class="forecast-controls">
-
-                <!-- Portfolio -->
-
-                <section class="forecast-panel">
-
-                    <div class="panel-heading">
-
-                        <div>
-                            <span class="panel-number">
-                                1
-                            </span>
-
-                            <h2>
-                                Your Portfolio
-                            </h2>
-                        </div>
-
-                        <button
-                            class="small-action-button"
-                            type="button"
-                        >
-                            + Add Stock
-                        </button>
-
-                    </div>
-
-
-                    <div class="portfolio-mode">
-
-                        <button
-                            type="button"
-                            class="mode-button active"
-                        >
-                            Existing Portfolio
-                        </button>
-
-                        <button
-                            type="button"
-                            class="mode-button"
-                        >
-                            Build New
-                        </button>
-
-                    </div>
-
-
-                    <div class="holding-header">
-
-                        <span>
-                            Ticker
-                        </span>
-
-                        <span>
-                            Shares
-                        </span>
-
-                        <span>
-                            Avg. Cost
-                        </span>
-
-                    </div>
-
-
-                    <div class="holding-row">
-
-                        <input
-                            type="text"
-                            value="AAPL"
-                            aria-label="Ticker"
-                        >
-
-                        <input
-                            type="number"
-                            value="50"
-                            min="0"
-                            aria-label="Shares"
-                        >
-
-                        <input
-                            type="number"
-                            placeholder="Latest close"
-                            min="0"
-                            step="0.01"
-                            aria-label="Average cost"
-                        >
-
-                    </div>
-
-
-                    <p class="field-help">
-                        If average cost is left blank, StocksGuru will
-                        use the most recent closing price.
-                    </p>
-
-                </section>
-
-
-                <!-- Contributions -->
-
-                <section class="forecast-panel">
-
-                    <div class="panel-heading">
-
-                        <div>
-                            <span class="panel-number">
-                                2
-                            </span>
-
-                            <h2>
-                                Contributions
-                            </h2>
-                        </div>
-
-                    </div>
-
-
-                    <label class="field-label">
-                        Recurring Investment
-                    </label>
-
-                    <div class="split-field">
-
-                        <input
-                            type="number"
-                            value="500"
-                            min="0"
-                            step="1"
-                        >
-
-                        <select>
-                            <option>
-                                Monthly
-                            </option>
-
-                            <option>
-                                Quarterly
-                            </option>
-
-                            <option>
-                                Annually
-                            </option>
-                        </select>
-
-                    </div>
-
-
-                    <label class="field-label">
-                        Contribution Allocation
-                    </label>
-
-                    <div class="allocation-row">
-
-                        <span>
-                            AAPL
-                        </span>
-
-                        <input
-                            type="number"
-                            value="100"
-                            min="0"
-                            max="100"
-                        >
-
-                        <span class="percentage-symbol">
-                            %
-                        </span>
-
-                    </div>
-
-                </section>
-
-
-                <!-- Projection Settings -->
-
-                <section class="forecast-panel">
-
-                    <div class="panel-heading">
-
-                        <div>
-                            <span class="panel-number">
-                                3
-                            </span>
-
-                            <h2>
-                                Projection Settings
-                            </h2>
-                        </div>
-
-                    </div>
-
-
-                    <label
-                        class="field-label"
-                        for="projection-years"
-                    >
-                        Time Horizon
-                    </label>
-
-                    <div class="input-suffix">
-
-                        <input
-                            id="projection-years"
-                            type="number"
-                            value="20"
-                            min="1"
-                            max="50"
-                        >
-
-                        <span>
-                            Years
-                        </span>
-
-                    </div>
-
-
-                    <label class="toggle-row">
-
-                        <input
-                            type="checkbox"
-                            checked
-                        >
-
-                        <span>
-                            Reinvest dividends (DRIP)
-                        </span>
-
-                    </label>
-
-
-                    <label class="field-label">
-                        Growth Assumption
-                    </label>
-
-                    <select class="full-field">
-                        <option>
-                            Historical Average
-                        </option>
-
-                        <option>
-                            Custom
-                        </option>
-                    </select>
-
-
-                    <label class="field-label">
-                        Dividend Assumption
-                    </label>
-
-                    <select class="full-field">
-                        <option>
-                            Historical Average
-                        </option>
-
-                        <option>
-                            Custom
-                        </option>
-                    </select>
-
+                <div class="portfolio-mode">
 
                     <button
                         type="button"
-                        class="run-button"
+                        class="mode-button active"
                     >
-                        Run Projection
+                        Existing Portfolio
                     </button>
 
-                </section>
-
-            </aside>
-
-
-            <!-- ==============================================
-                 Results
-                 ============================================== -->
-
-            <section class="forecast-results">
-
-                <!-- Main value -->
-
-                <section class="forecast-panel projection-panel">
-
-                    <div class="projection-heading">
-
-                        <div>
-
-                            <span class="result-label">
-                                PROJECTED PORTFOLIO VALUE
-                            </span>
-
-                            <div class="projected-value">
-                                —
-                            </div>
-
-                            <p>
-                                Run a projection to see your
-                                potential future portfolio value.
-                            </p>
-
-                        </div>
-
-                        <div class="time-horizon">
-                            <span>
-                                Time Horizon
-                            </span>
-
-                            <strong>
-                                20 years
-                            </strong>
-                        </div>
-
-                    </div>
-
-
-                    <div class="forecast-chart-placeholder">
-
-                        <div class="placeholder-chart">
-
-                            <div class="placeholder-line line-one"></div>
-                            <div class="placeholder-line line-two"></div>
-                            <div class="placeholder-line line-three"></div>
-
-                            <span>
-                                Portfolio value over time
-                            </span>
-
-                        </div>
-
-                    </div>
-
-                </section>
-
-
-                <!-- Summary -->
-
-                <div class="results-grid">
-
-                    <section class="forecast-panel">
-
-                        <div class="section-title">
-
-                            <h2>
-                                Where Your Money Came From
-                            </h2>
-
-                        </div>
-
-
-                        <div class="donut-placeholder">
-
-                            <div class="donut-ring">
-                                <span>
-                                    —
-                                </span>
-                            </div>
-
-                            <div class="source-list">
-
-                                <div>
-                                    <span class="source-dot invested"></span>
-                                    Your Investment
-                                    <strong>—</strong>
-                                </div>
-
-                                <div>
-                                    <span class="source-dot contributions"></span>
-                                    Future Contributions
-                                    <strong>—</strong>
-                                </div>
-
-                                <div>
-                                    <span class="source-dot growth"></span>
-                                    Stock Growth
-                                    <strong>—</strong>
-                                </div>
-
-                                <div>
-                                    <span class="source-dot dividends"></span>
-                                    Dividends / DRIP
-                                    <strong>—</strong>
-                                </div>
-
-                            </div>
-
-                        </div>
-
-                    </section>
-
-
-                    <section class="forecast-panel">
-
-                        <div class="section-title">
-
-                            <h2>
-                                Key Numbers
-                            </h2>
-
-                        </div>
-
-
-                        <div class="key-number-list">
-
-                            <div>
-                                <span>
-                                    Initial Investment
-                                </span>
-
-                                <strong>
-                                    —
-                                </strong>
-                            </div>
-
-                            <div>
-                                <span>
-                                    Future Contributions
-                                </span>
-
-                                <strong>
-                                    —
-                                </strong>
-                            </div>
-
-                            <div>
-                                <span>
-                                    Stock Growth
-                                </span>
-
-                                <strong>
-                                    —
-                                </strong>
-                            </div>
-
-                            <div>
-                                <span>
-                                    Dividends
-                                </span>
-
-                                <strong>
-                                    —
-                                </strong>
-                            </div>
-
-                        </div>
-
-                    </section>
+                    <button
+                        type="button"
+                        class="mode-button"
+                    >
+                        Build New
+                    </button>
 
                 </div>
 
 
-                <!-- Holdings breakdown -->
+                <div class="holding-header">
 
-                <section class="forecast-panel holdings-breakdown">
+                    <span>
+                        Ticker
+                    </span>
+
+                    <span>
+                        Shares
+                    </span>
+
+                    <span>
+                        Avg. Cost
+                    </span>
+
+                </div>
+
+
+                <div class="holding-row">
+
+                    <input
+                        type="text"
+                        value="AAPL"
+                        aria-label="Ticker"
+                    >
+
+                    <input
+                        type="number"
+                        value="50"
+                        min="0"
+                        aria-label="Shares"
+                    >
+
+                    <input
+                        type="number"
+                        placeholder="Latest close"
+                        min="0"
+                        step="0.01"
+                        aria-label="Average cost"
+                    >
+
+                </div>
+
+
+                <p class="field-help">
+                    If average cost is left blank, StocksGuru will
+                    use the most recent closing price.
+                </p>
+
+            </section>
+
+
+            <!-- Contributions -->
+
+            <section class="forecast-panel">
+
+                <div class="panel-heading">
+
+                    <div>
+
+                        <span class="panel-number">
+                            2
+                        </span>
+
+                        <h2>
+                            Contributions
+                        </h2>
+
+                    </div>
+
+                </div>
+
+
+                <label class="field-label">
+                    Recurring Investment
+                </label>
+
+
+                <div class="split-field">
+
+                    <input
+                        type="number"
+                        value="500"
+                        min="0"
+                        step="1"
+                    >
+
+                    <select>
+
+                        <option>
+                            Monthly
+                        </option>
+
+                        <option>
+                            Quarterly
+                        </option>
+
+                        <option>
+                            Annually
+                        </option>
+
+                    </select>
+
+                </div>
+
+
+                <label class="field-label">
+                    Contribution Allocation
+                </label>
+
+
+                <div class="allocation-row">
+
+                    <span>
+                        AAPL
+                    </span>
+
+                    <input
+                        type="number"
+                        value="100"
+                        min="0"
+                        max="100"
+                    >
+
+                    <span class="percentage-symbol">
+                        %
+                    </span>
+
+                </div>
+
+            </section>
+
+
+            <!-- Projection Settings -->
+
+            <section class="forecast-panel">
+
+                <div class="panel-heading">
+
+                    <div>
+
+                        <span class="panel-number">
+                            3
+                        </span>
+
+                        <h2>
+                            Projection Settings
+                        </h2>
+
+                    </div>
+
+                </div>
+
+
+                <label
+                    class="field-label"
+                    for="projection-years"
+                >
+                    Time Horizon
+                </label>
+
+
+                <div class="input-suffix">
+
+                    <input
+                        id="projection-years"
+                        type="number"
+                        value="20"
+                        min="1"
+                        max="50"
+                    >
+
+                    <span>
+                        Years
+                    </span>
+
+                </div>
+
+
+                <label class="toggle-row">
+
+                    <input
+                        type="checkbox"
+                        checked
+                    >
+
+                    <span>
+                        Reinvest dividends (DRIP)
+                    </span>
+
+                </label>
+
+
+                <label class="field-label">
+                    Growth Assumption
+                </label>
+
+
+                <select class="full-field">
+
+                    <option>
+                        Historical Average
+                    </option>
+
+                    <option>
+                        Custom
+                    </option>
+
+                </select>
+
+
+                <label class="field-label">
+                    Dividend Assumption
+                </label>
+
+
+                <select class="full-field">
+
+                    <option>
+                        Historical Average
+                    </option>
+
+                    <option>
+                        Custom
+                    </option>
+
+                </select>
+
+
+                <button
+                    type="button"
+                    class="run-button"
+                >
+                    Run Projection
+                </button>
+
+            </section>
+
+        </aside>
+
+
+        <!-- ==============================================
+             Results
+             ============================================== -->
+
+        <section class="forecast-results">
+
+
+            <!-- Main value -->
+
+            <section class="forecast-panel projection-panel">
+
+                <div class="projection-heading">
+
+                    <div>
+
+                        <span class="result-label">
+                            PROJECTED PORTFOLIO VALUE
+                        </span>
+
+                        <div class="projected-value">
+                            —
+                        </div>
+
+                        <p>
+                            Run a projection to see your
+                            potential future portfolio value.
+                        </p>
+
+                    </div>
+
+
+                    <div class="time-horizon">
+
+                        <span>
+                            Time Horizon
+                        </span>
+
+                        <strong>
+                            20 years
+                        </strong>
+
+                    </div>
+
+                </div>
+
+
+                <div class="forecast-chart-placeholder">
+
+                    <div class="placeholder-chart">
+
+                        <div class="placeholder-line line-one"></div>
+
+                        <div class="placeholder-line line-two"></div>
+
+                        <div class="placeholder-line line-three"></div>
+
+                        <span>
+                            Portfolio value over time
+                        </span>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- Summary -->
+
+            <div class="results-grid">
+
+
+                <section class="forecast-panel">
 
                     <div class="section-title">
 
                         <h2>
-                            Holdings Breakdown
+                            Where Your Money Came From
                         </h2>
 
                     </div>
 
 
-                    <div class="table-wrapper">
+                    <div class="donut-placeholder">
 
-                        <table>
+                        <div class="donut-ring">
 
-                            <thead>
-                                <tr>
-                                    <th>
-                                        Ticker
-                                    </th>
+                            <span>
+                                —
+                            </span>
 
-                                    <th>
-                                        Initial Investment
-                                    </th>
+                        </div>
 
-                                    <th>
-                                        Contributions
-                                    </th>
 
-                                    <th>
-                                        Growth
-                                    </th>
+                        <div class="source-list">
 
-                                    <th>
-                                        Dividends
-                                    </th>
+                            <div>
 
-                                    <th>
-                                        Future Value
-                                    </th>
-                                </tr>
-                            </thead>
+                                <span class="source-dot invested"></span>
 
-                            <tbody>
+                                Your Investment
 
-                                <tr>
-                                    <td colspan="6">
-                                        Run a projection to see your
-                                        holdings breakdown.
-                                    </td>
-                                </tr>
+                                <strong>
+                                    —
+                                </strong>
 
-                            </tbody>
+                            </div>
 
-                        </table>
+
+                            <div>
+
+                                <span class="source-dot contributions"></span>
+
+                                Future Contributions
+
+                                <strong>
+                                    —
+                                </strong>
+
+                            </div>
+
+
+                            <div>
+
+                                <span class="source-dot growth"></span>
+
+                                Stock Growth
+
+                                <strong>
+                                    —
+                                </strong>
+
+                            </div>
+
+
+                            <div>
+
+                                <span class="source-dot dividends"></span>
+
+                                Dividends / DRIP
+
+                                <strong>
+                                    —
+                                </strong>
+
+                            </div>
+
+                        </div>
 
                     </div>
 
                 </section>
 
+
+                <section class="forecast-panel">
+
+                    <div class="section-title">
+
+                        <h2>
+                            Key Numbers
+                        </h2>
+
+                    </div>
+
+
+                    <div class="key-number-list">
+
+                        <div>
+
+                            <span>
+                                Initial Investment
+                            </span>
+
+                            <strong>
+                                —
+                            </strong>
+
+                        </div>
+
+
+                        <div>
+
+                            <span>
+                                Future Contributions
+                            </span>
+
+                            <strong>
+                                —
+                            </strong>
+
+                        </div>
+
+
+                        <div>
+
+                            <span>
+                                Stock Growth
+                            </span>
+
+                            <strong>
+                                —
+                            </strong>
+
+                        </div>
+
+
+                        <div>
+
+                            <span>
+                                Dividends
+                            </span>
+
+                            <strong>
+                                —
+                            </strong>
+
+                        </div>
+
+                    </div>
+
+                </section>
+
+            </div>
+
+
+            <!-- Holdings breakdown -->
+
+            <section class="forecast-panel holdings-breakdown">
+
+                <div class="section-title">
+
+                    <h2>
+                        Holdings Breakdown
+                    </h2>
+
+                </div>
+
+
+                <div class="table-wrapper">
+
+                    <table>
+
+                        <thead>
+
+                            <tr>
+
+                                <th>
+                                    Ticker
+                                </th>
+
+                                <th>
+                                    Initial Investment
+                                </th>
+
+                                <th>
+                                    Contributions
+                                </th>
+
+                                <th>
+                                    Growth
+                                </th>
+
+                                <th>
+                                    Dividends
+                                </th>
+
+                                <th>
+                                    Future Value
+                                </th>
+
+                            </tr>
+
+                        </thead>
+
+
+                        <tbody>
+
+                            <tr>
+
+                                <td colspan="6">
+                                    Run a projection to see your
+                                    holdings breakdown.
+                                </td>
+
+                            </tr>
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
             </section>
 
-        </div>
+        </section>
 
-    </main>
+    </div>
 
-</div>
+</main>
 
-</body>
-
-</html>
+{% endblock %}
