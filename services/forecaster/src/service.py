@@ -87,17 +87,39 @@ class ForecasterService:
         Combine individual holding projections into a
         portfolio-level forecast response.
         """
+
+        # -----------------------------------------------------
+        # Per-holding results
+        # -----------------------------------------------------
+
         holdings = [
             HoldingForecast(
                 ticker=result.ticker,
+
                 initial_investment=result.initial_investment,
+                current_growth=result.current_growth,
+
                 contributions=result.contributions,
                 growth=result.growth,
                 dividends=result.dividends,
+
                 future_value=result.future_value,
+
+                dividend_yield=result.dividend_yield,
+
+                purchased_shares=result.purchased_shares,
+                drip_shares=result.drip_shares,
+                total_shares=result.total_shares,
+
+                ending_price=result.ending_price,
             )
             for result in results
         ]
+
+
+        # -----------------------------------------------------
+        # Portfolio summary
+        # -----------------------------------------------------
 
         summary = ForecastSummary(
             initial_investment=round(
@@ -107,6 +129,15 @@ class ForecasterService:
                 ),
                 2,
             ),
+
+            current_growth=round(
+                sum(
+                    result.current_growth
+                    for result in results
+                ),
+                2,
+            ),
+
             future_contributions=round(
                 sum(
                     result.contributions
@@ -114,6 +145,7 @@ class ForecasterService:
                 ),
                 2,
             ),
+
             stock_growth=round(
                 sum(
                     result.growth
@@ -121,6 +153,7 @@ class ForecasterService:
                 ),
                 2,
             ),
+
             dividends=round(
                 sum(
                     result.dividends
@@ -128,6 +161,7 @@ class ForecasterService:
                 ),
                 2,
             ),
+
             future_value=round(
                 sum(
                     result.future_value
@@ -137,9 +171,15 @@ class ForecasterService:
             ),
         )
 
+
+        # -----------------------------------------------------
+        # Portfolio timeline
+        # -----------------------------------------------------
+
         timeline = []
 
         for year in range(years + 1):
+
             value = sum(
                 result.timeline[year].value
                 for result in results
@@ -151,6 +191,7 @@ class ForecasterService:
                     value=round(value, 2),
                 )
             )
+
 
         return ForecastResponse(
             summary=summary,

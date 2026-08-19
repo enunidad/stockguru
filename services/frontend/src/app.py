@@ -134,6 +134,86 @@ async def get_price_history_chart(request: web.Request, ) -> web.Response:
 
     return web.json_response(payload)
 
+async def portfolio_overview_chart(
+    request: web.Request,
+) -> web.Response:
+    """
+    Proxy portfolio overview chart data to ChartMgr.
+    """
+
+    try:
+        payload = await request.json()
+
+    except ValueError:
+        return web.json_response(
+            {
+                "error": "invalid_json",
+                "message": (
+                    "Request body must contain valid JSON."
+                ),
+            },
+            status=400,
+        )
+
+
+    if not isinstance(payload, dict):
+        return web.json_response(
+            {
+                "error": "invalid_request",
+                "message": (
+                    "Portfolio overview request must be "
+                    "a JSON object."
+                ),
+            },
+            status=400,
+        )
+
+
+    chartmgr_client = request.app[
+        CHARTMGR_CLIENT_KEY
+    ]
+
+
+    try:
+        result = (
+            await chartmgr_client
+            .get_portfolio_overview(
+                payload
+            )
+        )
+
+    except ApiResponseError as exc:
+        return web.json_response(
+            {
+                "error": "chartmgr_request_error",
+                "message": exc.message,
+            },
+            status=exc.status,
+        )
+
+    except InvalidResponseError as exc:
+        return web.json_response(
+            {
+                "error": "invalid_chartmgr_response",
+                "message": str(exc),
+            },
+            status=502,
+        )
+
+    except ServiceUnavailableError as exc:
+        return web.json_response(
+            {
+                "error": "chartmgr_unavailable",
+                "message": str(exc),
+            },
+            status=503,
+        )
+
+
+    return web.json_response(
+        result
+    )
+
 async def get_price_history(
     request: web.Request,
 ) -> web.Response:
@@ -390,6 +470,11 @@ def create_app(
     app.router.add_get(
         "/api/charting/price_history/{ticker}",
         get_price_history_chart,
+    )
+
+    app.router.add_post(
+        "/api/charting/portfolio_overview",
+        portfolio_overview_chart,
     )
 
     app.router.add_get(

@@ -74,6 +74,23 @@ def project_holding(
         contribution_frequency=contribution_frequency,
     )
 
+    starting_market_value = (
+        shares
+        * current_price
+    )
+
+    current_growth = (
+        starting_market_value
+        - initial_investment
+    )
+
+    dividend_yield = (
+        annual_dividend_per_share
+        / current_price
+        if current_price > 0
+        else 0.0
+    )
+
     state = HoldingProjectionState(
         ticker=ticker.strip().upper(),
         price=current_price,
@@ -157,6 +174,10 @@ def project_holding(
                 )
             )
 
+    # ---------------------------------------------------------
+    # Final holding values
+    # ---------------------------------------------------------
+
     investment_value = (
         state.investment_shares
         * state.price
@@ -168,11 +189,48 @@ def project_holding(
         + state.dividend_cash
     )
 
+
+    # ---------------------------------------------------------
+    # Future stock growth
+    # ---------------------------------------------------------
+    #
+    # Starting market value already includes any gain/loss the
+    # user has accumulated before today.
+    #
+    # Future growth should therefore only represent price
+    # appreciation that occurs during the forecast.
+    #
+    # Contribution dollars are also removed because they came
+    # directly from the user rather than from stock growth.
+    # ---------------------------------------------------------
+
     growth = (
         investment_value
-        - state.initial_investment
+        - starting_market_value
         - state.contributions
     )
+
+
+    # ---------------------------------------------------------
+    # Share attribution
+    # ---------------------------------------------------------
+
+    purchased_shares = (
+        state.investment_shares
+    )
+
+    drip_shares = (
+        state.dividend_shares
+    )
+
+    ending_total_shares = (
+        total_shares(state)
+    )
+
+
+    # ---------------------------------------------------------
+    # Final portfolio value
+    # ---------------------------------------------------------
 
     future_value = (
         investment_value
@@ -183,40 +241,106 @@ def project_holding(
         "FORECAST DEBUG",
         {
             "ticker": state.ticker,
-            "price": state.price,
-            "investment_shares": state.investment_shares,
-            "dividend_shares": state.dividend_shares,
-            "initial_investment": state.initial_investment,
-            "contributions": state.contributions,
-            "dividend_cash": state.dividend_cash,
-            "investment_value": investment_value,
-            "dividend_value": dividend_value,
-            "growth": growth,
-            "future_value": future_value,
+
+            "starting_price": current_price,
+            "ending_price": state.price,
+
+            "initial_investment":
+                state.initial_investment,
+
+            "starting_market_value":
+                starting_market_value,
+
+            "current_growth":
+                current_growth,
+
+            "contributions":
+                state.contributions,
+
+            "purchased_shares":
+                purchased_shares,
+
+            "drip_shares":
+                drip_shares,
+
+            "total_shares":
+                ending_total_shares,
+
+            "dividend_cash":
+                state.dividend_cash,
+
+            "investment_value":
+                investment_value,
+
+            "dividend_value":
+                dividend_value,
+
+            "future_growth":
+                growth,
+
+            "future_value":
+                future_value,
         },
     )
+
     return HoldingProjectionResult(
         ticker=state.ticker,
+
         initial_investment=round(
             state.initial_investment,
             2,
         ),
+
+        current_growth=round(
+            current_growth,
+            2,
+        ),
+
         contributions=round(
             state.contributions,
             2,
         ),
+
         growth=round(
             growth,
             2,
         ),
+
         dividends=round(
             dividend_value,
             2,
         ),
+
         future_value=round(
             future_value,
             2,
         ),
+
+        dividend_yield=round(
+            dividend_yield,
+            6,
+        ),
+
+        purchased_shares=round(
+            purchased_shares,
+            6,
+        ),
+
+        drip_shares=round(
+            drip_shares,
+            6,
+        ),
+
+        total_shares=round(
+            ending_total_shares,
+            6,
+        ),
+
+        ending_price=round(
+            state.price,
+            2,
+        ),
+
         timeline=timeline,
     )
 

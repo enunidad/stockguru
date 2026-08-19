@@ -45,12 +45,37 @@ class ForecastRequest:
 class ForecastSummary:
     """
     Portfolio-level totals at the end of the projection.
+
+    initial_investment:
+        Total user cost basis for the starting portfolio.
+
+    current_growth:
+        Gain or loss already present in the portfolio at the
+        start of the forecast.
+
+    future_contributions:
+        Additional money supplied by the user during the
+        forecast horizon.
+
+    stock_growth:
+        Price appreciation generated from the start of the
+        forecast forward.
+
+    dividends:
+        Dividend value generated during the forecast.
+
+    future_value:
+        Total projected portfolio value at the end of the
+        forecast horizon.
     """
 
     initial_investment: float
+    current_growth: float
+
     future_contributions: float
     stock_growth: float
     dividends: float
+
     future_value: float
 
 
@@ -73,10 +98,21 @@ class HoldingForecast:
     ticker: str
 
     initial_investment: float
+    current_growth: float
+
     contributions: float
     growth: float
     dividends: float
+
     future_value: float
+
+    dividend_yield: float
+
+    purchased_shares: float
+    drip_shares: float
+    total_shares: float
+
+    ending_price: float
 
 
 @dataclass(frozen=True)
@@ -97,14 +133,36 @@ class ForecastResponse:
 class HoldingProjectionResult:
     """
     Internal result produced by the calculator for one holding.
+
+    purchased_shares:
+        Shares owned because of user-supplied money. This includes
+        the user's starting shares plus shares purchased using
+        future contributions.
+
+    drip_shares:
+        Additional shares purchased using reinvested dividends.
+
+    total_shares:
+        Total projected shares at the end of the forecast.
     """
 
     ticker: str
 
     initial_investment: float
+    current_growth: float
+
     contributions: float
     growth: float
     dividends: float
+
     future_value: float
+
+    dividend_yield: float
+
+    purchased_shares: float
+    drip_shares: float
+    total_shares: float
+
+    ending_price: float
 
     timeline: list[ForecastPoint]
