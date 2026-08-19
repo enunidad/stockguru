@@ -6,11 +6,13 @@ from typing import Any
 import aiohttp
 
 from .exceptions import (
+    AnalyzerClientError,
+    AnalyzerResponseError,
     DownloaderClientError,
     DownloaderResponseError,
+    InvalidAnalyzerResponseError,
     InvalidDownloaderResponseError,
 )
-
 
 class DownloaderApiClient:
     """HTTP client for the StocksGuru downloader service."""
@@ -316,6 +318,7 @@ class AnalyzerApiClient:
         period: str = "10y",
         interval: str = "1d",
         aggregate: bool = False,
+        auto_adjust: bool = True,
     ) -> dict[str, Any]:
         """
         Retrieve historical analysis for a ticker.
@@ -333,6 +336,7 @@ class AnalyzerApiClient:
             "period": period,
             "interval": interval,
             "aggregate": str(aggregate).lower(),
+            "autoadjust": str(auto_adjust).lower(),
         }
 
         try:

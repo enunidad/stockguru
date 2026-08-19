@@ -20,13 +20,14 @@ class DownloaderService:
 
     def __init__(self, client: YahooFinanceClient | None = None,
                 cache: PriceHistoryCache | None = None,
-                metadata: TickerMetadataCache | None = None, ) -> None:
+                metadata: TickerMetadataCache | None = None, 
+                dividend: DividendCache | None = None, ) -> None:
         self.client = client or YahooFinanceClient()
         self.cache = cache or PriceHistoryCache(cache_dir=Path("data"),
                                                 ttl=timedelta(days=1),)
         self.metadata = metadata or TickerMetadataCache(cache_dir=Path("data"),
                                                         ttl=timedelta(days=1),)
-        self.divedend = dividend or DividendCache(cache_dir=Path("data"),
+        self.dividend = dividend or DividendCache(cache_dir=Path("data"),
                                                     ttl=timedelta(days=1), )
     
     @staticmethod
@@ -160,7 +161,7 @@ class DownloaderService:
         """
         ticker = ticker.strip().upper()
 
-        dividends = self.cache.get_dividends(
+        dividends = self.dividend.get_dividends(
             ticker
         )
 
@@ -169,7 +170,7 @@ class DownloaderService:
                 ticker
             )
 
-            self.cache.save_dividends(
+            self.dividend.save_dividends(
                 ticker,
                 dividends,
             )

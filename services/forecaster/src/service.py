@@ -178,6 +178,7 @@ class ForecasterService:
                 ticker,
                 period="10y",
                 interval="1d",
+                auto_adjust=False,
             )
         )
 

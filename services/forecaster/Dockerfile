@@ -9,6 +9,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY src ./src
 COPY tests ./tests
 
-EXPOSE 8020
+EXPOSE 8060
 
 CMD ["python", "-m", "src.main"]

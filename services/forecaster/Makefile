@@ -1,3 +1,5 @@
+PYTHON ?= python
+
 install:
 	$(PIP) install -r requirements.txt
 
