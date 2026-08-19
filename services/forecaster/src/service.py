@@ -15,7 +15,9 @@ from .schemas import (
     ForecastSummary,
     HoldingForecast,
     HoldingInput,
+    HoldingProjectionResult,
 )
+from .calculations import project_holding
 
 
 class ForecasterService:
@@ -41,138 +43,119 @@ class ForecasterService:
         self,
         request: ForecastRequest,
     ) -> ForecastResponse:
-        """
-        Generate a portfolio forecast.
-
-        Historical CAGR is used as the growth assumption.
-
-        Dividend forecasting is intentionally left at zero until
-        dividend history is available from a dependency.
-        """
         self._validate_request(request)
 
-        holding_states: list[dict[str, Any]] = []
+        results = []
 
         for holding in request.holdings:
-            state = await self._prepare_holding(
+            prepared = await self._prepare_holding(
                 holding
             )
-            holding_states.append(state)
 
-        timeline = [
-            ForecastPoint(
-                year=0,
-                value=round(
-                    sum(
-                        state["current_value"]
-                        for state in holding_states
-                    ),
-                    2,
-                ),
+            contribution_amount = (
+                request.contribution_amount
+                * holding.contribution_weight
             )
+
+            result = project_holding(
+                ticker=prepared["ticker"],
+                shares=holding.shares,
+                current_price=prepared["latest_close"],
+                initial_investment=prepared["initial_investment"],
+                annual_growth_rate=prepared["annual_growth_rate"],
+                annual_dividend_per_share=prepared["annual_dividend"],
+                years=request.years,
+                contribution_amount=contribution_amount,
+                contribution_frequency=request.contribution_frequency,
+                drip=request.drip,
+            )
+
+            results.append(result)
+
+        return self._build_response(
+            results,
+            years=request.years,
+        )
+    
+    @staticmethod
+    def _build_response(
+        results: list[HoldingProjectionResult],
+        *,
+        years: int,
+    ) -> ForecastResponse:
+        """
+        Combine individual holding projections into a
+        portfolio-level forecast response.
+        """
+        holdings = [
+            HoldingForecast(
+                ticker=result.ticker,
+                initial_investment=result.initial_investment,
+                contributions=result.contributions,
+                growth=result.growth,
+                dividends=result.dividends,
+                future_value=result.future_value,
+            )
+            for result in results
         ]
-
-        total_months = (
-            request.years * self._MONTHS_PER_YEAR
-        )
-
-        contribution_interval = (
-            self._CONTRIBUTION_MONTHS[
-                request.contribution_frequency
-            ]
-        )
-
-        total_contributions = 0.0
-
-        for month in range(1, total_months + 1):
-
-            for state in holding_states:
-
-                state["value"] *= (
-                    1.0 + state["monthly_growth_rate"]
-                )
-
-                if month % contribution_interval == 0:
-                    contribution = (
-                        request.contribution_amount
-                        * state["contribution_weight"]
-                    )
-
-                    state["value"] += contribution
-                    state["contributions"] += contribution
-                    total_contributions += contribution
-
-            if month % self._MONTHS_PER_YEAR == 0:
-                timeline.append(
-                    ForecastPoint(
-                        year=(
-                            month
-                            // self._MONTHS_PER_YEAR
-                        ),
-                        value=round(
-                            sum(
-                                state["value"]
-                                for state in holding_states
-                            ),
-                            2,
-                        ),
-                    )
-                )
-
-        holding_forecasts = [
-            self._build_holding_forecast(state)
-            for state in holding_states
-        ]
-
-        initial_investment = sum(
-            result.initial_investment
-            for result in holding_forecasts
-        )
-
-        future_value = sum(
-            result.future_value
-            for result in holding_forecasts
-        )
-
-        dividends = sum(
-            result.dividends
-            for result in holding_forecasts
-        )
-
-        stock_growth = (
-            future_value
-            - initial_investment
-            - total_contributions
-            - dividends
-        )
 
         summary = ForecastSummary(
             initial_investment=round(
-                initial_investment,
+                sum(
+                    result.initial_investment
+                    for result in results
+                ),
                 2,
             ),
             future_contributions=round(
-                total_contributions,
+                sum(
+                    result.contributions
+                    for result in results
+                ),
                 2,
             ),
             stock_growth=round(
-                stock_growth,
+                sum(
+                    result.growth
+                    for result in results
+                ),
                 2,
             ),
             dividends=round(
-                dividends,
+                sum(
+                    result.dividends
+                    for result in results
+                ),
                 2,
             ),
             future_value=round(
-                future_value,
+                sum(
+                    result.future_value
+                    for result in results
+                ),
                 2,
             ),
         )
+
+        timeline = []
+
+        for year in range(years + 1):
+            value = sum(
+                result.timeline[year].value
+                for result in results
+            )
+
+            timeline.append(
+                ForecastPoint(
+                    year=year,
+                    value=round(value, 2),
+                )
+            )
 
         return ForecastResponse(
             summary=summary,
             timeline=timeline,
-            holdings=holding_forecasts,
+            holdings=holdings,
         )
 
     async def _prepare_holding(
@@ -213,12 +196,6 @@ class ForecasterService:
             dividend_data
         )
 
-        monthly_growth_rate = (
-            self._annual_to_monthly_rate(
-                annual_growth_rate
-            )
-        )
-
         cost_per_share = (
             holding.average_cost
             if holding.average_cost is not None
@@ -229,75 +206,13 @@ class ForecasterService:
             holding.shares * cost_per_share
         )
 
-        current_value = (
-            holding.shares * latest_close
-        )
-
         return {
             "ticker": ticker,
-            "shares": holding.shares,
             "latest_close": latest_close,
             "initial_investment": initial_investment,
-            "current_value": current_value,
-            "value": current_value,
-            "contribution_weight": (
-                holding.contribution_weight
-            ),
-            "contributions": 0.0,
-            "dividends": 0.0,
             "annual_growth_rate": annual_growth_rate,
-            "monthly_growth_rate": monthly_growth_rate,
             "annual_dividend": annual_dividend,
         }
-
-    @staticmethod
-    def _build_holding_forecast(
-        state: dict[str, Any],
-    ) -> HoldingForecast:
-        future_value = float(state["value"])
-
-        initial_investment = float(
-            state["initial_investment"]
-        )
-
-        contributions = float(
-            state["contributions"]
-        )
-
-        dividends = float(
-            state["dividends"]
-        )
-
-        growth = (
-            future_value
-            - initial_investment
-            - contributions
-            - dividends
-        )
-
-        return HoldingForecast(
-            ticker=str(state["ticker"]),
-            initial_investment=round(
-                initial_investment,
-                2,
-            ),
-            contributions=round(
-                contributions,
-                2,
-            ),
-            growth=round(
-                growth,
-                2,
-            ),
-            dividends=round(
-                dividends,
-                2,
-            ),
-            future_value=round(
-                future_value,
-                2,
-            ),
-        )
     
     @staticmethod
     def _read_annual_dividend(
@@ -405,19 +320,6 @@ class ForecasterService:
             )
 
         return cagr
-
-    @staticmethod
-    def _annual_to_monthly_rate(
-        annual_rate: float,
-    ) -> float:
-        """
-        Convert an effective annual growth rate into an
-        equivalent effective monthly rate.
-        """
-        return (
-            (1.0 + annual_rate) ** (1.0 / 12.0)
-            - 1.0
-        )
 
     @classmethod
     def _validate_request(

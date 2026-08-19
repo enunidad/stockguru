@@ -91,3 +91,20 @@ class ForecastResponse:
 
     def to_dict(self) -> dict:
         return asdict(self)
+
+
+@dataclass(frozen=True)
+class HoldingProjectionResult:
+    """
+    Internal result produced by the calculator for one holding.
+    """
+
+    ticker: str
+
+    initial_investment: float
+    contributions: float
+    growth: float
+    dividends: float
+    future_value: float
+
+    timeline: list[ForecastPoint]
