@@ -57,6 +57,7 @@ class AnalyzerService:
             period=period,
             interval="1d",
             aggregate=False,
+            auto_adjust=auto_adjust,
         )
 
         return self._analyze_history(history)

@@ -9,6 +9,16 @@ from .schemas import (
 
 MONTHS_PER_YEAR = 12
 
+# Conservative long-run price-growth assumption.
+LONG_TERM_GROWTH_RATE = 0.05
+
+# Historical excess growth loses half its influence
+# approximately every pi years.
+#
+# This is intentionally a fixed conservative heuristic for now.
+# It can be empirically calibrated in a future iteration.
+GROWTH_HALF_LIFE_YEARS = math.pi
+
 CONTRIBUTION_INTERVALS = {
     "monthly": 1,
     "quarterly": 3,
@@ -71,10 +81,6 @@ def project_holding(
         initial_investment=initial_investment,
     )
 
-    monthly_growth_rate = annual_to_monthly_rate(
-        annual_growth_rate
-    )
-
     monthly_dividend_per_share = (
         annual_dividend_per_share
         / MONTHS_PER_YEAR
@@ -102,6 +108,23 @@ def project_holding(
         1,
         total_months + 1,
     ):
+        elapsed_years = (
+            month - 1
+        ) / MONTHS_PER_YEAR
+
+        effective_annual_growth_rate = (
+            decayed_annual_growth_rate(
+                annual_growth_rate,
+                elapsed_years,
+            )
+        )
+
+        monthly_growth_rate = (
+            annual_to_monthly_rate(
+                effective_annual_growth_rate
+            )
+        )
+
         apply_price_growth(
             state,
             monthly_growth_rate,
@@ -296,6 +319,55 @@ def total_value(
         + state.dividend_cash
     )
 
+def decayed_annual_growth_rate(
+    historical_growth_rate: float,
+    elapsed_years: float,
+    *,
+    long_term_growth_rate: float = LONG_TERM_GROWTH_RATE,
+    half_life_years: float = GROWTH_HALF_LIFE_YEARS,
+) -> float:
+    """
+    Reduce reliance on historical CAGR as the forecast horizon grows.
+
+    Growth above the conservative long-term rate decays exponentially
+    with the configured half-life.
+
+    Historical growth below the long-term rate is never increased
+    toward that rate. This keeps the forecast conservative for
+    slow-growing or declining holdings.
+    """
+    if elapsed_years < 0:
+        raise ValueError(
+            "Elapsed years cannot be negative."
+        )
+
+    if (
+        not math.isfinite(half_life_years)
+        or half_life_years <= 0
+    ):
+        raise ValueError(
+            "Growth half-life must be a finite value greater than zero."
+        )
+
+    conservative_anchor = min(
+        historical_growth_rate,
+        long_term_growth_rate,
+    )
+
+    excess_growth = (
+        historical_growth_rate
+        - conservative_anchor
+    )
+
+    persistence = 2.0 ** (
+        -elapsed_years
+        / half_life_years
+    )
+
+    return (
+        conservative_anchor
+        + excess_growth * persistence
+    )
 
 def annual_to_monthly_rate(
     annual_rate: float,
