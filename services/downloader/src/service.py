@@ -161,7 +161,7 @@ class DownloaderService:
         """
         ticker = ticker.strip().upper()
 
-        dividends = self.dividend.get_dividends(
+        dividends = self.dividend.get_if_fresh(
             ticker
         )
 
@@ -170,7 +170,7 @@ class DownloaderService:
                 ticker
             )
 
-            self.dividend.save_dividends(
+            self.dividend.save(
                 ticker,
                 dividends,
             )

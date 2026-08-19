@@ -260,6 +260,15 @@ select {
     font-weight: 700;
 }
 
+.small-action-button:hover {
+    background: var(--sg-teal);
+    color: white;
+}
+
+.small-action-button:active {
+    transform: translateY(1px);
+}
+
 
 /* ---------------------------------------------------------
    Portfolio mode
@@ -312,11 +321,50 @@ select {
     display: grid;
 
     grid-template-columns:
-        0.8fr
-        0.7fr
-        1fr;
+        minmax(0, 0.8fr)
+        minmax(0, 0.7fr)
+        minmax(0, 1fr)
+        30px;
 
     gap: 8px;
+
+    align-items: center;
+}
+
+#holdings-container {
+    display: flex;
+    flex-direction: column;
+
+    gap: 8px;
+}
+
+
+.remove-holding {
+    width: 30px;
+    height: 30px;
+
+    display: grid;
+    place-items: center;
+
+    border:
+        1px solid var(--sg-border);
+
+    border-radius: 6px;
+
+    background: transparent;
+    color: var(--sg-text-muted);
+
+    cursor: pointer;
+
+    font-size: 18px;
+    line-height: 1;
+}
+
+
+.remove-holding:hover {
+    border-color: var(--sg-orange);
+
+    color: var(--sg-orange);
 }
 
 
@@ -385,6 +433,23 @@ select {
     gap: 8px;
 }
 
+#allocation-container {
+    display: flex;
+    flex-direction: column;
+
+    gap: 8px;
+}
+
+.allocation-ticker {
+    min-width: 0;
+
+    overflow: hidden;
+
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    font-weight: 700;
+}
 
 .allocation-row {
     display: grid;
@@ -863,6 +928,15 @@ tbody td[colspan] {
 
     .time-horizon {
         text-align: left;
+    }
+
+    .holding-header,
+    .holding-row {
+        grid-template-columns:
+            minmax(0, 1fr)
+            70px
+            minmax(0, 1fr)
+            30px;
     }
 
 }

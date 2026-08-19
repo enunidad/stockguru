@@ -106,6 +106,7 @@ StockGuru - Portfolio Forecaster
                     </div>
 
                     <button
+                        id="add-stock"
                         class="small-action-button"
                         type="button"
                     >
@@ -151,28 +152,47 @@ StockGuru - Portfolio Forecaster
                 </div>
 
 
-                <div class="holding-row">
+                <div id="holdings-container">
 
-                    <input
-                        type="text"
-                        value="AAPL"
-                        aria-label="Ticker"
+                    <div
+                        class="holding-row"
+                        data-holding-id="holding-1"
                     >
 
-                    <input
-                        type="number"
-                        value="50"
-                        min="0"
-                        aria-label="Shares"
-                    >
+                        <input
+                            class="holding-ticker"
+                            type="text"
+                            value="AAPL"
+                            aria-label="Ticker"
+                        >
 
-                    <input
-                        type="number"
-                        placeholder="Latest close"
-                        min="0"
-                        step="0.01"
-                        aria-label="Average cost"
-                    >
+                        <input
+                            class="holding-shares"
+                            type="number"
+                            value="50"
+                            min="0"
+                            aria-label="Shares"
+                        >
+
+                        <input
+                            class="holding-average-cost"
+                            type="number"
+                            placeholder="Latest close"
+                            min="0"
+                            step="0.01"
+                            aria-label="Average cost"
+                        >
+
+                        <button
+                            class="remove-holding"
+                            type="button"
+                            aria-label="Remove stock"
+                            hidden
+                        >
+                            ×
+                        </button>
+
+                    </div>
 
                 </div>
 
@@ -214,26 +234,17 @@ StockGuru - Portfolio Forecaster
                 <div class="split-field">
 
                     <input
+                        id="contribution-amount"
                         type="number"
                         value="500"
                         min="0"
                         step="1"
                     >
 
-                    <select>
-
-                        <option>
-                            Monthly
-                        </option>
-
-                        <option>
-                            Quarterly
-                        </option>
-
-                        <option>
-                            Annually
-                        </option>
-
+                    <select id="contribution-frequency">
+                        <option value="monthly">Monthly</option>
+                        <option value="quarterly">Quarterly</option>
+                        <option value="annually">Annually</option>
                     </select>
 
                 </div>
@@ -244,22 +255,30 @@ StockGuru - Portfolio Forecaster
                 </label>
 
 
-                <div class="allocation-row">
+                <div id="allocation-container">
 
-                    <span>
-                        AAPL
-                    </span>
-
-                    <input
-                        type="number"
-                        value="100"
-                        min="0"
-                        max="100"
+                    <div
+                        class="allocation-row"
+                        data-holding-id="holding-1"
                     >
 
-                    <span class="percentage-symbol">
-                        %
-                    </span>
+                        <span class="allocation-ticker">
+                            AAPL
+                        </span>
+
+                        <input
+                            class="contribution-weight"
+                            type="number"
+                            value="100"
+                            min="0"
+                            max="100"
+                        >
+
+                        <span class="percentage-symbol">
+                            %
+                        </span>
+
+                    </div>
 
                 </div>
 
@@ -315,6 +334,7 @@ StockGuru - Portfolio Forecaster
                 <label class="toggle-row">
 
                     <input
+                        id="drip"
                         type="checkbox"
                         checked
                     >
@@ -337,7 +357,7 @@ StockGuru - Portfolio Forecaster
                         Historical Average
                     </option>
 
-                    <option>
+                    <option disabled>
                         Custom
                     </option>
 
@@ -355,7 +375,7 @@ StockGuru - Portfolio Forecaster
                         Historical Average
                     </option>
 
-                    <option>
+                    <option disabled>
                         Custom
                     </option>
 
@@ -363,11 +383,18 @@ StockGuru - Portfolio Forecaster
 
 
                 <button
+                    id="run-forecast"
                     type="button"
                     class="run-button"
                 >
                     Run Projection
                 </button>
+
+                <p
+                    id="forecast-status"
+                    class="field-help"
+                    aria-live="polite"
+                ></p>
 
             </section>
 
@@ -393,7 +420,10 @@ StockGuru - Portfolio Forecaster
                             PROJECTED PORTFOLIO VALUE
                         </span>
 
-                        <div class="projected-value">
+                        <div
+                            id="projected-value"
+                            class="projected-value"
+                        >
                             —
                         </div>
 
@@ -411,7 +441,7 @@ StockGuru - Portfolio Forecaster
                             Time Horizon
                         </span>
 
-                        <strong>
+                        <strong id="projection-horizon">
                             20 years
                         </strong>
 
@@ -476,7 +506,7 @@ StockGuru - Portfolio Forecaster
 
                                 Your Investment
 
-                                <strong>
+                                <strong id="source-investment">
                                     —
                                 </strong>
 
@@ -489,7 +519,7 @@ StockGuru - Portfolio Forecaster
 
                                 Future Contributions
 
-                                <strong>
+                                <strong id="source-contributions">
                                     —
                                 </strong>
 
@@ -502,7 +532,7 @@ StockGuru - Portfolio Forecaster
 
                                 Stock Growth
 
-                                <strong>
+                                <strong id="source-growth">
                                     —
                                 </strong>
 
@@ -515,7 +545,7 @@ StockGuru - Portfolio Forecaster
 
                                 Dividends / DRIP
 
-                                <strong>
+                                <strong id="source-dividends">
                                     —
                                 </strong>
 
@@ -547,7 +577,7 @@ StockGuru - Portfolio Forecaster
                                 Initial Investment
                             </span>
 
-                            <strong>
+                            <strong id="key-initial-investment">
                                 —
                             </strong>
 
@@ -560,7 +590,7 @@ StockGuru - Portfolio Forecaster
                                 Future Contributions
                             </span>
 
-                            <strong>
+                            <strong id="key-contributions">
                                 —
                             </strong>
 
@@ -573,7 +603,7 @@ StockGuru - Portfolio Forecaster
                                 Stock Growth
                             </span>
 
-                            <strong>
+                            <strong id="key-growth">
                                 —
                             </strong>
 
@@ -586,7 +616,7 @@ StockGuru - Portfolio Forecaster
                                 Dividends
                             </span>
 
-                            <strong>
+                            <strong id="key-dividends">
                                 —
                             </strong>
 
@@ -649,15 +679,13 @@ StockGuru - Portfolio Forecaster
                         </thead>
 
 
-                        <tbody>
+                        <tbody id="holdings-body">
 
                             <tr>
-
                                 <td colspan="6">
                                     Run a projection to see your
                                     holdings breakdown.
                                 </td>
-
                             </tr>
 
                         </tbody>
@@ -673,5 +701,14 @@ StockGuru - Portfolio Forecaster
     </div>
 
 </main>
+
+{% endblock %}
+
+{% block page_scripts %}
+
+<script
+    src="/static/forecaster.js"
+    defer
+></script>
 
 {% endblock %}

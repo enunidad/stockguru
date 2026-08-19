@@ -156,6 +156,22 @@ def project_holding(
         + dividend_value
     )
 
+    print(
+        "FORECAST DEBUG",
+        {
+            "ticker": state.ticker,
+            "price": state.price,
+            "investment_shares": state.investment_shares,
+            "dividend_shares": state.dividend_shares,
+            "initial_investment": state.initial_investment,
+            "contributions": state.contributions,
+            "dividend_cash": state.dividend_cash,
+            "investment_value": investment_value,
+            "dividend_value": dividend_value,
+            "growth": growth,
+            "future_value": future_value,
+        },
+    )
     return HoldingProjectionResult(
         ticker=state.ticker,
         initial_investment=round(
@@ -311,9 +327,12 @@ def _validate_inputs(
             "Shares cannot be negative."
         )
 
-    if current_price <= 0:
+    if (
+        not math.isfinite(current_price)
+        or current_price <= 0
+    ):
         raise ValueError(
-            "Current price must be greater than zero."
+            "Current price must be a finite value greater than zero."
         )
 
     if initial_investment < 0:

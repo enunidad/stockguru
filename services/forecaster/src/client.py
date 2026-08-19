@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from json import JSONDecodeError
 from typing import Any
+import math
 
 import aiohttp
 
@@ -111,9 +112,6 @@ class DownloaderApiClient:
         self,
         ticker: str,
     ) -> float:
-        """
-        Retrieve the most recent closing price for a ticker.
-        """
         history = await self.price_history(
             ticker,
             period="1y",
@@ -127,33 +125,29 @@ class DownloaderApiClient:
                 "Downloader returned no price history."
             )
 
-        latest = history[-1]
+        for row in reversed(history):
+            if not isinstance(row, dict):
+                continue
 
-        if not isinstance(latest, dict):
-            raise InvalidDownloaderResponseError(
-                "Latest price history row must be an object."
-            )
+            close = row.get("Close")
 
-        close = latest.get("Close")
+            if close is None:
+                continue
 
-        if close is None:
-            raise InvalidDownloaderResponseError(
-                "Latest price history row is missing Close."
-            )
+            try:
+                close_value = float(close)
+            except (TypeError, ValueError):
+                continue
 
-        try:
-            close_value = float(close)
-        except (TypeError, ValueError) as exc:
-            raise InvalidDownloaderResponseError(
-                "Latest closing price must be numeric."
-            ) from exc
+            if (
+                math.isfinite(close_value)
+                and close_value > 0
+            ):
+                return close_value
 
-        if close_value <= 0:
-            raise InvalidDownloaderResponseError(
-                "Latest closing price must be greater than zero."
-            )
-
-        return close_value
+        raise InvalidDownloaderResponseError(
+            f"Downloader returned no valid closing price for {ticker}."
+        )
     
     async def get_dividends(
         self,

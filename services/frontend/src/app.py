@@ -6,7 +6,7 @@ from aiohttp import web
 import aiohttp_jinja2
 import jinja2
 
-from .client import AnalyzerApiClient, DownloaderApiClient, ChartMgrApiClient
+from .client import AnalyzerApiClient, DownloaderApiClient, ChartMgrApiClient, ForecasterApiClient
 from .exceptions import ApiClientError, InvalidResponseError, ApiResponseError, ServiceUnavailableError
 from .schemas import PriceHistoryRequest
 
@@ -31,6 +31,10 @@ CHARTMGR_CLIENT_KEY = web.AppKey(
     ChartMgrApiClient,
 )
 
+FORECASTER_CLIENT_KEY = web.AppKey(
+    "forecaster_client",
+    ForecasterApiClient,
+)
 
 @aiohttp_jinja2.template("index.html")
 async def index(
@@ -261,11 +265,76 @@ async def get_analysis(
 
     return web.json_response(analysis)
 
+async def run_forecast(
+    request: web.Request,
+) -> web.Response:
+    """Proxy a forecast request to the Forecaster service."""
+
+    try:
+        payload = await request.json()
+
+    except ValueError:
+        return web.json_response(
+            {
+                "error": "invalid_json",
+                "message": "Request body must contain valid JSON.",
+            },
+            status=400,
+        )
+
+    forecaster_client = request.app[
+        FORECASTER_CLIENT_KEY
+    ]
+
+    try:
+        result = await forecaster_client.forecast(
+            payload
+        )
+
+    except InvalidResponseError as exc:
+        return web.json_response(
+            {
+                "error": "invalid_forecaster_response",
+                "message": str(exc),
+            },
+            status=502,
+        )
+
+    except ApiResponseError as exc:
+        if 400 <= exc.status < 500:
+            return web.json_response(
+                {
+                    "error": "forecaster_request_error",
+                    "message": exc.message,
+                },
+                status=exc.status,
+            )
+
+        return web.json_response(
+            {
+                "error": "forecaster_error",
+                "message": exc.message,
+            },
+            status=502,
+        )
+
+    except ServiceUnavailableError as exc:
+        return web.json_response(
+            {
+                "error": "forecaster_unavailable",
+                "message": str(exc),
+            },
+            status=503,
+        )
+
+    return web.json_response(result)
+
 
 def create_app(
     downloader_client: DownloaderApiClient,
     analyzer_client: AnalyzerApiClient,
-    chartmgr_client: ChartMgrApiClient
+    chartmgr_client: ChartMgrApiClient,
+    forecaster_client: ForecasterApiClient
 ) -> web.Application:
     """Create and configure the frontend application."""
 
@@ -281,6 +350,7 @@ def create_app(
     app[DOWNLOADER_CLIENT_KEY] = downloader_client
     app[ANALYZER_CLIENT_KEY] = analyzer_client
     app[CHARTMGR_CLIENT_KEY] = chartmgr_client
+    app[FORECASTER_CLIENT_KEY] = forecaster_client
 
     app.router.add_get(
         "/health",
@@ -310,6 +380,11 @@ def create_app(
     app.router.add_get(
         "/forecaster",
         forecaster,
+    )
+
+    app.router.add_post(
+        "/api/forecast",
+        run_forecast,
     )
 
     app.router.add_get(
