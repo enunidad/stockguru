@@ -658,6 +658,22 @@ def test_validate_request_rejects_zero_years() -> None:
             request
         )
 
+def test_validate_request_rejects_max_years() -> None:
+    request = ForecastRequest(
+        holdings=[
+            make_holding(),
+        ],
+        years=50,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="Forecast years must be less than 40.",
+    ):
+        ForecasterService._validate_request(
+            request
+        )
+
 
 def test_validate_request_rejects_negative_contribution() -> None:
     request = ForecastRequest(
@@ -670,6 +686,22 @@ def test_validate_request_rejects_negative_contribution() -> None:
     with pytest.raises(
         ValueError,
         match="Contribution amount cannot be negative.",
+    ):
+        ForecasterService._validate_request(
+            request
+        )
+
+def test_validate_request_rejects_very_large_contribution() -> None:
+    request = ForecastRequest(
+        holdings=[
+            make_holding(),
+        ],
+        contribution_amount=5000000,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="Contribution must be less than 1M.",
     ):
         ForecasterService._validate_request(
             request
