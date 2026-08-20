@@ -9,6 +9,8 @@ PID_DIR := .pids
 
 SELECTED_SERVICES := $(filter $(SERVICES),$(MAKECMDGOALS))
 
+PYTHON := py
+
 
 .PHONY: service test run-all-tests start-detached stop start-all stop-all run-local push-to-remote $(SERVICES)
 
@@ -21,7 +23,7 @@ $(SERVICES):
 service:
 	@if "$(SVC)"=="" (echo SVC is required && exit /b 1)
 	@if "$(CMD)"=="" (echo CMD is required && exit /b 1)
-	$(MAKE) -C services/$(SVC) $(CMD)
+	@$(MAKE) -C services/$(SVC) $(CMD)
 
 
 test:
@@ -37,9 +39,27 @@ test-all:
 	@for %%s in ($(SERVICES)) do @$(MAKE) service SVC=%%s CMD=test || exit /b 1
 	@echo.
 	@echo ========================================
-	@echo All tests passed.
+	@echo All unit tests passed.
 	@echo ========================================
 
+integration-test: start-all
+	@echo ========================================
+	@echo Running all public endpoints tests...
+	@echo ========================================
+	@$(PYTHON) -m pytest integration_tests -v
+	@$(MAKE) stop-all
+	@echo ========================================
+	@echo All endpoints passed.
+	@echo ========================================
+	@$(MAKE) clean-all
+	@$(PYTHON) -c "import shutil, pathlib; [shutil.rmtree(p, ignore_errors=True) for p in pathlib.Path('.').rglob('__pycache__')]; [p.unlink() for p in pathlib.Path('.').rglob('*.pyc')]"
+
+
+full-test: test-all
+	$(MAKE) integration-test
+	@echo ========================================
+	@echo Ready to merge.
+	@echo ========================================
 
 start-detached:
 	@if "$(SELECTED_SERVICES)"=="" (echo Usage: make ^<service...^> start-detached && exit /b 1)
@@ -64,6 +84,12 @@ stop-all:
 run-local: start-all
 	powershell -NoProfile -Command "Start-Process 'http://localhost:$(PORT)/'"
 
+clean:
+	@if "$(SELECTED_SERVICES)"=="" (echo Usage: make ^<service...^> clean && exit /b 1)
+	@for %%s in ($(SELECTED_SERVICES)) do @$(MAKE) service SVC=%%s CMD=clean
+
+clean-all:
+	$(MAKE) $(SERVICES) clean
 
 push-to-remote:
 	$(MAKE) service SVC=downloader CMD=clean-cache
