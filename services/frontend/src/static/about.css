@@ -1,0 +1,675 @@
+/* =========================================================
+   StockGuru About Page
+   ========================================================= */
+
+* {
+    box-sizing: border-box;
+}
+
+
+.about-main {
+    flex: 1;
+
+    min-width: 0;
+
+    padding:
+        42px
+        clamp(28px, 5vw, 78px)
+        70px;
+
+    background:
+        var(--sg-background);
+
+    color:
+        var(--sg-text);
+}
+
+
+/* =========================================================
+   Header
+   ========================================================= */
+
+.about-header {
+    width: 100%;
+
+    max-width: 1050px;
+
+    margin:
+        0
+        auto
+        52px;
+}
+
+
+.page-eyebrow {
+    margin:
+        0
+        0
+        8px;
+
+    color:
+        var(--sg-teal);
+
+    font-size:
+        12px;
+
+    font-weight:
+        800;
+
+    letter-spacing:
+        0.14em;
+}
+
+
+.about-header h1 {
+    margin:
+        0;
+
+    font-size:
+        clamp(
+            38px,
+            5vw,
+            58px
+        );
+
+    line-height:
+        1.05;
+
+    letter-spacing:
+        -0.04em;
+}
+
+
+.page-description {
+    max-width:
+        760px;
+
+    margin:
+        18px
+        0
+        0;
+
+    color:
+        var(--sg-text-muted);
+
+    font-size:
+        18px;
+
+    line-height:
+        1.7;
+}
+
+
+/* =========================================================
+   Sections
+   ========================================================= */
+
+.about-section {
+    width:
+        100%;
+
+    max-width:
+        1050px;
+
+    margin:
+        0
+        auto;
+
+    padding:
+        44px
+        0;
+
+    display:
+        grid;
+
+    grid-template-columns:
+        60px
+        minmax(0, 1fr);
+
+    gap:
+        24px;
+
+    border-top:
+        1px
+        solid
+        var(--sg-border);
+}
+
+
+.about-section-number {
+    padding-top:
+        5px;
+
+    color:
+        var(--sg-gold);
+
+    font-size:
+        12px;
+
+    font-weight:
+        800;
+
+    letter-spacing:
+        0.08em;
+}
+
+
+.about-section-content {
+    max-width:
+        780px;
+}
+
+
+.about-section-content h2 {
+    margin:
+        0
+        0
+        22px;
+
+    font-size:
+        27px;
+
+    letter-spacing:
+        -0.025em;
+}
+
+
+.about-section-content p {
+    margin:
+        0
+        0
+        17px;
+
+    color:
+        var(--sg-text-muted);
+
+    font-size:
+        16px;
+
+    line-height:
+        1.75;
+}
+
+
+.about-section-content strong {
+    color:
+        var(--sg-text);
+}
+
+
+.about-emphasis {
+    color:
+        var(--sg-text)
+        !important;
+
+    font-size:
+        19px
+        !important;
+
+    font-weight:
+        750;
+}
+
+
+/* =========================================================
+   Investing Questions
+   ========================================================= */
+
+.question-panel {
+    margin:
+        28px
+        0;
+
+    padding:
+        22px
+        26px;
+
+    border-left:
+        4px
+        solid
+        var(--sg-teal);
+
+    background:
+        var(--sg-surface);
+
+    border-radius:
+        0
+        10px
+        10px
+        0;
+}
+
+
+.question-panel p {
+    margin:
+        0;
+
+    padding:
+        8px
+        0;
+
+    color:
+        var(--sg-text)
+        !important;
+
+    font-weight:
+        600;
+}
+
+
+/* =========================================================
+   Thought Cards
+   ========================================================= */
+
+.thought-grid {
+    margin:
+        28px
+        0;
+
+    display:
+        grid;
+
+    grid-template-columns:
+        repeat(
+            3,
+            minmax(0, 1fr)
+        );
+
+    gap:
+        14px;
+}
+
+
+.thought-grid blockquote {
+    margin:
+        0;
+
+    padding:
+        22px;
+
+    border:
+        1px
+        solid
+        var(--sg-border);
+
+    border-radius:
+        12px;
+
+    background:
+        var(--sg-surface);
+
+    color:
+        var(--sg-text);
+
+    font-size:
+        14px;
+
+    font-weight:
+        600;
+
+    line-height:
+        1.6;
+}
+
+
+/* =========================================================
+   Philosophy
+   ========================================================= */
+
+.philosophy-callout {
+    margin:
+        28px
+        0;
+
+    padding:
+        26px;
+
+    display:
+        flex;
+
+    flex-direction:
+        column;
+
+    gap:
+        6px;
+
+    border-radius:
+        12px;
+
+    background:
+        var(--sg-navy);
+
+    color:
+        var(--sg-text-inverse);
+}
+
+
+.philosophy-callout span {
+    opacity:
+        0.8;
+
+    font-size:
+        14px;
+}
+
+
+.philosophy-callout strong {
+    color:
+        var(--sg-text-inverse);
+
+    font-size:
+        22px;
+}
+
+
+/* =========================================================
+   Builder
+   ========================================================= */
+
+.builder-thought {
+    margin:
+        28px
+        0;
+
+    padding:
+        28px;
+
+    display:
+        flex;
+
+    flex-direction:
+        column;
+
+    gap:
+        9px;
+
+    border:
+        1px
+        solid
+        var(--sg-border);
+
+    border-radius:
+        12px;
+
+    background:
+        var(--sg-surface);
+}
+
+
+.builder-thought span {
+    color:
+        var(--sg-text-muted);
+
+    font-size:
+        17px;
+}
+
+
+.builder-thought strong {
+    color:
+        var(--sg-text);
+
+    font-size:
+        21px;
+
+    line-height:
+        1.4;
+}
+
+
+/* =========================================================
+   Mission
+   ========================================================= */
+
+.large-statement {
+    color:
+        var(--sg-text)
+        !important;
+
+    font-size:
+        24px
+        !important;
+
+    font-weight:
+        800;
+
+    letter-spacing:
+        -0.02em;
+}
+
+
+.mission-statement {
+    margin:
+        28px
+        0;
+
+    padding:
+        30px;
+
+    border-radius:
+        12px;
+
+    background:
+        var(--sg-surface-alt);
+
+    color:
+        var(--sg-navy);
+
+    font-size:
+        21px;
+
+    font-weight:
+        750;
+
+    line-height:
+        1.55;
+}
+
+
+.tagline {
+    color:
+        var(--sg-gold)
+        !important;
+
+    font-weight:
+        800;
+
+    font-size:
+        17px
+        !important;
+}
+
+
+/* =========================================================
+   Disclaimer
+   ========================================================= */
+
+.about-disclaimer {
+    width:
+        100%;
+
+    max-width:
+        1050px;
+
+    margin:
+        44px
+        auto
+        0;
+
+    padding:
+        18px
+        20px;
+
+    display:
+        flex;
+
+    align-items:
+        flex-start;
+
+    gap:
+        13px;
+
+    border:
+        1px
+        solid
+        var(--sg-border);
+
+    border-radius:
+        10px;
+
+    background:
+        var(--sg-surface);
+}
+
+
+.disclaimer-icon {
+    width:
+        27px;
+
+    height:
+        27px;
+
+    flex-shrink:
+        0;
+
+    display:
+        grid;
+
+    place-items:
+        center;
+
+    border-radius:
+        50%;
+
+    background:
+        var(--sg-teal);
+
+    color:
+        var(--sg-text-inverse);
+
+    font-size:
+        13px;
+
+    font-weight:
+        800;
+}
+
+
+.about-disclaimer strong {
+    display:
+        block;
+
+    margin-bottom:
+        6px;
+}
+
+
+.about-disclaimer p {
+    margin:
+        0
+        0
+        7px;
+
+    color:
+        var(--sg-text-muted);
+
+    font-size:
+        12px;
+
+    line-height:
+        1.6;
+}
+
+
+.about-disclaimer p:last-child {
+    margin-bottom:
+        0;
+}
+
+
+/* =========================================================
+   Tablet
+   ========================================================= */
+
+@media (max-width: 850px) {
+
+    .thought-grid {
+        grid-template-columns:
+            1fr;
+    }
+
+}
+
+
+/* =========================================================
+   Mobile
+   ========================================================= */
+
+@media (max-width: 600px) {
+
+    .about-main {
+        padding:
+            28px
+            18px
+            44px;
+    }
+
+
+    .about-header {
+        margin-bottom:
+            34px;
+    }
+
+
+    .about-header h1 {
+        font-size:
+            36px;
+    }
+
+
+    .page-description {
+        font-size:
+            15px;
+    }
+
+
+    .about-section {
+        grid-template-columns:
+            1fr;
+
+        gap:
+            8px;
+
+        padding:
+            32px
+            0;
+    }
+
+
+    .about-section-number {
+        padding:
+            0;
+    }
+
+
+    .about-section-content h2 {
+        font-size:
+            23px;
+    }
+
+
+    .about-section-content p {
+        font-size:
+            15px;
+    }
+
+
+    .mission-statement {
+        padding:
+            22px;
+
+        font-size:
+            18px;
+    }
+
+}

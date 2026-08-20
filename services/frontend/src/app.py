@@ -65,6 +65,12 @@ async def forecaster(
         "active_page": "forecaster",
     }
 
+@aiohttp_jinja2.template("about.html")
+async def about_page(request: web.Request) -> dict:
+    """Serve the about page"""
+    return {
+            "active_page": "about",
+        }
 
 async def health(
     request: web.Request,
@@ -481,6 +487,8 @@ def create_app(
         "/api/metadata/{ticker}",
         get_metadata,
     )
+
+    app.router.add_get("/about", about_page)
 
     app.router.add_static(
         "/static/",
