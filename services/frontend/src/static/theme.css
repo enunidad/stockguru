@@ -116,3 +116,15 @@
     --sg-shadow:
         0 4px 12px rgba(13, 43, 69, 0.10);
 }
+
+html,
+body {
+   margin: 0;
+   padding: 0;
+}
+
+body {
+   background: var(--sg-background);
+   color: var(--sg-text);
+   font-family: var(--sg-font-body);
+}
