@@ -4,3 +4,4 @@ jinja2
 pytest
 pytest-aiohttp
 pytest-asyncio
+beautifulsoup4
