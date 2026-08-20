@@ -388,10 +388,20 @@ class ForecasterService:
             raise ValueError(
                 "Forecast years must be greater than zero."
             )
+        
+        if request.years >= 40:
+            raise ValueError(
+                "Forecast years must be less than 40."
+            )
 
         if request.contribution_amount < 0:
             raise ValueError(
                 "Contribution amount cannot be negative."
+            )
+        
+        if request.contribution_amount >= 1000000:
+            raise ValueError(
+                "Contribution must be less than 1M."
             )
 
         if (
