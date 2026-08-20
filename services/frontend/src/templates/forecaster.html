@@ -53,14 +53,17 @@ StockGuru - Portfolio Forecaster
 
     <!-- ==================================================
          Forecast Workspace
+         Top row:
+         1. Portfolio
+         2. Projection Settings
+         3. Projection Summary
          ================================================== -->
 
     <div class="forecast-workspace">
 
 
         <!-- ==============================================
-             LEFT COLUMN
-             Portfolio Inputs
+             1. Portfolio Inputs
              ============================================== -->
 
         <section class="forecast-panel portfolio-panel">
@@ -206,145 +209,137 @@ StockGuru - Portfolio Forecaster
 
 
         <!-- ==============================================
-             RIGHT SIDE
+             2. Projection Settings
+             Contributions + Horizon
              ============================================== -->
 
-        <div class="forecast-right-column">
+        <section class="forecast-panel projection-settings-panel">
+
+            <div class="panel-heading">
+
+                <div>
+
+                    <span class="panel-number">
+                        2
+                    </span>
+
+                    <h2>
+                        Projection Settings
+                    </h2>
+
+                </div>
+
+            </div>
 
 
             <!-- ==========================================
-                 Forecast Controls
+                 Contributions
                  ========================================== -->
 
-            <div class="forecast-settings-grid">
+            <div class="settings-group">
+
+                <label
+                    class="field-label"
+                    for="contribution-amount"
+                >
+                    Recurring Investment
+                </label>
 
 
-                <!-- Contributions -->
+                <div class="split-field">
 
-                <section class="forecast-panel contributions-panel">
-
-                    <div class="panel-heading">
-
-                        <div>
-
-                            <span class="panel-number">
-                                2
-                            </span>
-
-                            <h2>
-                                Contributions
-                            </h2>
-
-                        </div>
-
-                    </div>
-
-
-                    <label
-                        class="field-label"
-                        for="contribution-amount"
+                    <input
+                        id="contribution-amount"
+                        type="number"
+                        value="500"
+                        min="0"
+                        step="1"
                     >
-                        Recurring Investment
-                    </label>
+
+                    <select
+                        id="contribution-frequency"
+                        aria-label="Contribution frequency"
+                    >
+
+                        <option value="monthly">
+                            Monthly
+                        </option>
+
+                        <option value="quarterly">
+                            Quarterly
+                        </option>
+
+                        <option value="annually">
+                            Annually
+                        </option>
+
+                    </select>
+
+                </div>
 
 
-                    <div class="split-field">
+                <p class="field-help contribution-help">
+                    Contributions are distributed equally
+                    across all holdings.
+                </p>
+
+            </div>
+
+
+            <!-- ==========================================
+                 Compatibility hook
+
+                 Kept hidden for now in case forecaster.js
+                 still references allocation-container.
+                 ========================================== -->
+
+            <div
+                id="allocation-container"
+                class="allocation-container"
+                hidden
+                aria-hidden="true"
+            >
+
+                <div
+                    class="allocation-row"
+                    data-holding-id="holding-1"
+                >
+
+                    <span class="allocation-ticker">
+                        AAPL
+                    </span>
+
+                    <div class="percentage-input">
 
                         <input
-                            id="contribution-amount"
+                            class="contribution-weight"
                             type="number"
-                            value="500"
+                            value="100"
                             min="0"
+                            max="100"
                             step="1"
+                            tabindex="-1"
+                            aria-label="AAPL contribution allocation"
                         >
 
-                        <select
-                            id="contribution-frequency"
-                            aria-label="Contribution frequency"
-                        >
-
-                            <option value="monthly">
-                                Monthly
-                            </option>
-
-                            <option value="quarterly">
-                                Quarterly
-                            </option>
-
-                            <option value="annually">
-                                Annually
-                            </option>
-
-                        </select>
+                        <span>
+                            %
+                        </span>
 
                     </div>
 
+                </div>
 
-                    <label class="field-label">
-                        Contribution Allocation
-                    </label>
-
-
-                    <div
-                        id="allocation-container"
-                        class="allocation-container"
-                    >
-
-                        <div
-                            class="allocation-row"
-                            data-holding-id="holding-1"
-                        >
-
-                            <span class="allocation-ticker">
-                                AAPL
-                            </span>
+            </div>
 
 
-                            <div class="percentage-input">
+            <!-- ==========================================
+                 Time Horizon
+                 ========================================== -->
 
-                                <input
-                                    class="contribution-weight"
-                                    type="number"
-                                    value="100"
-                                    min="0"
-                                    max="100"
-                                    step="1"
-                                    aria-label="AAPL contribution allocation"
-                                >
+            <div class="settings-group horizon-settings-group">
 
-                                <span>
-                                    %
-                                </span>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                </section>
-
-
-                <!-- Horizon / Projection Settings -->
-
-                <section class="forecast-panel horizon-panel">
-
-                    <div class="panel-heading">
-
-                        <div>
-
-                            <span class="panel-number">
-                                3
-                            </span>
-
-                            <h2>
-                                Horizon
-                            </h2>
-
-                        </div>
-
-                    </div>
-
+                <div class="range-heading">
 
                     <label
                         class="field-label"
@@ -353,40 +348,69 @@ StockGuru - Portfolio Forecaster
                         Time Horizon
                     </label>
 
+                    <output
+                        id="projection-years-value"
+                        for="projection-years"
+                        class="range-value"
+                    >
+                        20 years
+                    </output>
 
-                    <div class="input-suffix">
-
-                        <input
-                            id="projection-years"
-                            type="number"
-                            value="20"
-                            min="1"
-                            max="50"
-                        >
-
-                        <span>
-                            Years
-                        </span>
-
-                    </div>
+                </div>
 
 
-                    <!-- Global DRIP setting -->
+                <input
+                    id="projection-years"
+                    class="horizon-slider"
+                    type="range"
+                    value="20"
+                    min="0"
+                    max="25"
+                    step="1"
+                >
 
-                    <label class="toggle-row">
 
-                        <input
-                            id="drip"
-                            type="checkbox"
-                            checked
-                        >
+                <div class="range-scale">
 
-                        <span>
-                            Reinvest dividends (DRIP)
-                        </span>
+                    <span>
+                        0 years
+                    </span>
 
-                    </label>
+                    <span>
+                        25 years
+                    </span>
 
+                </div>
+
+            </div>
+
+
+            <!-- ==========================================
+                 DRIP
+                 ========================================== -->
+
+            <label class="toggle-row">
+
+                <input
+                    id="drip"
+                    type="checkbox"
+                    checked
+                >
+
+                <span>
+                    Reinvest dividends (DRIP)
+                </span>
+
+            </label>
+
+
+            <!-- ==========================================
+                 Future assumption controls
+                 ========================================== -->
+
+            <div class="settings-group future-settings">
+
+                <div class="future-setting-heading">
 
                     <label
                         class="field-label"
@@ -395,25 +419,31 @@ StockGuru - Portfolio Forecaster
                         Growth Assumption
                     </label>
 
+                    <span class="future-badge">
+                        Future
+                    </span>
 
-                    <select
-                        id="growth-assumption"
-                        class="full-field"
-                    >
+                </div>
 
-                        <option value="historical">
-                            Historical Average
-                        </option>
 
-                        <option
-                            value="custom"
-                            disabled
-                        >
-                            Custom
-                        </option>
+                <select
+                    id="growth-assumption"
+                    class="full-field"
+                    disabled
+                >
 
-                    </select>
+                    <option value="historical">
+                        Historical Average
+                    </option>
 
+                    <option value="custom">
+                        Custom
+                    </option>
+
+                </select>
+
+
+                <div class="future-setting-heading">
 
                     <label
                         class="field-label"
@@ -422,297 +452,304 @@ StockGuru - Portfolio Forecaster
                         Dividend Assumption
                     </label>
 
+                    <span class="future-badge">
+                        Future
+                    </span>
 
-                    <select
-                        id="dividend-assumption"
-                        class="full-field"
-                    >
-
-                        <option value="historical">
-                            Historical Average
-                        </option>
-
-                        <option
-                            value="custom"
-                            disabled
-                        >
-                            Custom
-                        </option>
-
-                    </select>
+                </div>
 
 
-                    <button
-                        id="run-forecast"
-                        type="button"
-                        class="run-button"
-                    >
-                        Run Projection
-                    </button>
+                <select
+                    id="dividend-assumption"
+                    class="full-field"
+                    disabled
+                >
 
+                    <option value="historical">
+                        Historical Average
+                    </option>
 
-                    <p
-                        id="forecast-status"
-                        class="field-help"
-                        aria-live="polite"
-                    ></p>
+                    <option value="custom">
+                        Custom
+                    </option>
 
-                </section>
+                </select>
 
             </div>
 
 
             <!-- ==========================================
-                Portfolio Overview
-                ========================================== -->
+                 Run Projection
+                 ========================================== -->
 
-            <section class="forecast-panel portfolio-overview">
+            <button
+                id="run-forecast"
+                type="button"
+                class="run-button"
+            >
+                Run Projection
+            </button>
 
-                <div class="section-title">
 
-                    <div>
+            <p
+                id="forecast-status"
+                class="field-help"
+                aria-live="polite"
+            ></p>
 
-                        <p class="result-label">
-                            FORECAST COMPOSITION
-                        </p>
+        </section>
 
-                        <h2>
-                            Portfolio Overview
-                        </h2>
+
+        <!-- ==============================================
+             3. Projection Summary
+             Donut moved into top workspace
+             ============================================== -->
+
+        <section class="forecast-panel portfolio-overview">
+
+            <div class="section-title">
+
+                <div>
+
+                    <p class="result-label">
+                        FORECAST COMPOSITION
+                    </p>
+
+                    <h2>
+                        Projection Summary
+                    </h2>
+
+                </div>
+
+            </div>
+
+
+            <div class="portfolio-overview-content">
+
+
+                <!-- ======================================
+                     Donut
+                     ====================================== -->
+
+                <div class="portfolio-chart-area">
+
+                    <div
+                        id="portfolio-overview-chart"
+                        class="portfolio-overview-chart"
+                        role="img"
+                        aria-label="Projected portfolio wealth distribution"
+                    >
+
+                        <div class="chart-empty-state">
+                            —
+                        </div>
 
                     </div>
 
                 </div>
 
 
-                <div class="portfolio-overview-content">
+                <!-- ======================================
+                     Portfolio Composition / Legend
+                     ====================================== -->
+
+                <div class="portfolio-source-list">
 
 
-                    <!-- ======================================
-                        Donut + Projected Value
-                        ====================================== -->
+                    <!-- Total invested -->
 
-                    <div class="portfolio-chart-area">
+                    <div class="portfolio-source-row">
 
-                        <div
-                            id="portfolio-overview-chart"
-                            class="portfolio-overview-chart"
-                            role="img"
-                            aria-label="Projected portfolio wealth distribution"
-                        >
+                        <div class="source-name">
 
-                            <div class="chart-empty-state">
-                                —
-                            </div>
+                            <span
+                                class="source-dot invested"
+                            ></span>
+
+                            <span>
+                                Total Invested
+                            </span>
 
                         </div>
+
+
+                        <strong id="source-investment">
+                            —
+                        </strong>
+
+
+                        <span
+                            id="source-investment-percent"
+                            class="source-percent"
+                        >
+                            —
+                        </span>
 
                     </div>
 
 
-                    <!-- ======================================
-                        Portfolio Composition / Legend
-                        ====================================== -->
+                    <!-- Current growth -->
 
-                    <div class="portfolio-source-list">
+                    <div class="portfolio-source-row">
 
-
-                        <!-- Total invested -->
-
-                        <div class="portfolio-source-row">
-
-                            <div class="source-name">
-
-                                <span
-                                    class="source-dot invested"
-                                ></span>
-
-                                <span>
-                                    Total Invested
-                                </span>
-
-                            </div>
-
-
-                            <strong id="source-investment">
-                                —
-                            </strong>
-
+                        <div class="source-name">
 
                             <span
-                                id="source-investment-percent"
-                                class="source-percent"
-                            >
-                                —
+                                class="source-dot current-growth"
+                            ></span>
+
+                            <span>
+                                Current Growth
                             </span>
 
                         </div>
 
 
-                        <!-- Current growth -->
-
-                        <div class="portfolio-source-row">
-
-                            <div class="source-name">
-
-                                <span
-                                    class="source-dot current-growth"
-                                ></span>
-
-                                <span>
-                                    Current Growth
-                                </span>
-
-                            </div>
+                        <strong id="source-current-growth">
+                            —
+                        </strong>
 
 
-                            <strong id="source-current-growth">
-                                —
-                            </strong>
-
-
-                            <span
-                                id="source-current-growth-percent"
-                                class="source-percent"
-                            >
-                                —
-                            </span>
-
-                        </div>
-
-
-                        <!-- Future contributions -->
-
-                        <div class="portfolio-source-row">
-
-                            <div class="source-name">
-
-                                <span
-                                    class="source-dot contributions"
-                                ></span>
-
-                                <span>
-                                    Future Contributions
-                                </span>
-
-                            </div>
-
-
-                            <strong id="source-contributions">
-                                —
-                            </strong>
-
-
-                            <span
-                                id="source-contributions-percent"
-                                class="source-percent"
-                            >
-                                —
-                            </span>
-
-                        </div>
-
-
-                        <!-- Stock growth -->
-
-                        <div class="portfolio-source-row">
-
-                            <div class="source-name">
-
-                                <span
-                                    class="source-dot growth"
-                                ></span>
-
-                                <span>
-                                    Stock Growth
-                                </span>
-
-                            </div>
-
-
-                            <strong id="source-growth">
-                                —
-                            </strong>
-
-
-                            <span
-                                id="source-growth-percent"
-                                class="source-percent"
-                            >
-                                —
-                            </span>
-
-                        </div>
-
-
-                        <!-- Dividends -->
-
-                        <div class="portfolio-source-row">
-
-                            <div class="source-name">
-
-                                <span
-                                    class="source-dot dividends"
-                                ></span>
-
-                                <span>
-                                    Dividends / DRIP
-                                </span>
-
-                            </div>
-
-
-                            <strong id="source-dividends">
-                                —
-                            </strong>
-
-
-                            <span
-                                id="source-dividends-percent"
-                                class="source-percent"
-                            >
-                                —
-                            </span>
-
-                        </div>
-
-
-                        <!-- Total -->
-
-                        <div
-                            class="
-                                portfolio-source-row
-                                portfolio-total-row
-                            "
+                        <span
+                            id="source-current-growth-percent"
+                            class="source-percent"
                         >
+                            —
+                        </span>
 
-                            <div class="source-name">
-
-                                <span>
-                                    Total
-                                </span>
-
-                            </div>
+                    </div>
 
 
-                            <strong id="source-total">
-                                —
-                            </strong>
+                    <!-- Future contributions -->
 
+                    <div class="portfolio-source-row">
 
-                            <span class="source-percent">
-                                100%
+                        <div class="source-name">
+
+                            <span
+                                class="source-dot contributions"
+                            ></span>
+
+                            <span>
+                                Future Contributions
                             </span>
 
                         </div>
+
+
+                        <strong id="source-contributions">
+                            —
+                        </strong>
+
+
+                        <span
+                            id="source-contributions-percent"
+                            class="source-percent"
+                        >
+                            —
+                        </span>
+
+                    </div>
+
+
+                    <!-- Stock growth -->
+
+                    <div class="portfolio-source-row">
+
+                        <div class="source-name">
+
+                            <span
+                                class="source-dot growth"
+                            ></span>
+
+                            <span>
+                                Stock Growth
+                            </span>
+
+                        </div>
+
+
+                        <strong id="source-growth">
+                            —
+                        </strong>
+
+
+                        <span
+                            id="source-growth-percent"
+                            class="source-percent"
+                        >
+                            —
+                        </span>
+
+                    </div>
+
+
+                    <!-- Dividends -->
+
+                    <div class="portfolio-source-row">
+
+                        <div class="source-name">
+
+                            <span
+                                class="source-dot dividends"
+                            ></span>
+
+                            <span>
+                                Dividends / DRIP
+                            </span>
+
+                        </div>
+
+
+                        <strong id="source-dividends">
+                            —
+                        </strong>
+
+
+                        <span
+                            id="source-dividends-percent"
+                            class="source-percent"
+                        >
+                            —
+                        </span>
+
+                    </div>
+
+
+                    <!-- Total -->
+
+                    <div
+                        class="
+                            portfolio-source-row
+                            portfolio-total-row
+                        "
+                    >
+
+                        <div class="source-name">
+
+                            <span>
+                                Total
+                            </span>
+
+                        </div>
+
+
+                        <strong id="source-total">
+                            —
+                        </strong>
+
+
+                        <span class="source-percent">
+                            100%
+                        </span>
 
                     </div>
 
                 </div>
 
-            </section>
+            </div>
 
-        </div>
+        </section>
 
     </div>
 
@@ -811,6 +848,7 @@ StockGuru - Portfolio Forecaster
 
             </table>
 
+
             <div class="forecast-notes">
 
                 <p class="forecast-footnote">
@@ -820,12 +858,13 @@ StockGuru - Portfolio Forecaster
                     market prices may differ due to stock splits or other corporate actions.
                 </p>
 
+
                 <p class="forecast-disclaimer">
                     This forecast is a projection based on historical data and modeling
                     assumptions, not a prediction of future market performance.
                     Past performance does not guarantee future results.
                 </p>
-                
+
             </div>
 
         </div>
@@ -843,5 +882,52 @@ StockGuru - Portfolio Forecaster
     src="/static/forecaster.js"
     defer
 ></script>
+
+
+<!--
+    Keeps the visible horizon value synchronized with the slider.
+    We can move this into forecaster.js afterward if preferred.
+-->
+
+<script>
+
+document.addEventListener("DOMContentLoaded", () => {
+
+    const projectionYears =
+        document.getElementById("projection-years");
+
+    const projectionYearsValue =
+        document.getElementById("projection-years-value");
+
+
+    if (!projectionYears || !projectionYearsValue) {
+        return;
+    }
+
+
+    function updateProjectionYearsLabel() {
+
+        const years =
+            Number(projectionYears.value);
+
+        projectionYearsValue.textContent =
+            years === 1
+                ? "1 year"
+                : `${years} years`;
+
+    }
+
+
+    projectionYears.addEventListener(
+        "input",
+        updateProjectionYearsLabel
+    );
+
+
+    updateProjectionYearsLabel();
+
+});
+
+</script>
 
 {% endblock %}
