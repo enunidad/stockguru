@@ -25,10 +25,11 @@ env/
 Thumbs.db
 
 # Local cache
-services/**/data/cache/
+services/**/data/
 
 # Environment variables
 .env
+.pids
 
 # Build
 dist/

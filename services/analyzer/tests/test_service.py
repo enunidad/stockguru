@@ -39,7 +39,7 @@ async def test_analyze_ticker_calls_downloader_and_returns_analysis():
 
     result = await service.analyze_ticker("aapl", period="2y", )
 
-    client.get_price_history.assert_awaited_once_with("aapl", period="2y", interval="1d", aggregate=False, )
+    client.get_price_history.assert_awaited_once_with("aapl", period="2y", interval="1d", aggregate=False, auto_adjust=False, )
 
     assert result.ticker == "AAPL"
     assert result.observations == 3
