@@ -30,6 +30,8 @@ class ForecasterService:
         "quarterly": 3,
         "annually": 12,
     }
+    
+    _MIN_PROJECTED_GROWTH_RATE = 0.015
 
     def __init__(
         self,
@@ -230,9 +232,8 @@ class ForecasterService:
             )
         )
 
-        annual_growth_rate = self._read_cagr(
-            analysis
-        )
+        annual_growth_rate = max(self._read_cagr(analysis),
+                                    _MIN_PROJECTED_GROWTH_RATE)
 
         annual_dividend = self._read_annual_dividend(
             dividend_data

@@ -330,11 +330,30 @@ function syncAllocations() {
         );
 
 
+    /*
+        If the number of holdings has changed,
+        redistribute contributions evenly.
+
+        Otherwise preserve the user's existing
+        allocation values.
+    */
+
+    const portfolioChanged =
+        existingWeights.size !==
+        holdings.length;
+
+
+    const equalWeight =
+        holdings.length > 0
+            ? 100 / holdings.length
+            : 0;
+
+
     container.innerHTML = "";
 
 
     holdings.forEach(
-        (holding, index) => {
+        (holding) => {
 
             const holdingId =
                 holding.dataset.holdingId;
@@ -352,39 +371,48 @@ function syncAllocations() {
                     .toUpperCase() || "—";
 
 
-            let weight =
-                existingWeights.get(
-                    holdingId
-                );
+            let weight;
 
 
-            if (weight === undefined) {
+            if (portfolioChanged) {
 
                 /*
-                    The first stock begins at 100%.
-
-                    Newly-added holdings start at 0%
-                    so the user's existing allocation
-                    is not silently changed.
+                    A holding was added or removed,
+                    so reset to an even allocation.
                 */
 
                 weight =
-                    holdings.length === 1
-                        ? 100
-                        : (
-                            index === 0 &&
-                            existingWeights.size === 0
-                                ? 100
-                                : 0
-                        );
+                    equalWeight;
+
+            }
+            else {
+
+                /*
+                    Portfolio composition has not
+                    changed. Preserve any allocation
+                    manually entered by the user.
+                */
+
+                weight =
+                    existingWeights.get(
+                        holdingId
+                    );
+
+
+                if (weight === undefined) {
+                    weight = equalWeight;
+                }
+
             }
 
 
             const allocationRow =
                 document.createElement("div");
 
+
             allocationRow.className =
                 "allocation-row";
+
 
             allocationRow.dataset.holdingId =
                 holdingId;
@@ -403,7 +431,7 @@ function syncAllocations() {
                         value="${weight}"
                         min="0"
                         max="100"
-                        step="1"
+                        step="0.01"
                         aria-label="${escapeHtml(ticker)} contribution allocation"
                     >
 
@@ -418,6 +446,7 @@ function syncAllocations() {
             container.appendChild(
                 allocationRow
             );
+
         }
     );
 }
