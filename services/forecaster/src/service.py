@@ -3,11 +3,10 @@ from __future__ import annotations
 import math
 from typing import Any
 import pandas as pd
+from dataclasses import fields
 
-from .client import (
-    AnalyzerApiClient,
-    DownloaderApiClient,
-)
+from .client import MyClient
+
 from .schemas import (
     ForecastPoint,
     ForecastRequest,
@@ -33,31 +32,18 @@ class ForecasterService:
     
     _MIN_PROJECTED_GROWTH_RATE = 0.015
 
-    def __init__(
-        self,
-        downloader_client: DownloaderApiClient,
-        analyzer_client: AnalyzerApiClient,
-    ) -> None:
-        self._downloader_client = downloader_client
-        self._analyzer_client = analyzer_client
+    def __init__(self, client: MyClient, ) -> None:
+        self._client = client
 
-    async def forecast(
-        self,
-        request: ForecastRequest,
-    ) -> ForecastResponse:
+    async def forecast(self, request: ForecastRequest, ) -> ForecastResponse:
         self._validate_request(request)
 
         results = []
 
         for holding in request.holdings:
-            prepared = await self._prepare_holding(
-                holding
-            )
+            prepared = await self._prepare_holding(holding)
 
-            contribution_amount = (
-                request.contribution_amount
-                * holding.contribution_weight
-            )
+            contribution_amount = request.contribution_amount * holding.contribution_weight
 
             result = project_holding(
                 ticker=prepared["ticker"],
@@ -74,17 +60,10 @@ class ForecasterService:
 
             results.append(result)
 
-        return self._build_response(
-            results,
-            years=request.years,
-        )
+        return self._build_response(results, years=request.years, )
     
     @staticmethod
-    def _build_response(
-        results: list[HoldingProjectionResult],
-        *,
-        years: int,
-    ) -> ForecastResponse:
+    def _build_response(results: list[HoldingProjectionResult], *, years: int, ) -> ForecastResponse:
         """
         Combine individual holding projections into a
         portfolio-level forecast response.
@@ -94,160 +73,51 @@ class ForecasterService:
         # Per-holding results
         # -----------------------------------------------------
 
-        holdings = [
-            HoldingForecast(
-                ticker=result.ticker,
-
-                initial_investment=result.initial_investment,
-                current_growth=result.current_growth,
-
-                contributions=result.contributions,
-                growth=result.growth,
-                dividends=result.dividends,
-
-                future_value=result.future_value,
-
-                dividend_yield=result.dividend_yield,
-
-                purchased_shares=result.purchased_shares,
-                drip_shares=result.drip_shares,
-                total_shares=result.total_shares,
-
-                ending_price=result.ending_price,
-            )
-            for result in results
-        ]
-
+        holding_params = lambda x: {key.name: getattr(x, key.name) for key in fields(HoldingForecast) if key.init}
+        holdings = [HoldingForecast(**holding_params(result)) for result in results]
 
         # -----------------------------------------------------
         # Portfolio summary
         # -----------------------------------------------------
 
-        summary = ForecastSummary(
-            initial_investment=round(
-                sum(
-                    result.initial_investment
-                    for result in results
-                ),
-                2,
-            ),
-
-            current_growth=round(
-                sum(
-                    result.current_growth
-                    for result in results
-                ),
-                2,
-            ),
-
-            future_contributions=round(
-                sum(
-                    result.contributions
-                    for result in results
-                ),
-                2,
-            ),
-
-            stock_growth=round(
-                sum(
-                    result.growth
-                    for result in results
-                ),
-                2,
-            ),
-
-            dividends=round(
-                sum(
-                    result.dividends
-                    for result in results
-                ),
-                2,
-            ),
-
-            future_value=round(
-                sum(
-                    result.future_value
-                    for result in results
-                ),
-                2,
-            ),
-        )
-
+        summary_content = lambda x, y: round(sum(getattr(result, y) for result in x), 2)
+        summary_params = {key.name: summary_content(results, key.name) for key in fields(ForecastSummary) if key.init}    
+        summary = ForecastSummary(**summary_params)
 
         # -----------------------------------------------------
         # Portfolio timeline
         # -----------------------------------------------------
 
+        timeline_params = [ForecastPoint(**timeline_params(x, y)) for key in fields(ForecastPoint) if key.init] 
+        timeline = [ForecastPoint(**timeline_params())]
         timeline = []
 
         for year in range(years + 1):
-
-            value = sum(
-                result.timeline[year].value
-                for result in results
-            )
-
-            timeline.append(
-                ForecastPoint(
-                    year=year,
-                    value=round(value, 2),
-                )
-            )
+            value = sum(result.timeline[year].value for result in results)
+            timeline.append(ForecastPoint(year=year, value=round(value, 2), ))
 
 
-        return ForecastResponse(
-            summary=summary,
-            timeline=timeline,
-            holdings=holdings,
-        )
+        return ForecastResponse(summary=summary, timeline=timeline, holdings=holdings, )
 
-    async def _prepare_holding(
-        self,
-        holding: HoldingInput,
-    ) -> dict[str, Any]:
+    async def _prepare_holding(self, holding: HoldingInput, ) -> dict[str, Any]:
         """
         Resolve external data required for one holding.
         """
         ticker = holding.ticker.strip().upper()
 
-        latest_close = (
-            await self._downloader_client.latest_close(
-                ticker
-            )
-        )
+        latest_close = (await self._client.latest_close(ticker))
 
-        analysis = (
-            await self._analyzer_client.get_analysis(
-                ticker,
-                period="10y",
-                interval="1d",
-                auto_adjust=False,
-            )
-        )
+        analysis = await self._client.get_analysis(ticker, period="10y", interval="1d", auto_adjust=False, )
 
-        dividend_data = (
-            await self._downloader_client.get_dividends(
-                ticker,
-                period="10y",
-            )
-        )
+        dividend_data = await self._client.get_dividends(ticker, period="10y", )
 
-        annual_growth_rate = max(self._read_cagr(analysis),
-                                    _MIN_PROJECTED_GROWTH_RATE)
+        annual_growth_rate = max(self._read_cagr(analysis), self._MIN_PROJECTED_GROWTH_RATE)
 
-        annual_dividend = self._read_annual_dividend(
-            dividend_data
-        )
+        annual_dividend = self._read_annual_dividend(dividend_data)
 
-        cost_per_share = (
-            holding.average_cost
-            if holding.average_cost is not None
-            else latest_close
-        )
+        cost_per_share = holding.average_cost if holding.average_cost is not None else latest_close
 
-        initial_investment = (
-            holding.shares * cost_per_share
-        )
+        initial_investment = holding.shares * cost_per_share
 
         return {
             "ticker": ticker,
@@ -258,9 +128,7 @@ class ForecasterService:
         }
     
     @staticmethod
-    def _read_annual_dividend(
-        dividend_data: list[dict[str, Any]],
-    ) -> float:
+    def _read_annual_dividend(dividend_data: list[dict[str, Any]], ) -> float:
         """
         Calculate trailing 12-month dividends per share.
 
@@ -273,94 +141,54 @@ class ForecasterService:
 
         for record in dividend_data:
             if not isinstance(record, dict):
-                raise ValueError(
-                    "Dividend record must be an object."
-                )
+                raise ValueError("Dividend record must be a dictionary.")
+            if "Date" not in record or "Dividend" not in record:
+                raise ValueError("Dividend record must contain Date and Dividend.")
 
-            date = record.get("Date")
-            amount = record.get("Dividend")
-
-            if date is None or amount is None:
-                raise ValueError(
-                    "Dividend record must contain Date and Dividend."
-                )
+            date = record['Date']
+            amount = record["Dividend"]
 
             try:
-                parsed_date = pd.to_datetime(
-                    date,
-                    utc=True,
-                )
-
+                parsed_date = pd.to_datetime(date, utc=True, )
                 parsed_amount = float(amount)
 
             except (TypeError, ValueError) as exc:
-                raise ValueError(
-                    "Dividend record contains invalid data."
-                ) from exc
+                raise ValueError("Dividend record contains invalid data.") from exc
 
             if not math.isfinite(parsed_amount):
-                raise ValueError(
-                    "Dividend amount must be finite."
-                )
+                raise ValueError("Dividend amount must be finite.")
 
             if parsed_amount < 0:
-                raise ValueError(
-                    "Dividend amount cannot be negative."
-                )
+                raise ValueError("Dividend amount cannot be negative.")
 
-            parsed.append(
-                (
-                    parsed_date,
-                    parsed_amount,
-                )
-            )
+            parsed.append((parsed_date, parsed_amount, ))
 
-        latest_date = max(
-            date
-            for date, _ in parsed
-        )
+        latest_date = max(date for date, _ in parsed)
 
-        cutoff_date = (
-            latest_date
-            - pd.DateOffset(years=1)
-        )
+        cutoff_date = latest_date - pd.DateOffset(years=1)
 
-        annual_dividend = sum(
-            amount
-            for date, amount in parsed
-            if date > cutoff_date
-        )
+        annual_dividend = sum(amount for date, amount in parsed if date > cutoff_date)
 
         return annual_dividend
 
     @staticmethod
-    def _read_cagr(
-        analysis: dict[str, Any],
-    ) -> float:
+    def _read_cagr(analysis: dict[str, Any], ) -> float:
         """
         Extract CAGR from an Analyzer response.
         """
         if "cagr" not in analysis:
-            raise ValueError(
-                "Analyzer response is missing CAGR."
-            )
+            raise ValueError("Analyzer response is missing CAGR.")
 
         try:
             cagr = float(analysis["cagr"])
         except (TypeError, ValueError) as exc:
-            raise ValueError(
-                "Analyzer CAGR must be numeric."
-            ) from exc
+            raise ValueError("Analyzer CAGR must be numeric.") from exc
 
         if not math.isfinite(cagr):
-            raise ValueError(
-                "Analyzer CAGR must be finite."
-            )
+            raise ValueError("Analyzer CAGR must be finite.")
 
         if cagr <= -1.0:
-            raise ValueError(
-                "Analyzer CAGR must be greater than -1."
-            )
+            raise ValueError("Analyzer CAGR must be greater than -1.")
 
         return cagr
 

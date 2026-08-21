@@ -1,3 +1,9 @@
+class WorkerResponseError(Exception):
+    """Base exception for errors with codes >= 400"""
+
+class InvalidWorkerResponseError(Exception):
+    """Base exception for some worker returning invalid response."""
+
 class DownloaderClientError(Exception):
     """Base exception for errors communicating with Downloader."""
 
