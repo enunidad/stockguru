@@ -1,0 +1,295 @@
+{% extends "base.html" %}
+
+
+{% block title %}
+StockGuru - Stock Analyzer
+{% endblock %}
+
+
+{% block page_styles %}
+
+<link
+    rel="stylesheet"
+    href="/static/analyzer.css"
+>
+
+{% endblock %}
+
+
+{% block head %}
+
+<script
+    src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"
+    defer
+></script>
+
+{% endblock %}
+
+
+{% block content %}
+
+<!-- ==================================================
+     Stock Analyzer
+     ================================================== -->
+
+<main class="app-container">
+
+    <header class="app-brand">
+        <img
+            src="/static/logo.png"
+            alt="StockGuru"
+            class="brand-logo"
+        >
+    </header>
+
+
+    <div class="top-layout">
+
+        <section class="search-panel panel">
+            <form
+                id="stock-form"
+                class="search-form"
+            >
+
+                <label for="ticker">
+                    Ticker symbol
+                </label>
+
+                <div class="search-controls">
+                    <input
+                        id="ticker"
+                        name="ticker"
+                        type="text"
+                        placeholder="For example: AAPL or BCE.TO"
+                        autocomplete="off"
+                        required
+                    >
+
+                    <button type="submit">
+                        Analyze
+                    </button>
+                </div>
+
+            </form>
+
+            <p
+                id="status"
+                class="status-message"
+                aria-live="polite"
+            ></p>
+
+        </section>
+
+
+        <section
+            id="metadata-section"
+            class="metadata-panel panel"
+            hidden
+        >
+            <div class="section-heading">
+                <h2>
+                    Company Information
+                </h2>
+            </div>
+
+            <div class="metadata-grid">
+
+                <div class="metadata-item">
+                    <span class="metadata-label">
+                        Company
+                    </span>
+
+                    <span id="company-name">
+                        —
+                    </span>
+                </div>
+
+
+                <div class="metadata-item">
+                    <span class="metadata-label">
+                        Ticker
+                    </span>
+
+                    <span id="metadata-ticker">
+                        —
+                    </span>
+                </div>
+
+
+                <div class="metadata-item">
+                    <span class="metadata-label">
+                        Currency
+                    </span>
+
+                    <span id="currency">
+                        —
+                    </span>
+                </div>
+
+
+                <div class="metadata-item">
+                    <span class="metadata-label">
+                        Exchange
+                    </span>
+
+                    <span id="exchange">
+                        —
+                    </span>
+                </div>
+
+
+                <div class="metadata-item">
+                    <span class="metadata-label">
+                        Country
+                    </span>
+
+                    <span id="country">
+                        —
+                    </span>
+                </div>
+
+
+                <div class="metadata-item">
+                    <span class="metadata-label">
+                        Industry
+                    </span>
+
+                    <span id="industry">
+                        —
+                    </span>
+                </div>
+
+            </div>
+
+        </section>
+
+    </div>
+
+
+    <section
+        id="results-section"
+        class="results-layout"
+        hidden
+    >
+
+        <div class="history-panel panel">
+
+            <div class="section-heading">
+
+                <div>
+
+                    <h2>
+                        Historical Prices
+                    </h2>
+
+                    <p id="history-description">
+                        Historical market data
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <div
+                id="price-history-chart"
+                class="price-history-chart"
+            ></div>
+
+        </div>
+
+
+        <aside class="metrics-panel panel">
+
+            <div class="section-heading">
+                <h2>
+                    Metrics
+                </h2>
+            </div>
+
+
+            <div class="metrics-list">
+
+                <div class="metric-item">
+
+                    <span class="metric-label">
+                        CAGR
+                    </span>
+
+                    <strong id="cagr">
+                        —
+                    </strong>
+
+                </div>
+
+
+                <div class="metric-item">
+
+                    <span class="metric-label">
+                        Volatility
+                    </span>
+
+                    <strong id="volatility">
+                        —
+                    </strong>
+
+                </div>
+
+
+                <div class="metric-item">
+
+                    <span class="metric-label">
+                        Max Drawdown
+                    </span>
+
+                    <strong id="max-drawdown">
+                        —
+                    </strong>
+
+                </div>
+
+
+                <div class="metric-item">
+
+                    <span class="metric-label">
+                        50-Day SMA
+                    </span>
+
+                    <strong id="sma">
+                        —
+                    </strong>
+
+                </div>
+
+
+                <div class="metric-item">
+
+                    <span class="metric-label">
+                        200-Day SMA
+                    </span>
+
+                    <strong id="ema">
+                        —
+                    </strong>
+
+                </div>
+
+            </div>
+
+        </aside>
+
+    </section>
+
+</main>
+
+{% endblock %}
+
+
+{% block page_scripts %}
+
+<script
+    src="/static/analyzer.js"
+    defer
+></script>
+
+{% endblock %}

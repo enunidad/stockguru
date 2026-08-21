@@ -59,7 +59,7 @@ async def test_analysis_endpoint_returns_json_and_forwards_period(aiohttp_client
 
     assert response.status == 200
 
-    service.analyze_ticker.assert_awaited_once_with("aapl", period="5y", )
+    service.analyze_ticker.assert_awaited_once_with("aapl", period="5y", auto_adjust=True,)
 
     assert body == make_result().to_dict()
 
@@ -76,7 +76,7 @@ async def test_analysis_endpoint_uses_defaults(aiohttp_client, ):
 
     assert response.status == 200
 
-    service.analyze_ticker.assert_awaited_once_with("AAPL", period="10y", )
+    service.analyze_ticker.assert_awaited_once_with("AAPL", period="10y", auto_adjust=True, )
 
 
 @pytest.mark.asyncio

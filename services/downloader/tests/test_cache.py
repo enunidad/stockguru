@@ -3,7 +3,7 @@ import os
 
 import pandas as pd
 
-from src.cache import PriceHistoryCache, TickerMetadataCache
+from src.cache import PriceHistoryCache, TickerMetadataCache, DividendCache
 from src.schemas import PriceHistoryRequest, TickerMetadata
 
 
@@ -203,3 +203,352 @@ def test_metadata_get_if_fresh_returns_none_when_expired(
     os.utime(path, (old_timestamp, old_timestamp))
 
     assert cache.get_if_fresh("AAPL") is None
+
+# =========================================================
+# Dividend Cache
+# =========================================================
+
+
+def make_dividend_data() -> pd.Series:
+    dividends = pd.Series(
+        [
+            0.24,
+            0.24,
+            0.25,
+            0.25,
+        ],
+        index=pd.to_datetime(
+            [
+                "2025-11-08",
+                "2026-02-08",
+                "2026-05-08",
+                "2026-08-08",
+            ],
+            utc=True,
+        ),
+        name="Dividends",
+        dtype=float,
+    )
+
+    dividends.index.name = "Date"
+
+    return dividends
+
+
+def test_dividend_get_path_normalizes_ticker(
+    tmp_path,
+) -> None:
+    cache = DividendCache(
+        cache_dir=tmp_path
+    )
+
+    assert cache.get_path(
+        " aapl "
+    ) == (
+        tmp_path
+        / "AAPL"
+        / "AAPL_dividends.csv"
+    )
+
+
+def test_dividend_is_not_fresh_when_missing(
+    tmp_path,
+) -> None:
+    cache = DividendCache(
+        cache_dir=tmp_path
+    )
+
+    assert cache.is_fresh(
+        "AAPL"
+    ) is False
+
+
+def test_dividend_save_creates_file(
+    tmp_path,
+) -> None:
+    cache = DividendCache(
+        cache_dir=tmp_path
+    )
+
+    dividends = make_dividend_data()
+
+    path = cache.save(
+        "AAPL",
+        dividends,
+    )
+
+    assert path.exists()
+
+    assert path == cache.get_path(
+        "AAPL"
+    )
+
+
+def test_dividend_save_normalizes_ticker(
+    tmp_path,
+) -> None:
+    cache = DividendCache(
+        cache_dir=tmp_path
+    )
+
+    path = cache.save(
+        " aapl ",
+        make_dividend_data(),
+    )
+
+    assert path == (
+        tmp_path
+        / "AAPL"
+        / "AAPL_dividends.csv"
+    )
+
+
+def test_dividend_save_then_load(
+    tmp_path,
+) -> None:
+    cache = DividendCache(
+        cache_dir=tmp_path
+    )
+
+    expected = make_dividend_data()
+
+    cache.save(
+        "AAPL",
+        expected,
+    )
+
+    result = cache.load(
+        "aapl"
+    )
+
+    pd.testing.assert_series_equal(
+        result,
+        expected,
+    )
+
+    assert result.index.name == "Date"
+
+    assert result.name == "Dividends"
+
+
+def test_dividend_load_returns_datetime_index(
+    tmp_path,
+) -> None:
+    cache = DividendCache(
+        cache_dir=tmp_path
+    )
+
+    cache.save(
+        "AAPL",
+        make_dividend_data(),
+    )
+
+    result = cache.load(
+        "AAPL"
+    )
+
+    assert isinstance(
+        result.index,
+        pd.DatetimeIndex,
+    )
+
+    assert result.index.tz is not None
+
+
+def test_dividend_save_does_not_modify_source_series(
+    tmp_path,
+) -> None:
+    cache = DividendCache(
+        cache_dir=tmp_path
+    )
+
+    dividends = pd.Series(
+        [
+            0.25,
+            0.26,
+        ],
+        index=pd.to_datetime(
+            [
+                "2026-05-01",
+                "2026-08-01",
+            ],
+            utc=True,
+        ),
+        name="Original Name",
+    )
+
+    dividends.index.name = "Original Index"
+
+    original = dividends.copy(
+        deep=True
+    )
+
+    cache.save(
+        "AAPL",
+        dividends,
+    )
+
+    pd.testing.assert_series_equal(
+        dividends,
+        original,
+    )
+
+
+def test_dividend_save_standardizes_cached_column_names(
+    tmp_path,
+) -> None:
+    cache = DividendCache(
+        cache_dir=tmp_path
+    )
+
+    dividends = pd.Series(
+        [
+            0.25,
+        ],
+        index=pd.to_datetime(
+            [
+                "2026-08-01",
+            ],
+            utc=True,
+        ),
+        name="Anything",
+    )
+
+    dividends.index.name = "Something"
+
+    cache.save(
+        "AAPL",
+        dividends,
+    )
+
+    result = pd.read_csv(
+        cache.get_path(
+            "AAPL"
+        )
+    )
+
+    assert list(result.columns) == [
+        "Date",
+        "Dividends",
+    ]
+
+
+def test_dividend_get_if_fresh_returns_data(
+    tmp_path,
+) -> None:
+    cache = DividendCache(
+        cache_dir=tmp_path,
+        ttl=timedelta(days=1),
+    )
+
+    expected = make_dividend_data()
+
+    cache.save(
+        "AAPL",
+        expected,
+    )
+
+    result = cache.get_if_fresh(
+        "AAPL"
+    )
+
+    assert result is not None
+
+    pd.testing.assert_series_equal(
+        result,
+        expected,
+    )
+
+
+def test_dividend_get_if_fresh_returns_none_when_expired(
+    tmp_path,
+) -> None:
+    cache = DividendCache(
+        cache_dir=tmp_path,
+        ttl=timedelta(seconds=1),
+    )
+
+    path = cache.save(
+        "AAPL",
+        make_dividend_data(),
+    )
+
+    old_timestamp = (
+        path.stat().st_mtime
+        - 60
+    )
+
+    os.utime(
+        path,
+        (
+            old_timestamp,
+            old_timestamp,
+        ),
+    )
+
+    assert cache.get_if_fresh(
+        "AAPL"
+    ) is None
+
+
+def test_dividend_load_empty_series(
+    tmp_path,
+) -> None:
+    cache = DividendCache(
+        cache_dir=tmp_path
+    )
+
+    empty = pd.Series(
+        dtype=float,
+        name="Dividends",
+    )
+
+    empty.index.name = "Date"
+
+    cache.save(
+        "AAPL",
+        empty,
+    )
+
+    result = cache.load(
+        "AAPL"
+    )
+
+    assert isinstance(
+        result,
+        pd.Series,
+    )
+
+    assert result.empty
+
+    assert result.dtype == float
+
+    assert result.name == "Dividends"
+
+
+def test_dividend_empty_series_round_trip(
+    tmp_path,
+) -> None:
+    cache = DividendCache(
+        cache_dir=tmp_path
+    )
+
+    expected = pd.Series(
+        dtype=float,
+        name="Dividends",
+    )
+
+    expected.index.name = "Date"
+
+    cache.save(
+        "AAPL",
+        expected,
+    )
+
+    result = cache.get_if_fresh(
+        "AAPL"
+    )
+
+    assert result is not None
+    assert result.empty
+    assert result.name == "Dividends"

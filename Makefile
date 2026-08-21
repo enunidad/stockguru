@@ -1,47 +1,95 @@
 SVC ?=
 CMD ?=
-SVCS ?= downloader analyzer chartmgr frontend
 PORT ?= 8000
 MSG ?= dev update
 
-.PHONY: service run stop
+SERVICE_DIRS := $(wildcard services/*/)
+SERVICES := $(patsubst services/%/,%,$(SERVICE_DIRS))
+PID_DIR := .pids
+
+SELECTED_SERVICES := $(filter $(SERVICES),$(MAKECMDGOALS))
+
+PYTHON := py
+
+
+.PHONY: service test run-all-tests start-detached stop start-all stop-all run-local push-to-remote $(SERVICES)
+
+
+# Service names are valid make targets, but don't do anything themselves.
+$(SERVICES):
+	@:
+
 
 service:
 	@if "$(SVC)"=="" (echo SVC is required && exit /b 1)
 	@if "$(CMD)"=="" (echo CMD is required && exit /b 1)
-	$(MAKE) -C services/$(SVC) $(CMD)
-	$(MAKE) -C services/$(SVC) clean
+	@$(MAKE) -C services/$(SVC) $(CMD)
 
-test-service:
-	$(MAKE) service SVC=$(SVC) CMD=test
-	$(MAKE) service SVC=$(SVC) CMD=clean
 
-run-all-tests:
+test:
+	@if "$(SELECTED_SERVICES)"=="" (echo Usage: make ^<service...^> test && exit /b 1)
+	@for %%s in ($(SELECTED_SERVICES)) do @$(MAKE) service SVC=%%s CMD=test || exit /b 1
+	@for %%s in ($(SELECTED_SERVICES)) do @$(MAKE) service SVC=%%s CMD=clean
+
+
+test-all:
 	@echo ========================================
 	@echo Running all service tests...
 	@echo ========================================
-	@for %%s in (downloader analyzer chartmgr frontend) do @$(MAKE) test-service SVC=%%s || exit /b 1
+	@for %%s in ($(SERVICES)) do @$(MAKE) service SVC=%%s CMD=test || exit /b 1
 	@echo.
 	@echo ========================================
-	@echo All tests passed.
+	@echo All unit tests passed.
 	@echo ========================================
 
-start-one-service:
-	powershell -NoProfile -Command "Start-Process powershell -ArgumentList '-Command','make service SVC=$(SVC) CMD=run'"
+integration-test: start-all
+	@echo ========================================
+	@echo Running all public endpoints tests...
+	@echo ========================================
+	@$(PYTHON) -m pytest integration_tests -v
+	@$(MAKE) stop-all
+	@echo ========================================
+	@echo All endpoints passed.
+	@echo ========================================
+	@$(MAKE) clean-all
+	@$(PYTHON) -c "import shutil, pathlib; [shutil.rmtree(p, ignore_errors=True) for p in pathlib.Path('.').rglob('__pycache__')]; [p.unlink() for p in pathlib.Path('.').rglob('*.pyc')]"
+
+
+full-test: test-all
+	$(MAKE) integration-test
+	@echo ========================================
+	@echo Ready to merge.
+	@echo ========================================
+
+start-detached:
+	@if "$(SELECTED_SERVICES)"=="" (echo Usage: make ^<service...^> start-detached && exit /b 1)
+	@if not exist "$(PID_DIR)" mkdir "$(PID_DIR)"
+	@for %%s in ($(SELECTED_SERVICES)) do @powershell -NoProfile -Command "$$p = Start-Process powershell -PassThru -ArgumentList '-NoProfile','-Command','$(MAKE) service SVC=%%s CMD=run'; $$p.Id | Out-File -Encoding ascii '$(PID_DIR)/%%s.pid'; Write-Host 'Started %%s PID' $$p.Id"
 	powershell -NoProfile -Command "Start-Sleep -Seconds 2"
 
-start-many-services:
-	powershell -NoProfile -Command "foreach ($$svc in '$(SVCS)'.Split(' ')) { Write-Host \"Starting $$svc...\"; & make start-one-service SVC=$$svc }"
-
-start-web-port:
-	powershell -NoProfile -Command "Start-Process 'http://localhost:$(PORT)/'"
-
-run:
-	$(MAKE) start-many-services SVCS="$(SVCS)"
-	$(MAKE) start-web-port PORT=$(PORT)
 
 stop:
-	powershell -NoProfile -Command "$$ports = 8000,8080,8090,8050; foreach ($$port in $$ports) { $$conns = Get-NetTCPConnection -LocalPort $$port -State Listen -ErrorAction SilentlyContinue; foreach ($$conn in $$conns) { if ($$conn.OwningProcess -gt 0) { Stop-Process -Id $$conn.OwningProcess -Force -ErrorAction SilentlyContinue } } }"
+	@if "$(SELECTED_SERVICES)"=="" (echo Usage: make ^<service...^> stop && exit /b 1)
+	@for %%s in ($(SELECTED_SERVICES)) do @powershell -NoProfile -Command "if (Test-Path '$(PID_DIR)/%%s.pid') { $$processId = Get-Content '$(PID_DIR)/%%s.pid'; Write-Host 'Stopping %%s PID' $$processId; taskkill /PID $$processId /T /F | Out-Null; Remove-Item '$(PID_DIR)/%%s.pid' -Force } else { Write-Host '%%s is not running.' }"
+
+
+start-all:
+	@$(MAKE) $(SERVICES) start-detached
+
+
+stop-all:
+	@$(MAKE) $(SERVICES) stop
+
+
+run-local: start-all
+	powershell -NoProfile -Command "Start-Process 'http://localhost:$(PORT)/'"
+
+clean:
+	@if "$(SELECTED_SERVICES)"=="" (echo Usage: make ^<service...^> clean && exit /b 1)
+	@for %%s in ($(SELECTED_SERVICES)) do @$(MAKE) service SVC=%%s CMD=clean
+
+clean-all:
+	$(MAKE) $(SERVICES) clean
 
 push-to-remote:
 	$(MAKE) service SVC=downloader CMD=clean-cache

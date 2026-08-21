@@ -1,0 +1,1636 @@
+/* =========================================================
+   StockGuru Portfolio Forecaster
+   ========================================================= */
+
+* {
+    box-sizing: border-box;
+}
+
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+}
+
+
+body {
+    background: var(--sg-background);
+    color: var(--sg-text);
+
+    font-family:
+        Inter,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+}
+
+
+button,
+input,
+select {
+    font: inherit;
+}
+
+
+/* =========================================================
+   Page Shell
+   ========================================================= */
+
+.forecaster-main {
+    flex: 1;
+
+    min-width: 0;
+
+    padding:
+        42px
+        clamp(28px, 4vw, 64px)
+        60px;
+}
+
+
+/* ---------------------------------------------------------
+   Page Header
+   --------------------------------------------------------- */
+
+.forecaster-header {
+    max-width: 1400px;
+
+    margin: 0 auto 22px;
+}
+
+
+.page-eyebrow {
+    margin: 0 0 6px;
+
+    color: var(--sg-teal);
+
+    font-size: 12px;
+    font-weight: 800;
+
+    letter-spacing: 0.12em;
+}
+
+
+.forecaster-header h1 {
+    margin: 0;
+
+    font-size: 38px;
+
+    letter-spacing: -0.03em;
+}
+
+
+.page-description {
+    margin: 8px 0 0;
+
+    color: var(--sg-text-muted);
+
+    font-size: 16px;
+}
+
+
+/* =========================================================
+   Common Panels
+   ========================================================= */
+
+.forecast-panel {
+    min-width: 0;
+
+    padding: 22px;
+
+    border:
+        1px solid var(--sg-border);
+
+    border-radius: 12px;
+
+    background: var(--sg-surface);
+}
+
+
+.panel-heading,
+.section-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 15px;
+}
+
+
+.panel-heading {
+    margin-bottom: 20px;
+}
+
+
+.panel-heading > div {
+    display: flex;
+    align-items: center;
+
+    gap: 9px;
+}
+
+
+.panel-number {
+    width: 24px;
+    height: 24px;
+
+    flex-shrink: 0;
+
+    display: grid;
+    place-items: center;
+
+    border-radius: 50%;
+
+    background: var(--sg-navy);
+    color: var(--sg-text-inverse);
+
+    font-size: 12px;
+    font-weight: 700;
+}
+
+
+.panel-heading h2,
+.section-title h2 {
+    margin: 0;
+
+    font-size: 17px;
+}
+
+
+.result-label {
+    display: block;
+
+    margin: 0 0 7px;
+
+    color: var(--sg-text-muted);
+
+    font-size: 10px;
+    font-weight: 800;
+
+    letter-spacing: 0.09em;
+}
+
+
+/* =========================================================
+   Main Forecast Workspace
+   ========================================================= */
+
+.forecast-workspace {
+    width: 100%;
+    max-width: 1400px;
+
+    margin: 0 auto;
+
+    display: grid;
+
+    /*
+        Desktop layout:
+
+        Portfolio
+        Projection Settings
+        Projection Summary
+
+        Give the summary a little more room for the donut
+        and forecast breakdown.
+    */
+
+    grid-template-columns:
+        minmax(300px, 0.9fr)
+        minmax(310px, 0.95fr)
+        minmax(350px, 1.15fr);
+
+    gap: 20px;
+
+    align-items: stretch;
+}
+
+
+/* =========================================================
+   Portfolio Panel
+   ========================================================= */
+
+.portfolio-panel {
+    min-width: 0;
+
+    display: flex;
+    flex-direction: column;
+}
+
+
+/* ---------------------------------------------------------
+   Add Stock Buttons
+   --------------------------------------------------------- */
+
+.small-action-button,
+.add-holding-button {
+    border:
+        1px solid var(--sg-teal);
+
+    border-radius: 7px;
+
+    background: transparent;
+    color: var(--sg-teal);
+
+    cursor: pointer;
+
+    font-size: 12px;
+    font-weight: 700;
+
+    transition:
+        background 0.15s ease,
+        color 0.15s ease,
+        border-color 0.15s ease;
+}
+
+
+.small-action-button {
+    padding: 7px 10px;
+}
+
+
+.add-holding-button {
+    width: 100%;
+
+    min-height: 38px;
+
+    margin-top: 12px;
+}
+
+
+.small-action-button:hover,
+.add-holding-button:hover {
+    background: var(--sg-teal);
+    color: var(--sg-text-inverse);
+}
+
+
+.small-action-button:active,
+.add-holding-button:active {
+    transform: translateY(1px);
+}
+
+
+/* ---------------------------------------------------------
+   Portfolio Mode
+   --------------------------------------------------------- */
+
+.portfolio-mode {
+    display: grid;
+
+    grid-template-columns:
+        1fr
+        1fr;
+
+    margin-bottom: 20px;
+
+    border:
+        1px solid var(--sg-border);
+
+    border-radius: 8px;
+
+    overflow: hidden;
+}
+
+
+.mode-button {
+    min-height: 38px;
+
+    border: 0;
+
+    background: transparent;
+    color: var(--sg-text-muted);
+
+    cursor: pointer;
+
+    font-size: 12px;
+    font-weight: 600;
+}
+
+
+.mode-button + .mode-button {
+    border-left:
+        1px solid var(--sg-border);
+}
+
+
+.mode-button.active {
+    background: var(--sg-teal);
+    color: var(--sg-text-inverse);
+}
+
+
+/* =========================================================
+   Holdings
+   ========================================================= */
+
+.holding-header,
+.holding-row {
+    display: grid;
+
+    grid-template-columns:
+        minmax(70px, 0.9fr)
+        minmax(62px, 0.8fr)
+        minmax(90px, 1.1fr)
+        30px;
+
+    gap: 8px;
+
+    align-items: center;
+}
+
+
+.holding-header {
+    margin-bottom: 7px;
+
+    color: var(--sg-text-muted);
+
+    font-size: 10px;
+    font-weight: 700;
+
+    text-transform: uppercase;
+
+    letter-spacing: 0.03em;
+}
+
+
+.holdings-container {
+    min-height: 0;
+
+    max-height: 560px;
+
+    display: flex;
+    flex-direction: column;
+
+    gap: 8px;
+
+    overflow-y: auto;
+
+    padding-right: 3px;
+
+    scrollbar-width: thin;
+}
+
+
+.holding-row {
+    flex-shrink: 0;
+}
+
+
+.holding-row input {
+    width: 100%;
+
+    min-width: 0;
+
+    min-height: 38px;
+
+    border:
+        1px solid var(--sg-border);
+
+    border-radius: 7px;
+
+    background: var(--sg-background);
+    color: var(--sg-text);
+
+    padding: 8px 9px;
+}
+
+
+.holding-row input:focus {
+    outline: none;
+
+    border-color: var(--sg-teal);
+
+    box-shadow:
+        0 0 0 2px
+        rgba(79, 143, 136, 0.12);
+}
+
+
+.holding-ticker {
+    text-transform: uppercase;
+
+    font-weight: 700;
+}
+
+
+.holding-average-cost::placeholder {
+    color: var(--sg-text-muted);
+
+    font-size: 10px;
+}
+
+
+.remove-holding {
+    width: 30px;
+    height: 30px;
+
+    display: grid;
+    place-items: center;
+
+    border:
+        1px solid var(--sg-border);
+
+    border-radius: 6px;
+
+    background: transparent;
+    color: var(--sg-text-muted);
+
+    cursor: pointer;
+
+    font-size: 18px;
+    line-height: 1;
+}
+
+
+.remove-holding:hover {
+    border-color: var(--sg-orange);
+
+    color: var(--sg-orange);
+}
+
+
+.portfolio-help {
+    margin-top: 10px;
+}
+
+
+/* =========================================================
+   Projection Settings
+   ========================================================= */
+
+.projection-settings-panel {
+    min-width: 0;
+
+    display: flex;
+    flex-direction: column;
+}
+
+
+/* ---------------------------------------------------------
+   Standard Fields
+   --------------------------------------------------------- */
+
+.field-label {
+    display: block;
+
+    margin: 17px 0 7px;
+
+    color: var(--sg-text);
+
+    font-size: 12px;
+    font-weight: 700;
+}
+
+
+.field-help {
+    margin: 8px 0 0;
+
+    color: var(--sg-text-muted);
+
+    font-size: 10px;
+    line-height: 1.45;
+}
+
+
+.settings-group {
+    min-width: 0;
+}
+
+
+.settings-group:first-of-type .field-label:first-child {
+    margin-top: 0;
+}
+
+
+.contribution-help {
+    margin-top: 8px;
+}
+
+
+.split-field {
+    display: grid;
+
+    grid-template-columns:
+        minmax(0, 1fr)
+        120px;
+
+    gap: 8px;
+}
+
+
+.split-field input,
+.split-field select,
+.full-field {
+    width: 100%;
+
+    min-width: 0;
+
+    min-height: 38px;
+
+    border:
+        1px solid var(--sg-border);
+
+    border-radius: 7px;
+
+    background: var(--sg-background);
+    color: var(--sg-text);
+
+    padding: 8px 10px;
+}
+
+
+.split-field input:focus,
+.split-field select:focus,
+.full-field:focus {
+    outline: none;
+
+    border-color: var(--sg-teal);
+
+    box-shadow:
+        0 0 0 2px
+        rgba(79, 143, 136, 0.12);
+}
+
+
+/* =========================================================
+   Old Contribution Allocation Compatibility Hook
+   ========================================================= */
+
+/*
+    The allocation UI is no longer shown.
+
+    This is intentionally stronger than the old
+    .allocation-container { display: flex; } rule because
+    author CSS can otherwise override the browser's
+    built-in [hidden] behaviour.
+*/
+
+.allocation-container[hidden] {
+    display: none !important;
+}
+
+
+/* =========================================================
+   Time Horizon Slider
+   ========================================================= */
+
+.horizon-settings-group {
+    margin-top: 22px;
+
+    padding-top: 18px;
+
+    border-top:
+        1px solid var(--sg-border);
+}
+
+
+.range-heading {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+
+    gap: 12px;
+
+    margin-bottom: 10px;
+}
+
+
+.range-heading .field-label {
+    margin: 0;
+}
+
+
+.range-value {
+    color: var(--sg-teal);
+
+    font-size: 13px;
+    font-weight: 800;
+
+    font-variant-numeric:
+        tabular-nums;
+}
+
+
+.horizon-slider {
+    width: 100%;
+    height: 20px;
+
+    margin: 0;
+
+    cursor: pointer;
+
+    accent-color: var(--sg-teal);
+}
+
+
+.range-scale {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    margin-top: 2px;
+
+    color: var(--sg-text-muted);
+
+    font-size: 10px;
+    font-weight: 600;
+
+    font-variant-numeric:
+        tabular-nums;
+}
+
+
+/* ---------------------------------------------------------
+   Slider - Chromium / Safari
+   --------------------------------------------------------- */
+
+.horizon-slider::-webkit-slider-runnable-track {
+    height: 5px;
+
+    border-radius: 999px;
+
+    background: var(--sg-border);
+}
+
+
+.horizon-slider::-webkit-slider-thumb {
+    width: 16px;
+    height: 16px;
+
+    margin-top: -5.5px;
+
+    appearance: none;
+    -webkit-appearance: none;
+
+    border: 0;
+
+    border-radius: 50%;
+
+    background: var(--sg-teal);
+}
+
+
+/* ---------------------------------------------------------
+   Slider - Firefox
+   --------------------------------------------------------- */
+
+.horizon-slider::-moz-range-track {
+    height: 5px;
+
+    border-radius: 999px;
+
+    background: var(--sg-border);
+}
+
+
+.horizon-slider::-moz-range-progress {
+    height: 5px;
+
+    border-radius: 999px;
+
+    background: var(--sg-teal);
+}
+
+
+.horizon-slider::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+
+    border: 0;
+
+    border-radius: 50%;
+
+    background: var(--sg-teal);
+}
+
+
+/* =========================================================
+   Global DRIP Toggle
+   ========================================================= */
+
+.toggle-row {
+    display: flex;
+    align-items: center;
+
+    gap: 9px;
+
+    margin-top: 20px;
+
+    color: var(--sg-text);
+
+    font-size: 12px;
+    font-weight: 600;
+
+    cursor: pointer;
+}
+
+
+.toggle-row input {
+    width: 16px;
+    height: 16px;
+
+    margin: 0;
+
+    accent-color: var(--sg-teal);
+}
+
+
+/* =========================================================
+   Future Assumption Controls
+   ========================================================= */
+
+.future-settings {
+    margin-top: 20px;
+
+    padding-top: 18px;
+
+    border-top:
+        1px solid var(--sg-border);
+}
+
+
+.future-setting-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    gap: 10px;
+}
+
+
+.future-setting-heading .field-label {
+    margin:
+        0
+        0
+        7px;
+}
+
+
+.future-setting-heading:not(:first-child) {
+    margin-top: 17px;
+}
+
+
+.future-badge {
+    flex-shrink: 0;
+
+    margin-bottom: 7px;
+
+    padding: 3px 7px;
+
+    border:
+        1px solid var(--sg-border);
+
+    border-radius: 999px;
+
+    background: var(--sg-surface-alt);
+    color: var(--sg-text-muted);
+
+    font-size: 9px;
+    font-weight: 700;
+
+    letter-spacing: 0.03em;
+
+    text-transform: uppercase;
+}
+
+
+.full-field:disabled {
+    opacity: 1;
+
+    background: var(--sg-surface-alt);
+    color: var(--sg-text-muted);
+
+    cursor: not-allowed;
+}
+
+
+/* =========================================================
+   Run Projection
+   ========================================================= */
+
+.run-button {
+    width: 100%;
+
+    min-height: 46px;
+
+    margin-top: 22px;
+
+    border: 0;
+
+    border-radius: 8px;
+
+    background: var(--sg-teal);
+    color: var(--sg-text-inverse);
+
+    cursor: pointer;
+
+    font-weight: 700;
+
+    transition:
+        opacity 0.15s ease,
+        transform 0.08s ease;
+}
+
+
+.run-button:hover {
+    opacity: 0.92;
+}
+
+
+.run-button:active {
+    transform: translateY(1px);
+}
+
+
+.run-button:disabled {
+    opacity: 0.55;
+
+    cursor: not-allowed;
+}
+
+
+/* =========================================================
+   Portfolio Overview / Projection Summary
+   ========================================================= */
+
+.portfolio-overview {
+    min-width: 0;
+
+    display: flex;
+    flex-direction: column;
+}
+
+
+.portfolio-overview .section-title {
+    margin-bottom: 16px;
+}
+
+
+.portfolio-overview .section-title .result-label {
+    margin-bottom: 4px;
+}
+
+
+/*
+    Summary is now a narrow third column.
+
+    Donut therefore sits ABOVE the breakdown instead of
+    beside it.
+*/
+
+.portfolio-overview-content {
+    min-width: 0;
+
+    display: grid;
+
+    grid-template-columns: 1fr;
+
+    gap: 18px;
+
+    align-items: start;
+}
+
+
+/* ---------------------------------------------------------
+   Pie / Donut Area
+   --------------------------------------------------------- */
+
+.portfolio-chart-area {
+    min-width: 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    position: relative;
+
+    padding: 4px 0 8px;
+}
+
+
+.portfolio-overview-chart {
+    width:
+        clamp(210px, 18vw, 260px);
+
+    aspect-ratio: 1;
+
+    display: grid;
+    place-items: center;
+
+    border-radius: 50%;
+
+    background:
+        conic-gradient(
+            var(--sg-navy) 0 24%,
+            var(--sg-teal) 24% 45%,
+            var(--sg-gold) 45% 72%,
+            var(--sg-orange) 72% 100%
+        );
+
+    position: relative;
+}
+
+
+.portfolio-overview-chart::after {
+    content: "";
+
+    width: 57%;
+    height: 57%;
+
+    position: absolute;
+
+    border-radius: 50%;
+
+    background: var(--sg-surface);
+}
+
+
+.portfolio-chart-rendered {
+    min-width: 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+
+.portfolio-chart-rendered canvas {
+    display: block;
+
+    max-width: 100%;
+
+    height: auto;
+}
+
+
+.chart-empty-state {
+    position: relative;
+
+    z-index: 1;
+
+    display: flex;
+    flex-direction: column;
+
+    align-items: center;
+
+    gap: 3px;
+
+    color: var(--sg-text);
+}
+
+
+.chart-empty-state span {
+    font-size: 22px;
+    font-weight: 800;
+}
+
+
+.chart-empty-state small {
+    color: var(--sg-text-muted);
+
+    font-size: 9px;
+}
+
+
+/* =========================================================
+   Portfolio Source Breakdown
+   ========================================================= */
+
+.portfolio-source-list {
+    min-width: 0;
+
+    display: flex;
+    flex-direction: column;
+}
+
+
+.portfolio-source-row {
+    display: grid;
+
+    grid-template-columns:
+        minmax(110px, 1fr)
+        minmax(80px, auto)
+        48px;
+
+    gap: 9px;
+
+    align-items: center;
+
+    min-height: 36px;
+
+    padding: 6px 0;
+
+    border-bottom:
+        1px solid var(--sg-border);
+
+    font-size: 11px;
+}
+
+
+.portfolio-source-row:last-child {
+    border-bottom: 0;
+}
+
+
+.source-name {
+    min-width: 0;
+
+    display: flex;
+    align-items: center;
+
+    gap: 8px;
+
+    color: var(--sg-text-muted);
+}
+
+
+.source-name span:last-child {
+    min-width: 0;
+}
+
+
+.portfolio-source-row strong {
+    text-align: right;
+
+    font-size: 12px;
+
+    font-variant-numeric:
+        tabular-nums;
+}
+
+
+.source-percent {
+    text-align: right;
+
+    color: var(--sg-text-muted);
+
+    font-size: 10px;
+
+    font-variant-numeric:
+        tabular-nums;
+}
+
+
+.source-dot {
+    width: 9px;
+    height: 9px;
+
+    flex-shrink: 0;
+
+    border-radius: 50%;
+}
+
+
+.source-dot.invested {
+    background: var(--sg-navy);
+}
+
+
+.source-dot.current-growth {
+    background: var(--sg-gold);
+}
+
+
+.source-dot.contributions {
+    background: var(--sg-teal);
+}
+
+
+.source-dot.growth {
+    background: var(--sg-orange);
+}
+
+
+.source-dot.dividends {
+    background: var(--sg-border-strong);
+}
+
+
+.portfolio-total-row {
+    margin-top: 5px;
+
+    border-top:
+        2px solid var(--sg-border-strong);
+
+    border-bottom: 0;
+
+    font-weight: 800;
+}
+
+
+.portfolio-total-row .source-name {
+    color: var(--sg-text);
+}
+
+
+/* =========================================================
+   Projected Value
+   Existing Donut-Centre / Forecast Result Styles
+   ========================================================= */
+
+.projection-summary {
+    padding:
+        24px
+        28px;
+}
+
+
+.projection-summary-content {
+    display: flex;
+    flex-direction: column;
+
+    align-items: flex-start;
+}
+
+
+.projection-summary .result-label {
+    margin-bottom: 5px;
+}
+
+
+#projection-horizon {
+    color: var(--sg-teal);
+}
+
+
+.projected-value {
+    margin: 1px 0 4px;
+
+    color: var(--sg-navy);
+
+    font-size:
+        clamp(32px, 3.3vw, 48px);
+
+    font-weight: 800;
+
+    line-height: 1;
+
+    letter-spacing: -0.04em;
+}
+
+
+.projection-change {
+    display: flex;
+    align-items: baseline;
+
+    gap: 12px;
+
+    margin-top: 5px;
+
+    font-size: 16px;
+    font-weight: 800;
+
+    font-variant-numeric:
+        tabular-nums;
+}
+
+
+.projection-delta,
+.projection-delta-percent {
+    color: var(--sg-teal);
+}
+
+
+.projection-change.positive
+.projection-delta::before {
+    content: "▲";
+
+    margin-right: 5px;
+
+    font-size: 10px;
+}
+
+
+.projection-change.negative
+.projection-delta::before {
+    content: "▼";
+
+    margin-right: 5px;
+
+    font-size: 10px;
+}
+
+
+.projection-change.positive
+.projection-delta,
+.projection-change.positive
+.projection-delta-percent {
+    color: var(--sg-teal);
+}
+
+
+.projection-change.negative
+.projection-delta,
+.projection-change.negative
+.projection-delta-percent {
+    color: var(--sg-orange);
+}
+
+
+/* =========================================================
+   Forecast Details
+   ========================================================= */
+
+.forecast-details {
+    max-width: 1400px;
+
+    margin:
+        20px
+        auto
+        0;
+}
+
+
+.forecast-details .section-title {
+    margin-bottom: 4px;
+}
+
+
+/* =========================================================
+   Table
+   ========================================================= */
+
+.table-wrapper {
+    width: 100%;
+
+    margin-top: 16px;
+
+    overflow-x: auto;
+
+    border:
+        1px solid var(--sg-border);
+
+    border-radius: 9px;
+}
+
+
+.forecast-table {
+    width: 100%;
+
+    min-width: 1050px;
+
+    border-collapse: collapse;
+
+    font-size: 11px;
+
+    font-variant-numeric:
+        tabular-nums;
+}
+
+
+.forecast-table th,
+.forecast-table td {
+    padding:
+        13px
+        12px;
+
+    text-align: right;
+
+    white-space: nowrap;
+
+    border-bottom:
+        1px solid var(--sg-border);
+}
+
+
+.forecast-table th:first-child,
+.forecast-table td:first-child {
+    text-align: left;
+}
+
+
+.forecast-table th {
+    background: var(--sg-surface-alt);
+
+    color: var(--sg-text-muted);
+
+    font-size: 9px;
+    font-weight: 800;
+
+    letter-spacing: 0.025em;
+
+    text-transform: uppercase;
+}
+
+
+.forecast-table tbody tr:hover {
+    background:
+        rgba(79, 143, 136, 0.04);
+}
+
+
+.forecast-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+
+.forecast-table tbody td:first-child {
+    color: var(--sg-navy);
+
+    font-weight: 800;
+}
+
+
+.forecast-table .empty-table-row td {
+    padding: 34px 15px;
+
+    text-align: center;
+
+    color: var(--sg-text-muted);
+
+    font-weight: 400;
+}
+
+
+/* =========================================================
+   Forecast Footnote / Disclaimer
+   ========================================================= */
+
+.forecast-notes {
+    margin-top: 14px;
+
+    padding-top: 12px;
+
+    border-top:
+        1px solid var(--sg-border);
+
+    color: var(--sg-text-muted);
+
+    font-size: 10px;
+    line-height: 1.5;
+}
+
+
+.forecast-notes p {
+    margin: 0;
+}
+
+
+.forecast-footnote {
+    margin-bottom: 6px !important;
+}
+
+
+.forecast-footnote sup {
+    color: var(--sg-text);
+
+    font-weight: 700;
+}
+
+
+.forecast-disclaimer {
+    font-style: italic;
+}
+
+
+/* =========================================================
+   Responsive
+   ========================================================= */
+
+
+/* ---------------------------------------------------------
+   Smaller Desktop
+   --------------------------------------------------------- */
+
+@media (max-width: 1100px) {
+
+    .forecast-workspace {
+        grid-template-columns:
+            minmax(300px, 0.9fr)
+            minmax(0, 1.1fr);
+    }
+
+
+    /*
+        Portfolio stays left.
+        Settings stays right.
+        Summary spans beneath both.
+    */
+
+    .portfolio-overview {
+        grid-column:
+            1 / -1;
+    }
+
+
+    .portfolio-overview-content {
+        grid-template-columns:
+            minmax(240px, 0.75fr)
+            minmax(0, 1.25fr);
+
+        align-items: center;
+    }
+
+
+    .portfolio-overview-chart {
+        width:
+            clamp(220px, 28vw, 280px);
+    }
+
+}
+
+
+/* ---------------------------------------------------------
+   Tablet
+   --------------------------------------------------------- */
+
+@media (max-width: 820px) {
+
+    .forecast-workspace {
+        grid-template-columns: 1fr;
+    }
+
+
+    .portfolio-overview {
+        grid-column: auto;
+    }
+
+
+    .portfolio-panel {
+        min-height: auto;
+    }
+
+
+    .holdings-container {
+        max-height: 400px;
+    }
+
+
+    .portfolio-overview-content {
+        grid-template-columns:
+            minmax(210px, 0.75fr)
+            minmax(0, 1.25fr);
+    }
+
+}
+
+
+/* ---------------------------------------------------------
+   Small Tablet
+   --------------------------------------------------------- */
+
+@media (max-width: 700px) {
+
+    .portfolio-overview-content {
+        grid-template-columns: 1fr;
+
+        gap: 22px;
+    }
+
+
+    .portfolio-overview-chart {
+        width: 220px;
+    }
+
+
+    .portfolio-source-row {
+        grid-template-columns:
+            minmax(130px, 1fr)
+            auto
+            50px;
+
+        gap: 10px;
+    }
+
+}
+
+
+/* ---------------------------------------------------------
+   Mobile
+   --------------------------------------------------------- */
+
+@media (max-width: 600px) {
+
+    .forecaster-main {
+        padding:
+            28px
+            18px
+            40px;
+    }
+
+
+    .forecaster-header h1 {
+        font-size: 30px;
+    }
+
+
+    .page-description {
+        font-size: 14px;
+    }
+
+
+    .forecast-panel {
+        padding: 18px;
+    }
+
+
+    .panel-heading {
+        align-items: flex-start;
+    }
+
+
+    .holding-header,
+    .holding-row {
+        grid-template-columns:
+            minmax(78px, 0.85fr)
+            minmax(65px, 0.7fr)
+            minmax(90px, 1fr)
+            28px;
+
+        gap: 6px;
+    }
+
+
+    .holding-row input {
+        padding:
+            7px
+            6px;
+
+        font-size: 12px;
+    }
+
+
+    .holding-header {
+        font-size: 8px;
+    }
+
+
+    .remove-holding {
+        width: 28px;
+        height: 28px;
+    }
+
+
+    .split-field {
+        grid-template-columns:
+            minmax(0, 1fr)
+            105px;
+    }
+
+
+    .portfolio-source-row {
+        grid-template-columns:
+            minmax(120px, 1fr)
+            auto
+            45px;
+
+        gap: 8px;
+    }
+
+}
+
+
+/* ---------------------------------------------------------
+   Very Small Mobile
+   --------------------------------------------------------- */
+
+@media (max-width: 430px) {
+
+    .holding-header {
+        display: none;
+    }
+
+
+    .holding-row {
+        grid-template-columns:
+            minmax(0, 1fr)
+            70px
+            minmax(85px, 1fr)
+            28px;
+    }
+
+
+    .portfolio-mode {
+        grid-template-columns: 1fr;
+    }
+
+
+    .mode-button + .mode-button {
+        border-left: 0;
+
+        border-top:
+            1px solid var(--sg-border);
+    }
+
+
+    .split-field {
+        grid-template-columns: 1fr;
+    }
+
+
+    .portfolio-source-row {
+        grid-template-columns:
+            minmax(0, 1fr)
+            auto;
+    }
+
+
+    .source-percent {
+        display: none;
+    }
+
+}

@@ -371,7 +371,7 @@ async def test_price_history_returns_internal_server_error_for_unexpected_except
     assert response.status == 500
 
     assert await response.json() == {
-        "error": "Unexpected internal Error",
+        "error": "unexpected_internal_error",
         "message": "Something unexpected happened.",
     }
 

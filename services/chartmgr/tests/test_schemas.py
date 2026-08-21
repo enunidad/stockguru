@@ -1,7 +1,12 @@
 import pytest
 from dataclasses import FrozenInstanceError
 
-from src.schemas import ChartRequest, ChartResponse
+from src.schemas import (
+    ChartRequest,
+    ChartResponse,
+    PortfolioOverviewRequest,
+    PortfolioOverviewResponse,
+)
 
 
 def test_chart_request_required_ticker() -> None:
@@ -152,3 +157,211 @@ def test_chart_response_is_frozen() -> None:
 
     with pytest.raises(FrozenInstanceError):
         response.title = "New Title"
+
+# =========================================================
+# PortfolioOverviewRequest
+# =========================================================
+
+
+def test_portfolio_overview_request_stores_values() -> None:
+    request = PortfolioOverviewRequest(
+        initial_investment=10000.0,
+        current_growth=1500.0,
+        future_contributions=12000.0,
+        stock_growth=8000.0,
+        dividends=2500.0,
+    )
+
+    assert request.initial_investment == pytest.approx(
+        10000.0
+    )
+
+    assert request.current_growth == pytest.approx(
+        1500.0
+    )
+
+    assert request.future_contributions == pytest.approx(
+        12000.0
+    )
+
+    assert request.stock_growth == pytest.approx(
+        8000.0
+    )
+
+    assert request.dividends == pytest.approx(
+        2500.0
+    )
+
+
+def test_portfolio_overview_request_allows_negative_growth() -> None:
+    request = PortfolioOverviewRequest(
+        initial_investment=10000.0,
+        current_growth=-500.0,
+        future_contributions=0.0,
+        stock_growth=-250.0,
+        dividends=100.0,
+    )
+
+    assert request.current_growth == pytest.approx(
+        -500.0
+    )
+
+    assert request.stock_growth == pytest.approx(
+        -250.0
+    )
+
+
+def test_portfolio_overview_request_is_frozen() -> None:
+    request = PortfolioOverviewRequest(
+        initial_investment=10000.0,
+        current_growth=1000.0,
+        future_contributions=5000.0,
+        stock_growth=3000.0,
+        dividends=500.0,
+    )
+
+    with pytest.raises(
+        FrozenInstanceError
+    ):
+        request.initial_investment = 20000.0
+
+
+# =========================================================
+# PortfolioOverviewResponse
+# =========================================================
+
+
+def test_portfolio_overview_response_stores_values() -> None:
+    response = PortfolioOverviewResponse(
+        chart_type="donut",
+        title="Portfolio Overview",
+        labels=[
+            "Total Invested",
+            "Current Growth",
+            "Future Contributions",
+            "Stock Growth",
+            "Dividends / DRIP",
+        ],
+        values=[
+            10000.0,
+            1000.0,
+            5000.0,
+            3000.0,
+            500.0,
+        ],
+        total=19500.0,
+    )
+
+    assert response.chart_type == "donut"
+    assert response.title == "Portfolio Overview"
+
+    assert response.labels == [
+        "Total Invested",
+        "Current Growth",
+        "Future Contributions",
+        "Stock Growth",
+        "Dividends / DRIP",
+    ]
+
+    assert response.values == [
+        10000.0,
+        1000.0,
+        5000.0,
+        3000.0,
+        500.0,
+    ]
+
+    assert response.total == pytest.approx(
+        19500.0
+    )
+
+    assert response.legend is True
+
+
+def test_portfolio_overview_response_accepts_bar_chart() -> None:
+    response = PortfolioOverviewResponse(
+        chart_type="bar",
+        title="Portfolio Overview",
+        labels=[
+            "Total Invested",
+            "Current Growth",
+        ],
+        values=[
+            10000.0,
+            -1000.0,
+        ],
+        total=9000.0,
+    )
+
+    assert response.chart_type == "bar"
+
+
+def test_portfolio_overview_response_to_dict() -> None:
+    response = PortfolioOverviewResponse(
+        chart_type="donut",
+        title="Portfolio Overview",
+        labels=[
+            "Total Invested",
+            "Current Growth",
+            "Future Contributions",
+            "Stock Growth",
+            "Dividends / DRIP",
+        ],
+        values=[
+            10000.0,
+            1000.0,
+            5000.0,
+            3000.0,
+            500.0,
+        ],
+        total=19500.0,
+        legend=True,
+    )
+
+    assert response.to_dict() == {
+        "chart_type": "donut",
+        "title": "Portfolio Overview",
+        "labels": [
+            "Total Invested",
+            "Current Growth",
+            "Future Contributions",
+            "Stock Growth",
+            "Dividends / DRIP",
+        ],
+        "values": [
+            10000.0,
+            1000.0,
+            5000.0,
+            3000.0,
+            500.0,
+        ],
+        "total": 19500.0,
+        "legend": True,
+    }
+
+
+def test_portfolio_overview_response_legend_defaults_true() -> None:
+    response = PortfolioOverviewResponse(
+        chart_type="donut",
+        title="Portfolio Overview",
+        labels=[],
+        values=[],
+        total=0.0,
+    )
+
+    assert response.legend is True
+
+
+def test_portfolio_overview_response_is_frozen() -> None:
+    response = PortfolioOverviewResponse(
+        chart_type="donut",
+        title="Portfolio Overview",
+        labels=[],
+        values=[],
+        total=1000.0,
+    )
+
+    with pytest.raises(
+        FrozenInstanceError
+    ):
+        response.chart_type = "bar"

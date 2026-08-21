@@ -3,6 +3,7 @@ import pytest
 import yfinance as yf
 
 from src.client import (
+    DownloaderClientError,
     InvalidTickerError,
     YahooFinanceClient,
 )
@@ -121,3 +122,242 @@ def test_download_price_history():
             auto_adjust=True,)
     result = YahooFinanceClient().download_price_history(request)
     assert isinstance(result, pd.DataFrame)
+
+# =========================================================
+# Dividend Downloads
+# =========================================================
+
+
+def test_download_dividends_returns_series(
+    monkeypatch,
+) -> None:
+    expected = pd.Series(
+        [
+            0.24,
+            0.25,
+            0.25,
+        ],
+        index=pd.to_datetime(
+            [
+                "2026-02-01",
+                "2026-05-01",
+                "2026-08-01",
+            ],
+            utc=True,
+        ),
+        name="Dividends",
+    )
+
+    class FakeTicker:
+        def __init__(
+            self,
+            ticker,
+        ):
+            self.ticker = ticker
+
+        def get_dividends(
+            self,
+        ):
+            return expected
+
+    monkeypatch.setattr(
+        yf,
+        "Ticker",
+        FakeTicker,
+    )
+
+    client = YahooFinanceClient()
+
+    result = client.download_dividends(
+        "AAPL"
+    )
+
+    pd.testing.assert_series_equal(
+        result,
+        expected,
+    )
+
+
+def test_download_dividends_normalizes_ticker(
+    monkeypatch,
+) -> None:
+    received = {}
+
+    class FakeTicker:
+        def __init__(
+            self,
+            ticker,
+        ):
+            received["ticker"] = ticker
+            self.ticker = ticker
+
+        def get_dividends(
+            self,
+        ):
+            return pd.Series(
+                dtype=float,
+                name="Dividends",
+            )
+
+    monkeypatch.setattr(
+        yf,
+        "Ticker",
+        FakeTicker,
+    )
+
+    client = YahooFinanceClient()
+
+    client.download_dividends(
+        "  aapl  "
+    )
+
+    assert received["ticker"] == "AAPL"
+
+
+def test_download_dividends_calls_yfinance_get_dividends(
+    monkeypatch,
+) -> None:
+    calls = {
+        "count": 0,
+    }
+
+    class FakeTicker:
+        def __init__(
+            self,
+            ticker,
+        ):
+            self.ticker = ticker
+
+        def get_dividends(
+            self,
+        ):
+            calls["count"] += 1
+
+            return pd.Series(
+                dtype=float,
+                name="Dividends",
+            )
+
+    monkeypatch.setattr(
+        yf,
+        "Ticker",
+        FakeTicker,
+    )
+
+    client = YahooFinanceClient()
+
+    client.download_dividends(
+        "AAPL"
+    )
+
+    assert calls["count"] == 1
+
+
+def test_download_dividends_returns_empty_series(
+    monkeypatch,
+) -> None:
+    expected = pd.Series(
+        dtype=float,
+        name="Dividends",
+    )
+
+    class FakeTicker:
+        def __init__(
+            self,
+            ticker,
+        ):
+            self.ticker = ticker
+
+        def get_dividends(
+            self,
+        ):
+            return expected
+
+    monkeypatch.setattr(
+        yf,
+        "Ticker",
+        FakeTicker,
+    )
+
+    client = YahooFinanceClient()
+
+    result = client.download_dividends(
+        "AAPL"
+    )
+
+    pd.testing.assert_series_equal(
+        result,
+        expected,
+    )
+
+    assert result.empty
+
+
+def test_download_dividends_wraps_yfinance_error(
+    monkeypatch,
+) -> None:
+    class FakeTicker:
+        def __init__(
+            self,
+            ticker,
+        ):
+            self.ticker = ticker
+
+        def get_dividends(
+            self,
+        ):
+            raise RuntimeError(
+                "Yahoo failed"
+            )
+
+    monkeypatch.setattr(
+        yf,
+        "Ticker",
+        FakeTicker,
+    )
+
+    client = YahooFinanceClient()
+
+    with pytest.raises(
+        DownloaderClientError,
+        match=(
+            "Failed to download dividends "
+            "for ticker 'AAPL'."
+        ),
+    ):
+        client.download_dividends(
+            "AAPL"
+        )
+
+
+def test_download_dividends_rejects_empty_ticker(
+    monkeypatch,
+) -> None:
+    ticker_called = False
+
+    class FakeTicker:
+        def __init__(
+            self,
+            ticker,
+        ):
+            nonlocal ticker_called
+
+            ticker_called = True
+
+    monkeypatch.setattr(
+        yf,
+        "Ticker",
+        FakeTicker,
+    )
+
+    client = YahooFinanceClient()
+
+    with pytest.raises(
+        InvalidTickerError,
+        match="Ticker cannot be empty.",
+    ):
+        client.download_dividends(
+            "   "
+        )
+
+    assert ticker_called is False

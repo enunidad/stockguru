@@ -256,3 +256,124 @@ class ChartMgrApiClient:
             )
 
         return payload
+    
+    async def get_portfolio_overview(
+        self,
+        payload: dict[str, Any],
+    ) -> dict[str, Any]:
+        """
+        Retrieve chart-ready portfolio composition data
+        from ChartMgr.
+        """
+
+        url = (
+            f"{self._base_url}"
+            "/charting/portfolio_overview"
+        )
+
+        try:
+            async with aiohttp.ClientSession(
+                timeout=self._timeout,
+            ) as session:
+
+                async with session.post(
+                    url,
+                    json=payload,
+                ) as response:
+
+                    if response.status >= 400:
+                        message = await response.text()
+
+                        raise ApiResponseError(
+                            status=response.status,
+                            message=message,
+                        )
+
+                    try:
+                        result = await response.json()
+
+                    except (
+                        aiohttp.ContentTypeError,
+                        JSONDecodeError,
+                    ) as exc:
+                        raise InvalidResponseError(
+                            "ChartMgr returned invalid JSON."
+                        ) from exc
+
+        except ApiResponseError:
+            raise
+
+        except aiohttp.ClientError as exc:
+            raise ServiceUnavailableError(
+                "Unable to communicate with ChartMgr."
+            ) from exc
+
+        if not isinstance(result, dict):
+            raise InvalidResponseError(
+                "ChartMgr response must be a JSON object."
+            )
+
+        return result
+
+class ForecasterApiClient:
+    """Client for the StocksGuru forecaster service."""
+
+    def __init__(
+        self,
+        base_url: str = "http://localhost:8060",
+        *,
+        timeout_seconds: float = 30.0,
+    ) -> None:
+        self._base_url = base_url.rstrip("/")
+        self._timeout = aiohttp.ClientTimeout(
+            total=timeout_seconds,
+        )
+
+    async def forecast(
+        self,
+        payload: dict[str, Any],
+    ) -> dict[str, Any]:
+        url = f"{self._base_url}/forecast"
+
+        try:
+            async with aiohttp.ClientSession(
+                timeout=self._timeout,
+            ) as session:
+                async with session.post(
+                    url,
+                    json=payload,
+                ) as response:
+
+                    if response.status >= 400:
+                        message = await response.text()
+
+                        raise ApiResponseError(
+                            status=response.status,
+                            message=message,
+                        )
+
+                    try:
+                        result = await response.json()
+
+                    except (
+                        aiohttp.ContentTypeError,
+                        JSONDecodeError,
+                    ) as exc:
+                        raise InvalidResponseError(
+                            "Forecaster returned invalid JSON."
+                        ) from exc
+
+        except ApiResponseError:
+            raise
+
+        except aiohttp.ClientError as exc:
+            raise ServiceUnavailableError(
+                "Unable to communicate with Forecaster."
+            ) from exc
+
+        if not isinstance(result, dict):
+            raise InvalidResponseError(
+                "Forecaster response must be a JSON object."
+            )
+
+        return result

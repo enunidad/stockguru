@@ -225,3 +225,159 @@ class TickerMetadataCache:
             return None
 
         return self.load(ticker)
+
+class DividendCache:
+    def __init__(
+        self,
+        cache_dir: Path,
+        ttl: timedelta = timedelta(days=1),
+    ) -> None:
+        """
+        Initializes dividend history cache.
+
+        Args:
+            cache_dir (Path): Path to the cache data folder.
+            ttl (timedelta): Duration cached dividend data
+                is considered fresh.
+        """
+        self.cache_dir = cache_dir
+        self.ttl = ttl
+
+    def get_path(
+        self,
+        ticker: str,
+    ) -> Path:
+        """
+        Return the path used to store dividend history.
+
+        Args:
+            ticker (str): Ticker symbol.
+
+        Returns:
+            Path: Path to the dividend cache file.
+        """
+        symbol = ticker.strip().upper()
+
+        return (
+            self.cache_dir
+            / symbol
+            / f"{symbol}_dividends.csv"
+        )
+
+    def is_fresh(
+        self,
+        ticker: str,
+    ) -> bool:
+        """
+        Check whether cached dividend data exists and
+        is still within the configured TTL.
+        """
+        path = self.get_path(ticker)
+
+        if not path.exists():
+            return False
+
+        modified_time = datetime.fromtimestamp(
+            path.stat().st_mtime,
+            tz=timezone.utc,
+        )
+
+        return (
+            datetime.now(timezone.utc)
+            - modified_time
+            <= self.ttl
+        )
+
+    def load(
+        self,
+        ticker: str,
+    ) -> pd.Series:
+        """
+        Load cached dividend history.
+
+        Args:
+            ticker (str): Ticker symbol.
+
+        Returns:
+            pd.Series: Dividend payments indexed by date.
+        """
+        path = self.get_path(ticker)
+
+        data = pd.read_csv(
+            path,
+            parse_dates=["Date"],
+        )
+
+        if data.empty:
+            return pd.Series(
+                dtype=float,
+                name="Dividends",
+            )
+
+        data["Date"] = pd.to_datetime(
+            data["Date"],
+            errors="raise",
+            utc=True,
+        )
+
+        data = data.set_index("Date")
+
+        dividends = data["Dividends"]
+
+        dividends.index.name = "Date"
+        dividends.name = "Dividends"
+
+        return dividends
+
+    def save(
+        self,
+        ticker: str,
+        dividends: pd.Series,
+    ) -> Path:
+        """
+        Save dividend history to cache.
+
+        Args:
+            ticker (str): Ticker symbol.
+            dividends (pd.Series): Dividend history.
+
+        Returns:
+            Path: Path where dividend data was saved.
+        """
+        path = self.get_path(ticker)
+
+        path.parent.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
+        output = dividends.copy()
+
+        output.index.name = "Date"
+        output.name = "Dividends"
+
+        output.to_csv(
+            path,
+            header=True,
+        )
+
+        return path
+
+    def get_if_fresh(
+        self,
+        ticker: str,
+    ) -> Optional[pd.Series]:
+        """
+        Return cached dividend data if fresh.
+
+        Args:
+            ticker (str): Ticker symbol.
+
+        Returns:
+            Optional[pd.Series]: Cached dividend data,
+            otherwise None.
+        """
+        if not self.is_fresh(ticker):
+            return None
+
+        return self.load(ticker)

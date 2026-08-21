@@ -82,6 +82,23 @@ async def analyze_ticker(
         "1mo",
     )
 
+    auto_adjust_value = request.query.get(
+        "autoadjust",
+        "true",
+    )
+
+    try:
+        auto_adjust = parse_bool(
+            auto_adjust_value
+        )
+
+    except ValueError as exc:
+        return _error_response(
+            status=web.HTTPBadRequest.status_code,
+            error="invalid_request",
+            message=str(exc),
+        )
+
     analyzer_service = request.app[
         ANALYZER_SERVICE_KEY
     ]
@@ -90,6 +107,7 @@ async def analyze_ticker(
         result = await analyzer_service.analyze_ticker(
             ticker,
             period=period,
+            auto_adjust=auto_adjust,
         )
 
     except DownloaderResponseError as exc:
@@ -157,4 +175,27 @@ def _error_response(
             "message": message,
         },
         status=status,
+    )
+
+def parse_bool(value: str) -> bool:
+    normalized = value.strip().lower()
+
+    if normalized in {
+        "true",
+        "1",
+        "on",
+        "yes",
+    }:
+        return True
+
+    if normalized in {
+        "false",
+        "0",
+        "off",
+        "no",
+    }:
+        return False
+
+    raise ValueError(
+        f"Invalid boolean value {value!r}."
     )

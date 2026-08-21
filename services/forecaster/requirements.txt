@@ -1,0 +1,6 @@
+aiohttp
+pandas==2.2.3
+
+pytest
+pytest-aiohttp
+pytest-asyncio
