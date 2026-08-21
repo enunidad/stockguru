@@ -248,17 +248,6 @@ class ForecasterService:
             holding.shares * cost_per_share
         )
 
-        print(
-            "FORECAST INPUT",
-            {
-                "ticker": ticker,
-                "latest_close": latest_close,
-                "analyzer_start_price": analysis.get("start_price"),
-                "analyzer_current_price": analysis.get("current_price"),
-                "cagr": annual_growth_rate,
-            },
-        )
-
         return {
             "ticker": ticker,
             "latest_close": latest_close,
