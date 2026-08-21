@@ -15,10 +15,7 @@ def main() -> None:
     """
     Start the StocksGuru Forecaster service.
     """
-    app = create_app(
-        downloader_base_url=DOWNLOADER_BASE_URL,
-        analyzer_base_url=ANALYZER_BASE_URL,
-    )
+    app = create_app()
 
     web.run_app(
         app,

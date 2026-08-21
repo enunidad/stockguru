@@ -32,8 +32,8 @@ class ForecasterService:
     
     _MIN_PROJECTED_GROWTH_RATE = 0.015
 
-    def __init__(self, client: MyClient, ) -> None:
-        self._client = client
+    def __init__(self, client: MyClient|None = None, ) -> None:
+        self._client = MyClient() if client is None else client
 
     async def forecast(self, request: ForecastRequest, ) -> ForecastResponse:
         self._validate_request(request)
@@ -88,14 +88,9 @@ class ForecasterService:
         # Portfolio timeline
         # -----------------------------------------------------
 
-        timeline_params = [ForecastPoint(**timeline_params(x, y)) for key in fields(ForecastPoint) if key.init] 
-        timeline = [ForecastPoint(**timeline_params())]
-        timeline = []
-
-        for year in range(years + 1):
-            value = sum(result.timeline[year].value for result in results)
-            timeline.append(ForecastPoint(year=year, value=round(value, 2), ))
-
+        value_content = lambda results, year: round(sum(result.timeline[year].value for result in results), 2)
+        timeline_params = lambda results, year: {"year": year, "value": value_content(results, year)}
+        timeline = [ForecastPoint(**timeline_params(results, year)) for year in range(years + 1)]
 
         return ForecastResponse(summary=summary, timeline=timeline, holdings=holdings, )
 
@@ -193,90 +188,45 @@ class ForecasterService:
         return cagr
 
     @classmethod
-    def _validate_request(
-        cls,
-        request: ForecastRequest,
-    ) -> None:
+    def _validate_request(cls, request: ForecastRequest, ) -> None:
         if not request.holdings:
-            raise ValueError(
-                "At least one holding is required."
-            )
+            raise ValueError("At least one holding is required.")
 
         if request.years <= 0:
-            raise ValueError(
-                "Forecast years must be greater than zero."
-            )
+            raise ValueError("Forecast years must be greater than zero.")
         
         if request.years >= 40:
-            raise ValueError(
-                "Forecast years must be less than 40."
-            )
+            raise ValueError("Forecast years must be less than 40.")
 
         if request.contribution_amount < 0:
-            raise ValueError(
-                "Contribution amount cannot be negative."
-            )
+            raise ValueError("Contribution amount cannot be negative.")
         
         if request.contribution_amount >= 1000000:
-            raise ValueError(
-                "Contribution must be less than 1M."
-            )
+            raise ValueError("Contribution must be less than 1M.")
 
-        if (
-            request.contribution_frequency
-            not in cls._CONTRIBUTION_MONTHS
-        ):
-            raise ValueError(
-                "Contribution frequency must be "
-                "monthly, quarterly, or annually."
-            )
+        if (request.contribution_frequency not in cls._CONTRIBUTION_MONTHS):
+            raise ValueError("Contribution frequency must be monthly, quarterly, or annually.")
 
         for holding in request.holdings:
             cls._validate_holding(holding)
 
         if request.contribution_amount > 0:
-            total_weight = sum(
-                holding.contribution_weight
-                for holding in request.holdings
-            )
+            total_weight = sum(holding.contribution_weight for holding in request.holdings)
 
-            if not math.isclose(
-                total_weight,
-                1.0,
-                abs_tol=1e-6,
-            ):
-                raise ValueError(
-                    "Contribution weights must sum to 1.0."
-                )
+            if not math.isclose(total_weight, 1.0, abs_tol=1e-6, ):
+                raise ValueError("Contribution weights must sum to 1.0.")
 
     @staticmethod
-    def _validate_holding(
-        holding: HoldingInput,
-    ) -> None:
+    def _validate_holding(holding: HoldingInput, ) -> None:
         if not holding.ticker.strip():
-            raise ValueError(
-                "Ticker cannot be empty."
-            )
+            raise ValueError("Ticker cannot be empty.")
 
         if holding.shares < 0:
-            raise ValueError(
-                "Shares cannot be negative."
-            )
+            raise ValueError("Shares cannot be negative.")
 
-        if (
-            holding.average_cost is not None
-            and holding.average_cost <= 0
-        ):
-            raise ValueError(
-                "Average cost must be greater than zero."
-            )
+        if (holding.average_cost is not None and holding.average_cost <= 0):
+            raise ValueError("Average cost must be greater than zero.")
 
-        if not (
-            0.0
-            <= holding.contribution_weight
-            <= 1.0
-        ):
-            raise ValueError(
-                "Contribution weight must be "
-                "between 0 and 1."
+        if not (0.0 <= holding.contribution_weight <= 1.0):
+            raise ValueError("Contribution weight must be between 0 and 1."
             )

@@ -5,10 +5,6 @@ from typing import Any
 
 from aiohttp import web
 
-from .client import (
-    AnalyzerApiClient,
-    DownloaderApiClient,
-)
 from .exceptions import (
     AnalyzerClientError,
     AnalyzerResponseError,
@@ -24,36 +20,16 @@ from .schemas import (
 from .service import ForecasterService
 
 
-FORECASTER_SERVICE_KEY = web.AppKey(
-    "forecaster_service",
-    ForecasterService,
-)
+FORECASTER_SERVICE_KEY = web.AppKey("forecaster_service", ForecasterService, )
 
 
-def create_app(
-    forecaster_service: ForecasterService | None = None,
-    *,
-    downloader_base_url: str = "http://localhost:8080",
-    analyzer_base_url: str = "http://localhost:8090",
-) -> web.Application:
+def create_app(service: ForecasterService | None = None, ) -> web.Application:
     """
     Create and configure the Forecaster API.
     """
     app = web.Application()
 
-    if forecaster_service is None:
-        downloader_client = DownloaderApiClient(
-            base_url=downloader_base_url,
-        )
-
-        analyzer_client = AnalyzerApiClient(
-            base_url=analyzer_base_url,
-        )
-
-        forecaster_service = ForecasterService(
-            downloader_client=downloader_client,
-            analyzer_client=analyzer_client,
-        )
+    forecaster_service = ForecasterService() if service is None else service
 
     app[FORECASTER_SERVICE_KEY] = forecaster_service
 

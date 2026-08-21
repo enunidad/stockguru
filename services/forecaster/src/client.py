@@ -17,12 +17,14 @@ from .exceptions import (
     InvalidWorkerResponseError,
 )
 
+from .config import DOWNLOADER_BASE_URL, ANALYZER_BASE_URL
+
 class MyClient:
-    def __init__(self, downloader_url:str="http://localhost:8080", 
-                    analyzer_url:str="http://localhostL8090", 
-                    * timeout_seconds:float=30.0, ) -> None:
-        self._downloader = downloader_url.strip("/")
-        self._analyzer = analyzer_url.strip("/")
+    def __init__(self, downloader_url:str|None=None, 
+                    analyzer_url:str=None, 
+                    *, timeout_seconds:float=30.0, ) -> None:
+        self._downloader = downloader_url.strip("/") if downloader_url is not None else DOWNLOADER_BASE_URL
+        self._analyzer = analyzer_url.strip("/") if analyzer_url is not None else ANALYZER_BASE_URL
         self._timeout = aiohttp.ClientTimeout(
             total=timeout_seconds,
         )
@@ -54,7 +56,7 @@ class MyClient:
         if response.status >= 400:
             message = self._read_error_message(response, worker)
 
-            if worker.lower() == "analyzer"::
+            if worker.lower() == "analyzer":
                 raise AnalyzerResponseError(status=response.status, message=message, )
             elif worker.lower() == "downloader":
                 raise DownloaderResponseError(status=response.status, message=message, )
@@ -69,7 +71,7 @@ class MyClient:
 
             if worker.lower() == "analyzer":
                 raise InvalidAnalyzerResponseError(msg.format(worker=worker)) from exc
-            elif worker.lower() == "downloader"
+            elif worker.lower() == "downloader":
                 raise InvalidDownloaderResponseError(msg.format(worker=worker)) from exc
             else:
                 raise InvalidWorkerResponseError("An invalid JSON was returned") from exc 
