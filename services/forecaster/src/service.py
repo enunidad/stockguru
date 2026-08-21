@@ -232,8 +232,7 @@ class ForecasterService:
             )
         )
 
-        annual_growth_rate = max(self._read_cagr(analysis),
-                                    _MIN_PROJECTED_GROWTH_RATE)
+        annual_growth_rate = max(self._read_cagr(analysis), self._MIN_PROJECTED_GROWTH_RATE)
 
         annual_dividend = self._read_annual_dividend(
             dividend_data
