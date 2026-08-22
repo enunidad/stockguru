@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from json import JSONDecodeError
 from typing import Any
+import math
 
 from aiohttp import web
 
@@ -296,23 +297,17 @@ def _parse_holding(
     )
 
 
-def _read_number(
-    value: Any,
-    field_name: str,
-) -> float:
+def _read_number(value: Any, field_name: str, ) -> float:
     """
     Read a JSON numeric field.
     """
-    if (
-        isinstance(value, bool)
-        or not isinstance(
-            value,
-            (int, float),
-        )
-    ):
+    if isinstance(value, bool) or not isinstance(value, (int, float), ):
         raise TypeError(
             f"'{field_name}' must be numeric."
         )
+    
+    if not math.isfinite(value):
+        raise ValueError(f"'{field_name}' must be finite.")
 
     return float(value)
 

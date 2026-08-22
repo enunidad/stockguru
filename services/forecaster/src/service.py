@@ -124,11 +124,17 @@ class ForecasterService:
         }
     
     @staticmethod
-    def _read_annual_dividend(dividend_data: list[dict[str, Any]], ) -> float:
+    def _read_annual_dividend(
+        dividend_data: list[dict[str, Any]],
+    ) -> float:
         """
-        Calculate trailing 12-month dividends per share.
+        Estimate annual dividends per share using the
+        trailing 18 months of actual payments.
 
-        Returns zero for stocks with no dividend history.
+        The 18-month total is annualized back to a
+        12-month rate. This allows for temporary payment
+        interruptions without projecting stale dividends
+        indefinitely.
         """
         if not dividend_data:
             return 0.0
@@ -137,33 +143,67 @@ class ForecasterService:
 
         for record in dividend_data:
             if not isinstance(record, dict):
-                raise ValueError("Dividend record must be a dictionary.")
-            if "Date" not in record or "Dividend" not in record:
-                raise ValueError("Dividend record must contain Date and Dividend.")
+                raise ValueError(
+                    "Dividend record must be a dictionary."
+                )
 
-            date = record['Date']
+            if "Date" not in record or "Dividend" not in record:
+                raise ValueError(
+                    "Dividend record must contain Date and Dividend."
+                )
+
+            date = record["Date"]
             amount = record["Dividend"]
 
             try:
-                parsed_date = pd.to_datetime(date, utc=True, )
+                parsed_date = pd.to_datetime(
+                    date,
+                    utc=True,
+                )
+
                 parsed_amount = float(amount)
 
             except (TypeError, ValueError) as exc:
-                raise ValueError("Dividend record contains invalid data.") from exc
+                raise ValueError(
+                    "Dividend record contains invalid data."
+                ) from exc
 
             if not math.isfinite(parsed_amount):
-                raise ValueError("Dividend amount must be finite.")
+                raise ValueError(
+                    "Dividend amount must be finite."
+                )
 
             if parsed_amount < 0:
-                raise ValueError("Dividend amount cannot be negative.")
+                raise ValueError(
+                    "Dividend amount cannot be negative."
+                )
 
-            parsed.append((parsed_date, parsed_amount, ))
+            parsed.append(
+                (
+                    parsed_date,
+                    parsed_amount,
+                )
+            )
 
-        latest_date = max(date for date, _ in parsed)
+        now = pd.Timestamp.now(
+            tz="UTC",
+        )
 
-        cutoff_date = latest_date - pd.DateOffset(years=1)
+        cutoff_date = now - pd.DateOffset(
+            months=18,
+        )
 
-        annual_dividend = sum(amount for date, amount in parsed if date > cutoff_date)
+        trailing_dividends = sum(
+            amount
+            for date, amount in parsed
+            if date > cutoff_date
+        )
+
+        annual_dividend = (
+            trailing_dividends
+            * 12
+            / 18
+        )
 
         return annual_dividend
 

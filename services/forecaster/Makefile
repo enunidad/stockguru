@@ -1,7 +1,7 @@
 PYTHON ?= python
 
 install:
-	$(PIP) install -r requirements.txt
+	$(PYTHON) -m pip install -r requirements.txt
 
 test:
 	$(PYTHON) -m pytest tests -v

@@ -569,70 +569,152 @@ def test_read_annual_dividend_returns_zero_for_empty_data():
 
     assert result == 0.0
 
+def test_read_annual_dividend_annualizes_trailing_18_months():
+    now = pd.Timestamp.now(tz="UTC")
 
-def test_read_annual_dividend_sums_trailing_twelve_months():
     data = [
         {
-            "Date": "2024-01-01",
-            "Dividend": 10.0,
-        },
-        {
-            "Date": "2025-01-15",
+            "Date": str(now - pd.DateOffset(months=3)),
             "Dividend": 0.25,
         },
         {
-            "Date": "2025-04-15",
+            "Date": str(now - pd.DateOffset(months=6)),
             "Dividend": 0.25,
         },
         {
-            "Date": "2025-07-15",
+            "Date": str(now - pd.DateOffset(months=9)),
             "Dividend": 0.25,
         },
         {
-            "Date": "2025-10-15",
+            "Date": str(now - pd.DateOffset(months=12)),
+            "Dividend": 0.25,
+        },
+        {
+            "Date": str(now - pd.DateOffset(months=15)),
+            "Dividend": 0.25,
+        },
+        {
+            "Date": str(now - pd.DateOffset(months=17)),
             "Dividend": 0.25,
         },
     ]
 
     result = ForecasterService._read_annual_dividend(
-        data,
+        data
     )
 
     assert result == pytest.approx(1.0)
 
+def test_read_annual_dividend_annualizes_trailing_eighteen_months():
+    now = pd.Timestamp.now(tz="UTC")
 
-def test_read_annual_dividend_uses_latest_record_as_reference_date():
     data = [
         {
-            "Date": "2023-01-01",
-            "Dividend": 50.0,
+            "Date": str(now - pd.DateOffset(months=2)),
+            "Dividend": 0.25,
         },
         {
-            "Date": "2024-06-01",
+            "Date": str(now - pd.DateOffset(months=5)),
+            "Dividend": 0.25,
+        },
+        {
+            "Date": str(now - pd.DateOffset(months=8)),
+            "Dividend": 0.25,
+        },
+        {
+            "Date": str(now - pd.DateOffset(months=11)),
+            "Dividend": 0.25,
+        },
+        {
+            "Date": str(now - pd.DateOffset(months=14)),
+            "Dividend": 0.25,
+        },
+        {
+            "Date": str(now - pd.DateOffset(months=17)),
+            "Dividend": 0.25,
+        },
+    ]
+
+    result = ForecasterService._read_annual_dividend(data)
+
+    assert result == pytest.approx(1.0)
+
+def test_read_annual_dividend_ignores_dividends_older_than_18_months():
+    now = pd.Timestamp.now(tz="UTC")
+
+    data = [
+        {
+            "Date": str(
+                now - pd.DateOffset(months=19)
+            ),
             "Dividend": 1.0,
         },
         {
-            "Date": "2025-01-01",
+            "Date": str(
+                now - pd.DateOffset(months=24)
+            ),
+            "Dividend": 1.0,
+        },
+    ]
+
+    result = ForecasterService._read_annual_dividend(
+        data
+    )
+
+    assert result == 0.0
+
+def test_read_annual_dividend_tolerates_recent_payment_gap():
+    now = pd.Timestamp.now(tz="UTC")
+
+    data = [
+        {
+            "Date": str(
+                now - pd.DateOffset(months=13)
+            ),
+            "Dividend": 1.50,
+        },
+    ]
+
+    result = ForecasterService._read_annual_dividend(
+        data
+    )
+
+    assert result == pytest.approx(1.0)
+
+def test_read_annual_dividend_uses_current_date_as_reference():
+    now = pd.Timestamp.now(tz="UTC")
+
+    data = [
+        {
+            "Date": str(now - pd.DateOffset(months=19)),
+            "Dividend": 1.0,
+        },
+        {
+            "Date": str(now - pd.DateOffset(months=24)),
             "Dividend": 2.0,
         },
     ]
 
-    result = ForecasterService._read_annual_dividend(
-        data,
-    )
+    result = ForecasterService._read_annual_dividend(data)
 
-    assert result == pytest.approx(3.0)
+    assert result == 0.0
 
 
-def test_read_annual_dividend_excludes_exact_cutoff_date():
+def test_read_annual_dividend_ignores_payments_older_than_eighteen_months():
+    now = pd.Timestamp.now(tz="UTC")
+
     data = [
         {
-            "Date": "2024-01-01",
-            "Dividend": 5.0,
+            "Date": str(
+                now - pd.DateOffset(months=17)
+            ),
+            "Dividend": 1.5,
         },
         {
-            "Date": "2025-01-01",
-            "Dividend": 1.0,
+            "Date": str(
+                now - pd.DateOffset(months=19)
+            ),
+            "Dividend": 100.0,
         },
     ]
 
@@ -640,9 +722,6 @@ def test_read_annual_dividend_excludes_exact_cutoff_date():
         data,
     )
 
-    # Code uses:
-    # date > cutoff_date
-    # rather than >=
     assert result == pytest.approx(1.0)
 
 
@@ -771,21 +850,43 @@ async def test_prepare_holding_returns_expected_values():
         "cagr": 0.10,
     }
 
+    now = pd.Timestamp.now(tz="UTC")
+
     client.get_dividends.return_value = [
         {
-            "Date": "2025-01-15",
+            "Date": str(
+                now - pd.DateOffset(months=2)
+            ),
             "Dividend": 0.25,
         },
         {
-            "Date": "2025-04-15",
+            "Date": str(
+                now - pd.DateOffset(months=5)
+            ),
             "Dividend": 0.25,
         },
         {
-            "Date": "2025-07-15",
+            "Date": str(
+                now - pd.DateOffset(months=8)
+            ),
             "Dividend": 0.25,
         },
         {
-            "Date": "2025-10-15",
+            "Date": str(
+                now - pd.DateOffset(months=11)
+            ),
+            "Dividend": 0.25,
+        },
+        {
+            "Date": str(
+                now - pd.DateOffset(months=14)
+            ),
+            "Dividend": 0.25,
+        },
+        {
+            "Date": str(
+                now - pd.DateOffset(months=17)
+            ),
             "Dividend": 0.25,
         },
     ]
