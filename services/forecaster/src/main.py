@@ -3,12 +3,7 @@ from __future__ import annotations
 from aiohttp import web
 
 from .api import create_app
-from .config import (
-    ANALYZER_BASE_URL,
-    DOWNLOADER_BASE_URL,
-    HOST,
-    PORT,
-)
+from .config import HOST, PORT
 
 
 def main() -> None:

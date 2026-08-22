@@ -1,57 +1,36 @@
-from unittest.mock import AsyncMock
+from __future__ import annotations
 
+from dataclasses import fields
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, patch
+
+import pandas as pd
 import pytest
 
-from src.client import (
-    AnalyzerApiClient,
-    DownloaderApiClient,
-)
+from src.client import MyClient
 from src.schemas import (
     ForecastPoint,
     ForecastRequest,
+    ForecastResponse,
+    ForecastSummary,
+    HoldingForecast,
     HoldingInput,
-    HoldingProjectionResult,
 )
 from src.service import ForecasterService
 
 
-# =========================================================
-# Fixtures
-# =========================================================
-
-
-@pytest.fixture
-def downloader_client():
-    return AsyncMock(
-        spec=DownloaderApiClient
-    )
-
-
-@pytest.fixture
-def analyzer_client():
-    return AsyncMock(
-        spec=AnalyzerApiClient
-    )
-
-
-@pytest.fixture
-def service(
-    downloader_client,
-    analyzer_client,
-):
-    return ForecasterService(
-        downloader_client=downloader_client,
-        analyzer_client=analyzer_client,
-    )
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
 
 def make_holding(
     *,
-    ticker="AAPL",
-    shares=10.0,
-    average_cost=None,
-    contribution_weight=1.0,
-):
+    ticker: str = "AAPL",
+    shares: float = 10.0,
+    average_cost: float | None = 100.0,
+    contribution_weight: float = 1.0,
+) -> HoldingInput:
     return HoldingInput(
         ticker=ticker,
         shares=shares,
@@ -60,681 +39,265 @@ def make_holding(
     )
 
 
+def make_request(
+    *,
+    holdings: list[HoldingInput] | None = None,
+    years: int = 10,
+    contribution_amount: float = 0.0,
+    contribution_frequency: str = "monthly",
+    drip: bool = True,
+) -> ForecastRequest:
+    if holdings is None:
+        holdings = [
+            make_holding(),
+        ]
+
+    return ForecastRequest(
+        holdings=holdings,
+        years=years,
+        contribution_amount=contribution_amount,
+        contribution_frequency=contribution_frequency,
+        drip=drip,
+    )
+
+
 def make_projection_result(
     *,
-    ticker="AAPL",
-    initial_investment=1000.0,
-    current_growth=100.0,
-    contributions=1200.0,
-    growth=300.0,
-    dividends=50.0,
-    future_value=2650.0,
-    dividend_yield=0.01,
-    purchased_shares=20.0,
-    drip_shares=0.5,
-    total_shares=20.5,
-    ending_price=125.0,
-    timeline=None,
+    ticker: str = "AAPL",
+    years: int = 2,
+    values: list[float] | None = None,
+    overrides: dict | None = None,
 ):
-    if timeline is None:
-        timeline = [
-            ForecastPoint(
-                year=0,
-                value=1100.0,
-            ),
-            ForecastPoint(
-                year=1,
-                value=2650.0,
-            ),
+    """
+    Create a lightweight object containing everything _build_response()
+    expects from a HoldingProjectionResult.
+
+    This intentionally derives required fields from the schema so this
+    helper remains useful if HoldingForecast / ForecastSummary evolve.
+    """
+    if values is None:
+        values = [
+            1000.0,
+            1100.0,
+            1210.0,
         ]
 
-    return HoldingProjectionResult(
-        ticker=ticker,
-        initial_investment=initial_investment,
-        current_growth=current_growth,
-        contributions=contributions,
-        growth=growth,
-        dividends=dividends,
-        future_value=future_value,
-        dividend_yield=dividend_yield,
-        purchased_shares=purchased_shares,
-        drip_shares=drip_shares,
-        total_shares=total_shares,
-        ending_price=ending_price,
-        timeline=timeline,
-    )
+    attrs = {}
 
+    # Every field copied into HoldingForecast.
+    for field in fields(HoldingForecast):
+        if not field.init:
+            continue
 
-# =========================================================
-# _read_cagr
-# =========================================================
+        if field.name == "ticker":
+            attrs[field.name] = ticker
+        elif field.name == "timeline":
+            attrs[field.name] = [
+                ForecastPoint(
+                    year=year,
+                    value=values[year],
+                )
+                for year in range(years + 1)
+            ]
+        else:
+            attrs[field.name] = 0.0
 
+    # Every field consumed when constructing ForecastSummary.
+    summary_aliases = {
+        "future_contributions": "contributions",
+        "stock_growth": "growth",
+    }
 
-def test_read_cagr_returns_numeric_value() -> None:
-    result = ForecasterService._read_cagr(
-        {
-            "cagr": 0.125,
-        }
-    )
+    for field in fields(ForecastSummary):
+        if not field.init:
+            continue
 
-    assert result == pytest.approx(
-        0.125
-    )
-
-
-def test_read_cagr_accepts_numeric_string() -> None:
-    result = ForecasterService._read_cagr(
-        {
-            "cagr": "0.125",
-        }
-    )
-
-    assert result == pytest.approx(
-        0.125
-    )
-
-
-def test_read_cagr_rejects_missing_value() -> None:
-    with pytest.raises(
-        ValueError,
-        match="Analyzer response is missing CAGR.",
-    ):
-        ForecasterService._read_cagr(
-            {}
+        result_name = summary_aliases.get(
+            field.name,
+            field.name,
         )
 
+        if not hasattr(SimpleNamespace(**attrs), result_name):
+            attrs[result_name] = 0.0
 
-@pytest.mark.parametrize(
-    "value",
-    [
-        "banana",
-        None,
-    ],
-)
-def test_read_cagr_rejects_non_numeric_value(
-    value,
-) -> None:
-    with pytest.raises(
-        ValueError,
-        match="Analyzer CAGR must be numeric.",
-    ):
-        ForecasterService._read_cagr(
-            {
-                "cagr": value,
-            }
+    # _build_response accesses result.timeline directly even if it
+    # isn't part of HoldingForecast.
+    attrs["timeline"] = [
+        ForecastPoint(
+            year=year,
+            value=values[year],
         )
-
-
-@pytest.mark.parametrize(
-    "value",
-    [
-        float("nan"),
-        float("inf"),
-        float("-inf"),
-    ],
-)
-def test_read_cagr_rejects_non_finite_value(
-    value,
-) -> None:
-    with pytest.raises(
-        ValueError,
-        match="Analyzer CAGR must be finite.",
-    ):
-        ForecasterService._read_cagr(
-            {
-                "cagr": value,
-            }
-        )
-
-
-@pytest.mark.parametrize(
-    "value",
-    [
-        -1.0,
-        -1.5,
-    ],
-)
-def test_read_cagr_rejects_rate_at_or_below_negative_one(
-    value,
-) -> None:
-    with pytest.raises(
-        ValueError,
-        match="Analyzer CAGR must be greater than -1.",
-    ):
-        ForecasterService._read_cagr(
-            {
-                "cagr": value,
-            }
-        )
-
-
-# =========================================================
-# _read_annual_dividend
-# =========================================================
-
-
-def test_read_annual_dividend_returns_zero_for_empty_history() -> None:
-    result = ForecasterService._read_annual_dividend(
-        []
-    )
-
-    assert result == pytest.approx(
-        0.0
-    )
-
-
-def test_read_annual_dividend_sums_trailing_twelve_months() -> None:
-    data = [
-        {
-            "Date": "2025-01-01",
-            "Dividend": 0.20,
-        },
-        {
-            "Date": "2025-08-01",
-            "Dividend": 0.25,
-        },
-        {
-            "Date": "2025-11-01",
-            "Dividend": 0.25,
-        },
-        {
-            "Date": "2026-02-01",
-            "Dividend": 0.25,
-        },
-        {
-            "Date": "2026-05-01",
-            "Dividend": 0.25,
-        },
+        for year in range(years + 1)
     ]
 
-    result = ForecasterService._read_annual_dividend(
-        data
-    )
+    if overrides:
+        attrs.update(overrides)
 
-    # Latest record is 2026-05-01.
-    # Cutoff is 2025-05-01.
-    # The 2025-01 dividend is excluded.
-    assert result == pytest.approx(
-        1.0
-    )
+    return SimpleNamespace(**attrs)
 
 
-def test_read_annual_dividend_excludes_exact_cutoff_date() -> None:
-    data = [
-        {
-            "Date": "2025-06-01",
-            "Dividend": 1.0,
-        },
-        {
-            "Date": "2026-06-01",
-            "Dividend": 2.0,
-        },
-    ]
-
-    result = ForecasterService._read_annual_dividend(
-        data
-    )
-
-    assert result == pytest.approx(
-        2.0
-    )
+# ---------------------------------------------------------------------------
+# Construction
+# ---------------------------------------------------------------------------
 
 
-def test_read_annual_dividend_accepts_numeric_string() -> None:
-    result = ForecasterService._read_annual_dividend(
-        [
-            {
-                "Date": "2026-01-01",
-                "Dividend": "0.50",
-            },
-        ]
-    )
+def test_service_uses_provided_client():
+    client = AsyncMock(spec=MyClient)
 
-    assert result == pytest.approx(
-        0.50
-    )
+    service = ForecasterService(client)
+
+    assert service._client is client
 
 
-def test_read_annual_dividend_rejects_non_object_record() -> None:
-    with pytest.raises(
-        ValueError,
-        match="Dividend record must be an object.",
-    ):
-        ForecasterService._read_annual_dividend(
-            [
-                "invalid",
-            ]
-        )
+def test_service_creates_client_when_not_provided():
+    with patch(
+        "src.service.MyClient",
+    ) as client_cls:
+        service = ForecasterService()
+
+    client_cls.assert_called_once_with()
+    assert service._client is client_cls.return_value
 
 
-@pytest.mark.parametrize(
-    "record",
-    [
-        {
-            "Dividend": 0.25,
-        },
-        {
-            "Date": "2026-01-01",
-        },
-    ],
-)
-def test_read_annual_dividend_rejects_missing_fields(
-    record,
-) -> None:
-    with pytest.raises(
-        ValueError,
-        match="Dividend record must contain Date and Dividend.",
-    ):
-        ForecasterService._read_annual_dividend(
-            [
-                record,
-            ]
-        )
+# ---------------------------------------------------------------------------
+# Request validation
+# ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize(
-    "record",
-    [
-        {
-            "Date": "not-a-date",
-            "Dividend": 0.25,
-        },
-        {
-            "Date": "2026-01-01",
-            "Dividend": "banana",
-        },
-    ],
-)
-def test_read_annual_dividend_rejects_invalid_data(
-    record,
-) -> None:
-    with pytest.raises(
-        ValueError,
-        match="Dividend record contains invalid data.",
-    ):
-        ForecasterService._read_annual_dividend(
-            [
-                record,
-            ]
-        )
+def test_validate_request_accepts_valid_request():
+    request = make_request()
+
+    ForecasterService._validate_request(request)
 
 
-def test_read_annual_dividend_rejects_non_finite_amount() -> None:
-    with pytest.raises(
-        ValueError,
-        match="Dividend amount must be finite.",
-    ):
-        ForecasterService._read_annual_dividend(
-            [
-                {
-                    "Date": "2026-01-01",
-                    "Dividend": float("nan"),
-                },
-            ]
-        )
-
-
-def test_read_annual_dividend_rejects_negative_amount() -> None:
-    with pytest.raises(
-        ValueError,
-        match="Dividend amount cannot be negative.",
-    ):
-        ForecasterService._read_annual_dividend(
-            [
-                {
-                    "Date": "2026-01-01",
-                    "Dividend": -0.25,
-                },
-            ]
-        )
-
-
-# =========================================================
-# _prepare_holding
-# =========================================================
-
-
-@pytest.mark.asyncio
-async def test_prepare_holding_uses_latest_close_when_average_cost_missing(
-    service,
-    downloader_client,
-    analyzer_client,
-) -> None:
-    downloader_client.latest_close.return_value = (
-        150.0
-    )
-
-    downloader_client.get_dividends.return_value = (
-        []
-    )
-
-    analyzer_client.get_analysis.return_value = {
-        "cagr": 0.10,
-    }
-
-    holding = make_holding(
-        ticker=" aapl ",
-        shares=10.0,
-        average_cost=None,
-    )
-
-    result = await service._prepare_holding(
-        holding
-    )
-
-    assert result == {
-        "ticker": "AAPL",
-        "latest_close": 150.0,
-        "initial_investment": 1500.0,
-        "annual_growth_rate": 0.10,
-        "annual_dividend": 0.0,
-    }
-
-
-@pytest.mark.asyncio
-async def test_prepare_holding_uses_user_average_cost(
-    service,
-    downloader_client,
-    analyzer_client,
-) -> None:
-    downloader_client.latest_close.return_value = (
-        150.0
-    )
-
-    downloader_client.get_dividends.return_value = (
-        []
-    )
-
-    analyzer_client.get_analysis.return_value = {
-        "cagr": 0.10,
-    }
-
-    holding = make_holding(
-        shares=10.0,
-        average_cost=80.0,
-    )
-
-    result = await service._prepare_holding(
-        holding
-    )
-
-    assert result["initial_investment"] == pytest.approx(
-        800.0
-    )
-
-    assert result["latest_close"] == pytest.approx(
-        150.0
-    )
-
-
-@pytest.mark.asyncio
-async def test_prepare_holding_requests_required_market_data(
-    service,
-    downloader_client,
-    analyzer_client,
-) -> None:
-    downloader_client.latest_close.return_value = (
-        100.0
-    )
-
-    downloader_client.get_dividends.return_value = (
-        []
-    )
-
-    analyzer_client.get_analysis.return_value = {
-        "cagr": 0.05,
-    }
-
-    await service._prepare_holding(
-        make_holding(
-            ticker=" msft ",
-        )
-    )
-
-    downloader_client.latest_close.assert_awaited_once_with(
-        "MSFT"
-    )
-
-    analyzer_client.get_analysis.assert_awaited_once_with(
-        "MSFT",
-        period="10y",
-        interval="1d",
-        auto_adjust=False,
-    )
-
-    downloader_client.get_dividends.assert_awaited_once_with(
-        "MSFT",
-        period="10y",
-    )
-
-
-@pytest.mark.asyncio
-async def test_prepare_holding_reads_trailing_dividend(
-    service,
-    downloader_client,
-    analyzer_client,
-) -> None:
-    downloader_client.latest_close.return_value = (
-        100.0
-    )
-
-    analyzer_client.get_analysis.return_value = {
-        "cagr": 0.05,
-    }
-
-    downloader_client.get_dividends.return_value = [
-        {
-            "Date": "2025-09-01",
-            "Dividend": 0.25,
-        },
-        {
-            "Date": "2025-12-01",
-            "Dividend": 0.25,
-        },
-        {
-            "Date": "2026-03-01",
-            "Dividend": 0.25,
-        },
-        {
-            "Date": "2026-06-01",
-            "Dividend": 0.25,
-        },
-    ]
-
-    result = await service._prepare_holding(
-        make_holding()
-    )
-
-    assert result["annual_dividend"] == pytest.approx(
-        1.0
-    )
-
-
-# =========================================================
-# Holding Validation
-# =========================================================
-
-
-@pytest.mark.parametrize(
-    (
-        "holding",
-        "message",
-    ),
-    [
-        (
-            make_holding(
-                ticker="   ",
-            ),
-            "Ticker cannot be empty.",
-        ),
-        (
-            make_holding(
-                shares=-1.0,
-            ),
-            "Shares cannot be negative.",
-        ),
-        (
-            make_holding(
-                average_cost=0.0,
-            ),
-            "Average cost must be greater than zero.",
-        ),
-        (
-            make_holding(
-                average_cost=-10.0,
-            ),
-            "Average cost must be greater than zero.",
-        ),
-        (
-            make_holding(
-                contribution_weight=-0.1,
-            ),
-            "Contribution weight must be between 0 and 1.",
-        ),
-        (
-            make_holding(
-                contribution_weight=1.1,
-            ),
-            "Contribution weight must be between 0 and 1.",
-        ),
-    ],
-)
-def test_validate_holding_rejects_invalid_input(
-    holding,
-    message,
-) -> None:
-    with pytest.raises(
-        ValueError,
-        match=message,
-    ):
-        ForecasterService._validate_holding(
-            holding
-        )
-
-
-def test_validate_holding_accepts_valid_input() -> None:
-    ForecasterService._validate_holding(
-        make_holding(
-            ticker="AAPL",
-            shares=10.5,
-            average_cost=75.0,
-            contribution_weight=1.0,
-        )
-    )
-
-
-# =========================================================
-# Request Validation
-# =========================================================
-
-
-def test_validate_request_rejects_empty_portfolio() -> None:
-    request = ForecastRequest(
+def test_validate_request_rejects_empty_holdings():
+    request = make_request(
         holdings=[],
     )
 
     with pytest.raises(
         ValueError,
-        match="At least one holding is required.",
+        match="At least one holding is required",
     ):
-        ForecasterService._validate_request(
-            request
-        )
+        ForecasterService._validate_request(request)
 
 
-def test_validate_request_rejects_zero_years() -> None:
-    request = ForecastRequest(
-        holdings=[
-            make_holding(),
-        ],
+def test_validate_request_rejects_zero_years():
+    request = make_request(
         years=0,
     )
 
     with pytest.raises(
         ValueError,
-        match="Forecast years must be greater than zero.",
+        match="greater than zero",
     ):
-        ForecasterService._validate_request(
-            request
-        )
+        ForecasterService._validate_request(request)
 
-def test_validate_request_rejects_max_years() -> None:
-    request = ForecastRequest(
-        holdings=[
-            make_holding(),
-        ],
-        years=50,
+
+def test_validate_request_rejects_negative_years():
+    request = make_request(
+        years=-1,
     )
 
     with pytest.raises(
         ValueError,
-        match="Forecast years must be less than 40.",
+        match="greater than zero",
     ):
-        ForecasterService._validate_request(
-            request
-        )
+        ForecasterService._validate_request(request)
 
 
-def test_validate_request_rejects_negative_contribution() -> None:
-    request = ForecastRequest(
-        holdings=[
-            make_holding(),
-        ],
+def test_validate_request_accepts_39_years():
+    request = make_request(
+        years=39,
+    )
+
+    ForecasterService._validate_request(request)
+
+
+def test_validate_request_rejects_40_years():
+    request = make_request(
+        years=40,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="less than 40",
+    ):
+        ForecasterService._validate_request(request)
+
+
+def test_validate_request_rejects_negative_contribution():
+    request = make_request(
         contribution_amount=-1.0,
     )
 
     with pytest.raises(
         ValueError,
-        match="Contribution amount cannot be negative.",
+        match="cannot be negative",
     ):
-        ForecasterService._validate_request(
-            request
-        )
+        ForecasterService._validate_request(request)
 
-def test_validate_request_rejects_very_large_contribution() -> None:
-    request = ForecastRequest(
-        holdings=[
-            make_holding(),
-        ],
-        contribution_amount=5000000,
+
+def test_validate_request_accepts_contribution_below_one_million():
+    request = make_request(
+        contribution_amount=999_999.99,
+    )
+
+    ForecasterService._validate_request(request)
+
+
+def test_validate_request_rejects_one_million_contribution():
+    request = make_request(
+        contribution_amount=1_000_000.0,
     )
 
     with pytest.raises(
         ValueError,
-        match="Contribution must be less than 1M.",
+        match="less than 1M",
     ):
-        ForecasterService._validate_request(
-            request
-        )
+        ForecasterService._validate_request(request)
 
 
-def test_validate_request_rejects_unknown_frequency() -> None:
-    request = ForecastRequest(
-        holdings=[
-            make_holding(),
-        ],
+@pytest.mark.parametrize(
+    "frequency",
+    [
+        "monthly",
+        "quarterly",
+        "annually",
+    ],
+)
+def test_validate_request_accepts_supported_frequency(
+    frequency,
+):
+    request = make_request(
+        contribution_frequency=frequency,
+    )
+
+    ForecasterService._validate_request(request)
+
+
+def test_validate_request_rejects_invalid_frequency():
+    request = make_request(
         contribution_frequency="weekly",
     )
 
     with pytest.raises(
         ValueError,
-        match="Contribution frequency must be",
+        match="monthly, quarterly, or annually",
     ):
-        ForecasterService._validate_request(
-            request
-        )
+        ForecasterService._validate_request(request)
 
 
-def test_validate_request_rejects_weights_not_summing_to_one() -> None:
-    request = ForecastRequest(
+def test_validate_request_requires_weights_to_sum_to_one_when_contributing():
+    request = make_request(
         holdings=[
             make_holding(
                 ticker="AAPL",
-                contribution_weight=0.25,
+                contribution_weight=0.7,
             ),
             make_holding(
                 ticker="MSFT",
-                contribution_weight=0.25,
+                contribution_weight=0.2,
             ),
         ],
         contribution_amount=500.0,
@@ -742,35 +305,31 @@ def test_validate_request_rejects_weights_not_summing_to_one() -> None:
 
     with pytest.raises(
         ValueError,
-        match="Contribution weights must sum to 1.0.",
+        match="Contribution weights must sum to 1.0",
     ):
-        ForecasterService._validate_request(
-            request
-        )
+        ForecasterService._validate_request(request)
 
 
-def test_validate_request_accepts_valid_weights() -> None:
-    request = ForecastRequest(
+def test_validate_request_accepts_weights_summing_to_one():
+    request = make_request(
         holdings=[
             make_holding(
                 ticker="AAPL",
-                contribution_weight=0.5,
+                contribution_weight=0.6,
             ),
             make_holding(
                 ticker="MSFT",
-                contribution_weight=0.5,
+                contribution_weight=0.4,
             ),
         ],
         contribution_amount=500.0,
     )
 
-    ForecasterService._validate_request(
-        request
-    )
+    ForecasterService._validate_request(request)
 
 
-def test_validate_request_does_not_require_weights_without_contributions() -> None:
-    request = ForecastRequest(
+def test_validate_request_does_not_require_weight_sum_without_contributions():
+    request = make_request(
         holdings=[
             make_holding(
                 ticker="AAPL",
@@ -784,288 +343,997 @@ def test_validate_request_does_not_require_weights_without_contributions() -> No
         contribution_amount=0.0,
     )
 
-    ForecasterService._validate_request(
-        request
+    ForecasterService._validate_request(request)
+
+
+# ---------------------------------------------------------------------------
+# Holding validation
+# ---------------------------------------------------------------------------
+
+
+def test_validate_holding_accepts_valid_holding():
+    holding = make_holding()
+
+    ForecasterService._validate_holding(holding)
+
+
+def test_validate_holding_rejects_empty_ticker():
+    holding = make_holding(
+        ticker="   ",
     )
 
+    with pytest.raises(
+        ValueError,
+        match="Ticker cannot be empty",
+    ):
+        ForecasterService._validate_holding(holding)
 
-# =========================================================
-# _build_response
-# =========================================================
 
-
-def test_build_response_aggregates_holdings() -> None:
-    first = make_projection_result(
-        ticker="AAPL",
-        initial_investment=1000.0,
-        current_growth=100.0,
-        contributions=500.0,
-        growth=200.0,
-        dividends=50.0,
-        future_value=1850.0,
-        timeline=[
-            ForecastPoint(
-                year=0,
-                value=1100.0,
-            ),
-            ForecastPoint(
-                year=1,
-                value=1850.0,
-            ),
-        ],
+def test_validate_holding_accepts_zero_shares():
+    holding = make_holding(
+        shares=0.0,
     )
 
-    second = make_projection_result(
-        ticker="MSFT",
-        initial_investment=2000.0,
-        current_growth=-100.0,
-        contributions=500.0,
-        growth=400.0,
-        dividends=100.0,
-        future_value=2900.0,
-        timeline=[
-            ForecastPoint(
-                year=0,
-                value=1900.0,
-            ),
-            ForecastPoint(
-                year=1,
-                value=2900.0,
-            ),
-        ],
+    ForecasterService._validate_holding(holding)
+
+
+def test_validate_holding_rejects_negative_shares():
+    holding = make_holding(
+        shares=-1.0,
     )
 
-    result = ForecasterService._build_response(
-        [
-            first,
-            second,
-        ],
-        years=1,
+    with pytest.raises(
+        ValueError,
+        match="Shares cannot be negative",
+    ):
+        ForecasterService._validate_holding(holding)
+
+
+def test_validate_holding_accepts_missing_average_cost():
+    holding = make_holding(
+        average_cost=None,
     )
 
-    assert result.summary.initial_investment == pytest.approx(
-        3000.0
+    ForecasterService._validate_holding(holding)
+
+
+def test_validate_holding_rejects_zero_average_cost():
+    holding = make_holding(
+        average_cost=0.0,
     )
 
-    assert result.summary.current_growth == pytest.approx(
-        0.0
+    with pytest.raises(
+        ValueError,
+        match="Average cost must be greater than zero",
+    ):
+        ForecasterService._validate_holding(holding)
+
+
+def test_validate_holding_rejects_negative_average_cost():
+    holding = make_holding(
+        average_cost=-10.0,
     )
 
-    assert result.summary.future_contributions == pytest.approx(
-        1000.0
+    with pytest.raises(
+        ValueError,
+        match="Average cost must be greater than zero",
+    ):
+        ForecasterService._validate_holding(holding)
+
+
+@pytest.mark.parametrize(
+    "weight",
+    [
+        0.0,
+        0.25,
+        0.5,
+        1.0,
+    ],
+)
+def test_validate_holding_accepts_valid_contribution_weight(
+    weight,
+):
+    holding = make_holding(
+        contribution_weight=weight,
     )
 
-    assert result.summary.stock_growth == pytest.approx(
-        600.0
+    ForecasterService._validate_holding(holding)
+
+
+@pytest.mark.parametrize(
+    "weight",
+    [
+        -0.01,
+        1.01,
+    ],
+)
+def test_validate_holding_rejects_invalid_contribution_weight(
+    weight,
+):
+    holding = make_holding(
+        contribution_weight=weight,
     )
 
-    assert result.summary.dividends == pytest.approx(
-        150.0
+    with pytest.raises(
+        ValueError,
+        match="Contribution weight must be between 0 and 1",
+    ):
+        ForecasterService._validate_holding(holding)
+
+
+# ---------------------------------------------------------------------------
+# CAGR parsing
+# ---------------------------------------------------------------------------
+
+
+def test_read_cagr_returns_float():
+    result = ForecasterService._read_cagr(
+        {
+            "cagr": 0.125,
+        }
     )
 
-    assert result.summary.future_value == pytest.approx(
-        4750.0
+    assert result == 0.125
+
+
+def test_read_cagr_accepts_numeric_string():
+    result = ForecasterService._read_cagr(
+        {
+            "cagr": "0.15",
+        }
     )
 
-    assert result.timeline == [
-        ForecastPoint(
-            year=0,
-            value=3000.0,
-        ),
-        ForecastPoint(
-            year=1,
-            value=4750.0,
-        ),
+    assert result == 0.15
+
+
+def test_read_cagr_rejects_missing_cagr():
+    with pytest.raises(
+        ValueError,
+        match="missing CAGR",
+    ):
+        ForecasterService._read_cagr({})
+
+
+def test_read_cagr_rejects_non_numeric_cagr():
+    with pytest.raises(
+        ValueError,
+        match="must be numeric",
+    ):
+        ForecasterService._read_cagr(
+            {
+                "cagr": "banana",
+            }
+        )
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        float("nan"),
+        float("inf"),
+        float("-inf"),
+    ],
+)
+def test_read_cagr_rejects_non_finite_cagr(
+    value,
+):
+    with pytest.raises(
+        ValueError,
+        match="must be finite",
+    ):
+        ForecasterService._read_cagr(
+            {
+                "cagr": value,
+            }
+        )
+
+
+def test_read_cagr_accepts_value_above_negative_one():
+    result = ForecasterService._read_cagr(
+        {
+            "cagr": -0.999,
+        }
+    )
+
+    assert result == -0.999
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        -1.0,
+        -1.5,
+    ],
+)
+def test_read_cagr_rejects_negative_one_or_less(
+    value,
+):
+    with pytest.raises(
+        ValueError,
+        match="greater than -1",
+    ):
+        ForecasterService._read_cagr(
+            {
+                "cagr": value,
+            }
+        )
+
+
+# ---------------------------------------------------------------------------
+# Dividend parsing
+# ---------------------------------------------------------------------------
+
+
+def test_read_annual_dividend_returns_zero_for_empty_data():
+    result = ForecasterService._read_annual_dividend([])
+
+    assert result == 0.0
+
+
+def test_read_annual_dividend_sums_trailing_twelve_months():
+    data = [
+        {
+            "Date": "2024-01-01",
+            "Dividend": 10.0,
+        },
+        {
+            "Date": "2025-01-15",
+            "Dividend": 0.25,
+        },
+        {
+            "Date": "2025-04-15",
+            "Dividend": 0.25,
+        },
+        {
+            "Date": "2025-07-15",
+            "Dividend": 0.25,
+        },
+        {
+            "Date": "2025-10-15",
+            "Dividend": 0.25,
+        },
     ]
 
-    assert len(result.holdings) == 2
-
-    assert result.holdings[0].ticker == "AAPL"
-    assert result.holdings[1].ticker == "MSFT"
-
-
-def test_build_response_preserves_share_attribution() -> None:
-    projection = make_projection_result(
-        purchased_shares=15.0,
-        drip_shares=2.0,
-        total_shares=17.0,
-        dividend_yield=0.025,
-        ending_price=175.0,
+    result = ForecasterService._read_annual_dividend(
+        data,
     )
 
-    result = ForecasterService._build_response(
-        [
-            projection,
-        ],
-        years=1,
+    assert result == pytest.approx(1.0)
+
+
+def test_read_annual_dividend_uses_latest_record_as_reference_date():
+    data = [
+        {
+            "Date": "2023-01-01",
+            "Dividend": 50.0,
+        },
+        {
+            "Date": "2024-06-01",
+            "Dividend": 1.0,
+        },
+        {
+            "Date": "2025-01-01",
+            "Dividend": 2.0,
+        },
+    ]
+
+    result = ForecasterService._read_annual_dividend(
+        data,
     )
 
-    holding = result.holdings[0]
+    assert result == pytest.approx(3.0)
 
-    assert holding.purchased_shares == pytest.approx(
-        15.0
+
+def test_read_annual_dividend_excludes_exact_cutoff_date():
+    data = [
+        {
+            "Date": "2024-01-01",
+            "Dividend": 5.0,
+        },
+        {
+            "Date": "2025-01-01",
+            "Dividend": 1.0,
+        },
+    ]
+
+    result = ForecasterService._read_annual_dividend(
+        data,
     )
 
-    assert holding.drip_shares == pytest.approx(
-        2.0
-    )
-
-    assert holding.total_shares == pytest.approx(
-        17.0
-    )
-
-    assert holding.dividend_yield == pytest.approx(
-        0.025
-    )
-
-    assert holding.ending_price == pytest.approx(
-        175.0
-    )
+    # Code uses:
+    # date > cutoff_date
+    # rather than >=
+    assert result == pytest.approx(1.0)
 
 
-# =========================================================
-# forecast
-# =========================================================
+def test_read_annual_dividend_rejects_non_dict_record():
+    with pytest.raises(
+        ValueError,
+        match="must be a dictionary",
+    ):
+        ForecasterService._read_annual_dividend(
+            [
+                "bad record",
+            ]
+        )
+
+
+def test_read_annual_dividend_requires_date():
+    with pytest.raises(
+        ValueError,
+        match="must contain Date and Dividend",
+    ):
+        ForecasterService._read_annual_dividend(
+            [
+                {
+                    "Dividend": 1.0,
+                },
+            ]
+        )
+
+
+def test_read_annual_dividend_requires_dividend():
+    with pytest.raises(
+        ValueError,
+        match="must contain Date and Dividend",
+    ):
+        ForecasterService._read_annual_dividend(
+            [
+                {
+                    "Date": "2025-01-01",
+                },
+            ]
+        )
+
+
+def test_read_annual_dividend_rejects_invalid_date():
+    with pytest.raises(
+        ValueError,
+        match="contains invalid data",
+    ):
+        ForecasterService._read_annual_dividend(
+            [
+                {
+                    "Date": "not-a-date",
+                    "Dividend": 1.0,
+                },
+            ]
+        )
+
+
+def test_read_annual_dividend_rejects_invalid_amount():
+    with pytest.raises(
+        ValueError,
+        match="contains invalid data",
+    ):
+        ForecasterService._read_annual_dividend(
+            [
+                {
+                    "Date": "2025-01-01",
+                    "Dividend": "garbage",
+                },
+            ]
+        )
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        float("nan"),
+        float("inf"),
+        float("-inf"),
+    ],
+)
+def test_read_annual_dividend_rejects_non_finite_amount(
+    value,
+):
+    with pytest.raises(
+        ValueError,
+        match="Dividend amount must be finite",
+    ):
+        ForecasterService._read_annual_dividend(
+            [
+                {
+                    "Date": "2025-01-01",
+                    "Dividend": value,
+                },
+            ]
+        )
+
+
+def test_read_annual_dividend_rejects_negative_amount():
+    with pytest.raises(
+        ValueError,
+        match="cannot be negative",
+    ):
+        ForecasterService._read_annual_dividend(
+            [
+                {
+                    "Date": "2025-01-01",
+                    "Dividend": -0.25,
+                },
+            ]
+        )
+
+
+# ---------------------------------------------------------------------------
+# Preparing holdings
+# ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
-async def test_forecast_prepares_holding_and_calls_projector(
-    service,
-    downloader_client,
-    analyzer_client,
-    monkeypatch,
-) -> None:
-    downloader_client.latest_close.return_value = (
-        150.0
+async def test_prepare_holding_returns_expected_values():
+    client = AsyncMock(spec=MyClient)
+
+    client.latest_close.return_value = 150.0
+
+    client.get_analysis.return_value = {
+        "cagr": 0.10,
+    }
+
+    client.get_dividends.return_value = [
+        {
+            "Date": "2025-01-15",
+            "Dividend": 0.25,
+        },
+        {
+            "Date": "2025-04-15",
+            "Dividend": 0.25,
+        },
+        {
+            "Date": "2025-07-15",
+            "Dividend": 0.25,
+        },
+        {
+            "Date": "2025-10-15",
+            "Dividend": 0.25,
+        },
+    ]
+
+    service = ForecasterService(client)
+
+    holding = make_holding(
+        ticker=" aapl ",
+        shares=10.0,
+        average_cost=100.0,
     )
 
-    downloader_client.get_dividends.return_value = (
-        []
+    result = await service._prepare_holding(
+        holding,
     )
 
-    analyzer_client.get_analysis.return_value = {
+    assert result == {
+        "ticker": "AAPL",
+        "latest_close": 150.0,
+        "initial_investment": 1000.0,
+        "annual_growth_rate": 0.10,
+        "annual_dividend": pytest.approx(1.0),
+    }
+
+    client.latest_close.assert_awaited_once_with(
+        "AAPL",
+    )
+
+    client.get_analysis.assert_awaited_once_with(
+        "AAPL",
+        period="10y",
+        interval="1d",
+        auto_adjust=False,
+    )
+
+    client.get_dividends.assert_awaited_once_with(
+        "AAPL",
+        period="10y",
+    )
+
+
+@pytest.mark.asyncio
+async def test_prepare_holding_uses_latest_close_when_average_cost_missing():
+    client = AsyncMock(spec=MyClient)
+
+    client.latest_close.return_value = 125.0
+
+    client.get_analysis.return_value = {
         "cagr": 0.08,
     }
 
-    captured = {}
+    client.get_dividends.return_value = []
 
-    def fake_project_holding(**kwargs):
-        captured.update(
-            kwargs
-        )
+    service = ForecasterService(client)
 
-        return make_projection_result(
-            ticker=kwargs["ticker"],
-            initial_investment=kwargs[
-                "initial_investment"
-            ],
-            timeline=[
-                ForecastPoint(
-                    year=0,
-                    value=1500.0,
-                ),
-                ForecastPoint(
-                    year=1,
-                    value=2000.0,
-                ),
-            ],
-        )
-
-    monkeypatch.setattr(
-        "src.service.project_holding",
-        fake_project_holding,
+    holding = make_holding(
+        shares=4.0,
+        average_cost=None,
     )
 
-    request = ForecastRequest(
-        holdings=[
-            make_holding(
-                ticker=" aapl ",
-                shares=10.0,
-                average_cost=100.0,
-                contribution_weight=1.0,
-            ),
-        ],
-        years=1,
-        contribution_amount=500.0,
-        contribution_frequency="monthly",
-        drip=False,
+    result = await service._prepare_holding(
+        holding,
     )
 
-    await service.forecast(
-        request
+    assert result["initial_investment"] == pytest.approx(
+        500.0
     )
-
-    assert captured == {
-        "ticker": "AAPL",
-        "shares": 10.0,
-        "current_price": 150.0,
-        "initial_investment": 1000.0,
-        "annual_growth_rate": 0.08,
-        "annual_dividend_per_share": 0.0,
-        "years": 1,
-        "contribution_amount": 500.0,
-        "contribution_frequency": "monthly",
-        "drip": False,
-    }
 
 
 @pytest.mark.asyncio
-async def test_forecast_allocates_contribution_by_weight(
-    service,
-    downloader_client,
-    analyzer_client,
-    monkeypatch,
-) -> None:
-    downloader_client.latest_close.return_value = (
-        100.0
-    )
+async def test_prepare_holding_applies_minimum_growth_rate():
+    client = AsyncMock(spec=MyClient)
 
-    downloader_client.get_dividends.return_value = (
-        []
-    )
+    client.latest_close.return_value = 100.0
 
-    analyzer_client.get_analysis.return_value = {
-        "cagr": 0.05,
+    client.get_analysis.return_value = {
+        "cagr": -0.20,
     }
 
-    contribution_amounts = []
+    client.get_dividends.return_value = []
 
-    def fake_project_holding(**kwargs):
-        contribution_amounts.append(
-            kwargs["contribution_amount"]
-        )
+    service = ForecasterService(client)
 
-        return make_projection_result(
-            ticker=kwargs["ticker"],
-        )
-
-    monkeypatch.setattr(
-        "src.service.project_holding",
-        fake_project_holding,
+    result = await service._prepare_holding(
+        make_holding()
     )
 
-    request = ForecastRequest(
+    assert result["annual_growth_rate"] == pytest.approx(
+        0.015
+    )
+
+
+@pytest.mark.asyncio
+async def test_prepare_holding_keeps_growth_above_minimum():
+    client = AsyncMock(spec=MyClient)
+
+    client.latest_close.return_value = 100.0
+
+    client.get_analysis.return_value = {
+        "cagr": 0.12,
+    }
+
+    client.get_dividends.return_value = []
+
+    service = ForecasterService(client)
+
+    result = await service._prepare_holding(
+        make_holding()
+    )
+
+    assert result["annual_growth_rate"] == pytest.approx(
+        0.12
+    )
+
+
+# ---------------------------------------------------------------------------
+# Forecast orchestration
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_forecast_calls_project_holding_with_prepared_data():
+    client = AsyncMock(spec=MyClient)
+
+    service = ForecasterService(client)
+
+    service._prepare_holding = AsyncMock(
+        return_value={
+            "ticker": "AAPL",
+            "latest_close": 150.0,
+            "initial_investment": 1000.0,
+            "annual_growth_rate": 0.08,
+            "annual_dividend": 1.0,
+        }
+    )
+
+    holding = make_holding(
+        ticker="AAPL",
+        shares=10.0,
+        contribution_weight=1.0,
+    )
+
+    request = make_request(
         holdings=[
-            make_holding(
-                ticker="AAPL",
-                contribution_weight=0.5,
-            ),
-            make_holding(
-                ticker="MSFT",
-                contribution_weight=0.5,
-            ),
+            holding,
+        ],
+        years=5,
+        contribution_amount=200.0,
+        contribution_frequency="monthly",
+        drip=True,
+    )
+
+    projection = make_projection_result(
+        years=5,
+        values=[
+            1000.0,
+            1200.0,
+            1400.0,
+            1600.0,
+            1800.0,
+            2000.0,
+        ],
+    )
+
+    response = ForecastResponse(
+        summary=ForecastSummary(
+            **{
+                field.name: 0.0
+                for field in fields(ForecastSummary)
+                if field.init
+            }
+        ),
+        timeline=[],
+        holdings=[],
+    )
+
+    with patch(
+        "src.service.project_holding",
+        return_value=projection,
+    ) as project_mock:
+        with patch.object(
+            service,
+            "_build_response",
+            return_value=response,
+        ) as build_mock:
+            result = await service.forecast(
+                request,
+            )
+
+    assert result is response
+
+    service._prepare_holding.assert_awaited_once_with(
+        holding,
+    )
+
+    project_mock.assert_called_once_with(
+        ticker="AAPL",
+        shares=10.0,
+        current_price=150.0,
+        initial_investment=1000.0,
+        annual_growth_rate=0.08,
+        annual_dividend_per_share=1.0,
+        years=5,
+        contribution_amount=200.0,
+        contribution_frequency="monthly",
+        drip=True,
+    )
+
+    build_mock.assert_called_once_with(
+        [
+            projection,
+        ],
+        years=5,
+    )
+
+
+@pytest.mark.asyncio
+async def test_forecast_splits_contribution_using_weights():
+    client = AsyncMock(spec=MyClient)
+
+    service = ForecasterService(client)
+
+    prepared = {
+        "AAPL": {
+            "ticker": "AAPL",
+            "latest_close": 100.0,
+            "initial_investment": 1000.0,
+            "annual_growth_rate": 0.08,
+            "annual_dividend": 1.0,
+        },
+        "MSFT": {
+            "ticker": "MSFT",
+            "latest_close": 200.0,
+            "initial_investment": 2000.0,
+            "annual_growth_rate": 0.10,
+            "annual_dividend": 2.0,
+        },
+    }
+
+    async def prepare(holding):
+        return prepared[
+            holding.ticker
+        ]
+
+    service._prepare_holding = AsyncMock(
+        side_effect=prepare,
+    )
+
+    holdings = [
+        make_holding(
+            ticker="AAPL",
+            contribution_weight=0.25,
+        ),
+        make_holding(
+            ticker="MSFT",
+            contribution_weight=0.75,
+        ),
+    ]
+
+    request = make_request(
+        holdings=holdings,
+        years=5,
+        contribution_amount=400.0,
+    )
+
+    projection1 = make_projection_result(
+        ticker="AAPL",
+        years=5,
+        values=[
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+        ],
+    )
+
+    projection2 = make_projection_result(
+        ticker="MSFT",
+        years=5,
+        values=[
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+        ],
+    )
+
+    dummy_response = object()
+
+    with patch(
+        "src.service.project_holding",
+        side_effect=[
+            projection1,
+            projection2,
+        ],
+    ) as project_mock:
+        with patch.object(
+            service,
+            "_build_response",
+            return_value=dummy_response,
+        ):
+            await service.forecast(
+                request,
+            )
+
+    assert project_mock.call_count == 2
+
+    first_call = project_mock.call_args_list[
+        0
+    ].kwargs
+
+    second_call = project_mock.call_args_list[
+        1
+    ].kwargs
+
+    assert first_call[
+        "contribution_amount"
+    ] == pytest.approx(100.0)
+
+    assert second_call[
+        "contribution_amount"
+    ] == pytest.approx(300.0)
+
+
+@pytest.mark.asyncio
+async def test_forecast_validates_before_preparing_holdings():
+    client = AsyncMock(spec=MyClient)
+
+    service = ForecasterService(client)
+
+    service._prepare_holding = AsyncMock()
+
+    request = make_request(
+        years=0,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="greater than zero",
+    ):
+        await service.forecast(
+            request,
+        )
+
+    service._prepare_holding.assert_not_awaited()
+
+
+# ---------------------------------------------------------------------------
+# Response construction
+# ---------------------------------------------------------------------------
+
+
+def test_build_response_combines_timelines():
+    result1 = make_projection_result(
+        ticker="AAPL",
+        years=2,
+        values=[
+            100.0,
+            110.0,
+            120.0,
+        ],
+    )
+
+    result2 = make_projection_result(
+        ticker="MSFT",
+        years=2,
+        values=[
+            200.0,
+            220.0,
+            250.0,
+        ],
+    )
+
+    response = ForecasterService._build_response(
+        [
+            result1,
+            result2,
+        ],
+        years=2,
+    )
+
+    assert isinstance(
+        response,
+        ForecastResponse,
+    )
+
+    assert [
+        point.year
+        for point in response.timeline
+    ] == [
+        0,
+        1,
+        2,
+    ]
+
+    assert [
+        point.value
+        for point in response.timeline
+    ] == [
+        300.0,
+        330.0,
+        370.0,
+    ]
+
+
+def test_build_response_creates_one_holding_forecast_per_result():
+    result1 = make_projection_result(
+        ticker="AAPL",
+        years=1,
+        values=[
+            100.0,
+            110.0,
+        ],
+    )
+
+    result2 = make_projection_result(
+        ticker="MSFT",
+        years=1,
+        values=[
+            200.0,
+            220.0,
+        ],
+    )
+
+    response = ForecasterService._build_response(
+        [
+            result1,
+            result2,
         ],
         years=1,
-        contribution_amount=600.0,
     )
 
-    await service.forecast(
-        request
+    assert len(
+        response.holdings
+    ) == 2
+
+    assert all(
+        isinstance(
+            holding,
+            HoldingForecast,
+        )
+        for holding in response.holdings
     )
 
-    assert contribution_amounts == pytest.approx(
+
+def test_build_response_sums_summary_fields():
+    overrides1 = {}
+    overrides2 = {}
+
+    aliases = {
+        "future_contributions": "contributions",
+        "stock_growth": "growth",
+    }
+
+    expected = {}
+
+    for field in fields(
+        ForecastSummary
+    ):
+        if not field.init:
+            continue
+
+        result_field = aliases.get(
+            field.name,
+            field.name,
+        )
+
+        overrides1[
+            result_field
+        ] = 10.25
+
+        overrides2[
+            result_field
+        ] = 20.50
+
+        expected[
+            field.name
+        ] = 30.75
+
+    result1 = make_projection_result(
+        ticker="AAPL",
+        years=1,
+        values=[
+            100.0,
+            110.0,
+        ],
+        overrides=overrides1,
+    )
+
+    result2 = make_projection_result(
+        ticker="MSFT",
+        years=1,
+        values=[
+            200.0,
+            220.0,
+        ],
+        overrides=overrides2,
+    )
+
+    response = ForecasterService._build_response(
         [
-            300.0,
-            300.0,
-        ]
+            result1,
+            result2,
+        ],
+        years=1,
     )
+
+    for name, value in expected.items():
+        assert getattr(
+            response.summary,
+            name,
+        ) == pytest.approx(value)
+
+
+def test_build_response_rounds_portfolio_timeline():
+    result1 = make_projection_result(
+        years=1,
+        values=[
+            100.111,
+            200.555,
+        ],
+    )
+
+    result2 = make_projection_result(
+        ticker="MSFT",
+        years=1,
+        values=[
+            50.222,
+            100.666,
+        ],
+    )
+
+    response = ForecasterService._build_response(
+        [
+            result1,
+            result2,
+        ],
+        years=1,
+    )
+
+    assert response.timeline[
+        0
+    ].value == 150.33
+
+    assert response.timeline[
+        1
+    ].value == 301.22

@@ -48,13 +48,12 @@ class MyClient:
 
         return normalized_ticker
     
-    @staticmethod
-    async def _read_response(response: aiohttp.ClientResponse, worker: str,  ) -> dict[str, Any]:
+    async def _read_response(self, response: aiohttp.ClientResponse, worker: str,  ) -> dict[str, Any]:
         """
         Validate and deserialize an Analyzer response.
         """
         if response.status >= 400:
-            message = self._read_error_message(response, worker)
+            message = await self._read_error_message(response, worker)
 
             if worker.lower() == "analyzer":
                 raise AnalyzerResponseError(status=response.status, message=message, )
@@ -127,11 +126,11 @@ class MyClient:
                 async with session.get(url, params=params, ) as response:
                     payload = await self._read_response(response, "downloader")
 
-        except aiohttp.ClientConnectionError as exc:
-            raise DownloaderClientError("Unable to connect to the Downloader service.") from exc
-
         except aiohttp.ServerTimeoutError as exc:
             raise DownloaderClientError("The Downloader service timed out.") from exc
+        
+        except aiohttp.ClientConnectionError as exc:
+            raise DownloaderClientError("Unable to connect to the Downloader service.") from exc
 
         except aiohttp.ClientError as exc:
             raise DownloaderClientError("The Downloader request failed.") from exc
@@ -183,11 +182,11 @@ class MyClient:
                 async with session.get(url, params=params, ) as response:
                     payload = await self._read_response(response, "downloader")
 
-        except aiohttp.ClientConnectionError as exc:
-            raise DownloaderClientError("Unable to connect to the Downloader service.") from exc
-
         except aiohttp.ServerTimeoutError as exc:
             raise DownloaderClientError("The Downloader service timed out.") from exc
+        
+        except aiohttp.ClientConnectionError as exc:
+            raise DownloaderClientError("Unable to connect to the Downloader service.") from exc
 
         except aiohttp.ClientError as exc:
             raise DownloaderClientError("The Downloader request failed.") from exc
@@ -216,11 +215,11 @@ class MyClient:
                 async with session.get(url, params=params, ) as response:
                     payload = await self._read_response(response, "analyzer")
 
-        except aiohttp.ClientConnectionError as exc:
-            raise AnalyzerClientError("Unable to connect to the Analyzer service.") from exc
-
         except aiohttp.ServerTimeoutError as exc:
             raise AnalyzerClientError("The Analyzer service timed out.") from exc
+        
+        except aiohttp.ClientConnectionError as exc:
+            raise AnalyzerClientError("Unable to connect to the Analyzer service.") from exc
 
         except aiohttp.ClientError as exc:
             raise AnalyzerClientError("The Analyzer request failed.") from exc

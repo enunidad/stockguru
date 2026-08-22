@@ -1,197 +1,457 @@
 from __future__ import annotations
 
-from unittest.mock import AsyncMock
+from json import JSONDecodeError
+from unittest.mock import AsyncMock, patch
 
+import aiohttp
 import pytest
-from aiohttp import web
 
-from src.client import (
-    AnalyzerApiClient,
-    DownloaderApiClient,
-)
+from src.client import MyClient
 from src.exceptions import (
+    AnalyzerClientError,
     AnalyzerResponseError,
+    DownloaderClientError,
     DownloaderResponseError,
     InvalidAnalyzerResponseError,
     InvalidDownloaderResponseError,
+    WorkerResponseError,
+    InvalidWorkerResponseError,
 )
 
 
-# =========================================================
-# DownloaderApiClient
+class FakeResponse:
+    def __init__(
+        self,
+        *,
+        status: int = 200,
+        json_data=None,
+        json_error: Exception | None = None,
+        text_data: str = "",
+    ):
+        self.status = status
+        self._json_data = json_data
+        self._json_error = json_error
+        self._text_data = text_data
+
+    async def json(self):
+        if self._json_error is not None:
+            raise self._json_error
+
+        return self._json_data
+
+    async def text(self):
+        return self._text_data
+
+
+class FakeResponseContext:
+    def __init__(self, response):
+        self.response = response
+
+    async def __aenter__(self):
+        return self.response
+
+    async def __aexit__(self, exc_type, exc, tb):
+        return False
+
+
+class FakeSession:
+    def __init__(
+        self,
+        response=None,
+        *,
+        request_error: Exception | None = None,
+        **kwargs,
+    ):
+        self.response = response
+        self.request_error = request_error
+        self.url = None
+        self.params = None
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb):
+        return False
+
+    def get(self, url, params=None):
+        self.url = url
+        self.params = params
+
+        if self.request_error is not None:
+            raise self.request_error
+
+        return FakeResponseContext(self.response)
+
+
+# ---------------------------------------------------------------------------
 # Initialization
-# =========================================================
+# ---------------------------------------------------------------------------
 
 
-def test_downloader_client_uses_default_base_url() -> None:
-    client = DownloaderApiClient()
-
-    assert client._base_url == "http://localhost:8080"
-
-
-def test_downloader_client_removes_trailing_slash() -> None:
-    client = DownloaderApiClient(
-        base_url="http://localhost:8080/",
+def test_client_uses_provided_base_urls():
+    client = MyClient(
+        downloader_url="http://downloader/",
+        analyzer_url="http://analyzer/",
     )
 
-    assert client._base_url == "http://localhost:8080"
+    assert client._downloader == "http://downloader"
+    assert client._analyzer == "http://analyzer"
 
 
-def test_downloader_client_sets_timeout() -> None:
-    client = DownloaderApiClient(
-        timeout_seconds=15.0,
-    )
+def test_client_creates_timeout():
+    client = MyClient(timeout_seconds=12.5)
 
-    assert client._timeout.total == 15.0
+    assert client._timeout.total == 12.5
 
 
-# =========================================================
-# DownloaderApiClient
-# Ticker Normalization
-# =========================================================
+# ---------------------------------------------------------------------------
+# Ticker normalization
+# ---------------------------------------------------------------------------
 
 
-def test_downloader_normalizes_ticker() -> None:
-    result = DownloaderApiClient._normalize_ticker(
-        "  aapl  "
-    )
-
-    assert result == "AAPL"
+def test_normalize_ticker():
+    assert MyClient._normalize_ticker("  aapl  ") == "AAPL"
 
 
-def test_downloader_rejects_empty_ticker() -> None:
+def test_normalize_ticker_preserves_exchange_suffix():
+    assert MyClient._normalize_ticker("  ffn.to ") == "FFN.TO"
+
+
+def test_normalize_ticker_rejects_empty_string():
     with pytest.raises(
         InvalidDownloaderResponseError,
-        match="Ticker cannot be empty.",
+        match="Ticker cannot be empty",
     ):
-        DownloaderApiClient._normalize_ticker(
-            "   "
-        )
+        MyClient._normalize_ticker("   ")
 
 
-def test_downloader_rejects_non_string_ticker() -> None:
+def test_normalize_ticker_rejects_non_string():
     with pytest.raises(
         InvalidDownloaderResponseError,
-        match="Ticker must be a string.",
+        match="Ticker must be a string",
     ):
-        DownloaderApiClient._normalize_ticker(
-            123
-        )
+        MyClient._normalize_ticker(None)
 
 
-# =========================================================
-# DownloaderApiClient
-# Price History
-# =========================================================
+# ---------------------------------------------------------------------------
+# Error message parsing
+# ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
-async def test_price_history_returns_data(
-    aiohttp_server,
-) -> None:
-    async def handler(
-        request: web.Request,
-    ) -> web.Response:
-        return web.json_response(
-            {
-                "ticker": "AAPL",
-                "data": [
-                    {
-                        "Date": "2026-08-18",
-                        "Close": 230.50,
-                    },
-                    {
-                        "Date": "2026-08-19",
-                        "Close": 232.25,
-                    },
-                ],
-            }
+async def test_read_error_message_uses_message():
+    response = FakeResponse(
+        status=400,
+        json_data={
+            "message": "Ticker does not exist.",
+        },
+    )
+
+    result = await MyClient._read_error_message(
+        response,
+        "Downloader",
+    )
+
+    assert result == "Ticker does not exist."
+
+
+@pytest.mark.asyncio
+async def test_read_error_message_falls_back_to_error():
+    response = FakeResponse(
+        status=400,
+        json_data={
+            "error": "Bad request",
+        },
+    )
+
+    result = await MyClient._read_error_message(
+        response,
+        "Downloader",
+    )
+
+    assert result == "Bad request"
+
+
+@pytest.mark.asyncio
+async def test_read_error_message_uses_plain_text():
+    response = FakeResponse(
+        status=500,
+        json_error=JSONDecodeError(
+            "Invalid JSON",
+            "",
+            0,
+        ),
+        text_data="Server exploded",
+    )
+
+    result = await MyClient._read_error_message(
+        response,
+        "Downloader",
+    )
+
+    assert result == "Server exploded"
+
+
+@pytest.mark.asyncio
+async def test_read_error_message_uses_default_when_body_empty():
+    response = FakeResponse(
+        status=500,
+        json_error=JSONDecodeError(
+            "Invalid JSON",
+            "",
+            0,
+        ),
+        text_data="",
+    )
+
+    result = await MyClient._read_error_message(
+        response,
+        "Downloader",
+    )
+
+    assert result == "Downloader returned an error."
+
+
+# ---------------------------------------------------------------------------
+# Response parsing
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_read_response_returns_dict():
+    client = MyClient()
+
+    response = FakeResponse(
+        status=200,
+        json_data={
+            "data": [1, 2, 3],
+        },
+    )
+
+    result = await client._read_response(
+        response,
+        "downloader",
+    )
+
+    assert result == {
+        "data": [1, 2, 3],
+    }
+
+
+@pytest.mark.asyncio
+async def test_read_response_rejects_non_dict_from_downloader():
+    client = MyClient()
+
+    response = FakeResponse(
+        status=200,
+        json_data=[
+            1,
+            2,
+            3,
+        ],
+    )
+
+    with pytest.raises(
+        InvalidDownloaderResponseError,
+        match="Downloader response must be a JSON object",
+    ):
+        await client._read_response(
+            response,
+            "Downloader",
         )
 
-    app = web.Application()
 
-    app.router.add_get(
-        "/history/{ticker}",
-        handler,
+@pytest.mark.asyncio
+async def test_read_response_rejects_non_dict_from_analyzer():
+    client = MyClient()
+
+    response = FakeResponse(
+        status=200,
+        json_data=[
+            1,
+            2,
+            3,
+        ],
     )
 
-    server = await aiohttp_server(
-        app
+    with pytest.raises(
+        InvalidAnalyzerResponseError,
+        match="Analyzer response must be a JSON object",
+    ):
+        await client._read_response(
+            response,
+            "Analyzer",
+        )
+
+
+@pytest.mark.asyncio
+async def test_read_response_rejects_non_dict_from_unknown_worker():
+    client = MyClient()
+
+    response = FakeResponse(
+        status=200,
+        json_data=[],
     )
 
-    client = DownloaderApiClient(
-        base_url=str(
-            server.make_url("")
-        ).rstrip("/")
+    with pytest.raises(
+        InvalidWorkerResponseError,
+        match="response must be a JSON object",
+    ):
+        await client._read_response(
+            response,
+            "SomethingElse",
+        )
+
+
+@pytest.mark.asyncio
+async def test_read_response_rejects_invalid_downloader_json():
+    client = MyClient()
+
+    response = FakeResponse(
+        status=200,
+        json_error=JSONDecodeError(
+            "Invalid JSON",
+            "",
+            0,
+        ),
     )
 
-    result = await client.price_history(
-        "AAPL"
+    with pytest.raises(
+        InvalidDownloaderResponseError,
+        match="Downloader returned an invalid JSON",
+    ):
+        await client._read_response(
+            response,
+            "Downloader",
+        )
+
+
+@pytest.mark.asyncio
+async def test_read_response_rejects_invalid_analyzer_json():
+    client = MyClient()
+
+    response = FakeResponse(
+        status=200,
+        json_error=JSONDecodeError(
+            "Invalid JSON",
+            "",
+            0,
+        ),
     )
 
-    assert result == [
+    with pytest.raises(
+        InvalidAnalyzerResponseError,
+        match="Analyzer returned an invalid JSON",
+    ):
+        await client._read_response(
+            response,
+            "Analyzer",
+        )
+
+
+@pytest.mark.asyncio
+async def test_read_response_raises_downloader_response_error():
+    client = MyClient()
+
+    response = FakeResponse(
+        status=404,
+        json_data={
+            "message": "Ticker not found.",
+        },
+    )
+
+    with pytest.raises(DownloaderResponseError):
+        await client._read_response(
+            response,
+            "Downloader",
+        )
+
+
+@pytest.mark.asyncio
+async def test_read_response_raises_analyzer_response_error():
+    client = MyClient()
+
+    response = FakeResponse(
+        status=500,
+        json_data={
+            "message": "Analysis failed.",
+        },
+    )
+
+    with pytest.raises(AnalyzerResponseError):
+        await client._read_response(
+            response,
+            "Analyzer",
+        )
+
+
+@pytest.mark.asyncio
+async def test_read_response_raises_worker_response_error():
+    client = MyClient()
+
+    response = FakeResponse(
+        status=500,
+        json_data={
+            "message": "Something failed.",
+        },
+    )
+
+    with pytest.raises(WorkerResponseError):
+        await client._read_response(
+            response,
+            "UnknownWorker",
+        )
+
+
+# ---------------------------------------------------------------------------
+# Price history
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_price_history_returns_data():
+    client = MyClient(
+        downloader_url="http://downloader",
+    )
+
+    expected = [
         {
-            "Date": "2026-08-18",
-            "Close": 230.50,
+            "Date": "2026-01-01",
+            "Close": 100.0,
         },
         {
-            "Date": "2026-08-19",
-            "Close": 232.25,
+            "Date": "2026-01-02",
+            "Close": 101.0,
         },
     ]
 
+    response = FakeResponse(
+        json_data={
+            "data": expected,
+        },
+    )
 
-@pytest.mark.asyncio
-async def test_price_history_normalizes_ticker_and_sends_parameters(
-    aiohttp_server,
-) -> None:
-    received = {}
+    fake_session = FakeSession(response)
 
-    async def handler(
-        request: web.Request,
-    ) -> web.Response:
-        received["ticker"] = (
-            request.match_info["ticker"]
+    with patch(
+        "src.client.aiohttp.ClientSession",
+        return_value=fake_session,
+    ):
+        result = await client.price_history(
+            " aapl ",
+            period="5y",
+            interval="1wk",
+            aggregate=True,
+            auto_adjust=False,
         )
 
-        received["query"] = dict(
-            request.query
-        )
+    assert result == expected
 
-        return web.json_response(
-            {
-                "data": [],
-            }
-        )
-
-    app = web.Application()
-
-    app.router.add_get(
-        "/history/{ticker}",
-        handler,
+    assert fake_session.url == (
+        "http://downloader/history/AAPL"
     )
 
-    server = await aiohttp_server(
-        app
-    )
-
-    client = DownloaderApiClient(
-        base_url=str(
-            server.make_url("")
-        ).rstrip("/")
-    )
-
-    await client.price_history(
-        " aapl ",
-        period="5y",
-        interval="1wk",
-        aggregate=True,
-        auto_adjust=False,
-    )
-
-    assert received["ticker"] == "AAPL"
-
-    assert received["query"] == {
+    assert fake_session.params == {
         "period": "5y",
         "interval": "1wk",
         "aggregate": "true",
@@ -200,46 +460,26 @@ async def test_price_history_normalizes_ticker_and_sends_parameters(
 
 
 @pytest.mark.asyncio
-async def test_price_history_uses_defaults(
-    aiohttp_server,
-) -> None:
-    received = {}
-
-    async def handler(
-        request: web.Request,
-    ) -> web.Response:
-        received.update(
-            request.query
-        )
-
-        return web.json_response(
-            {
-                "data": [],
-            }
-        )
-
-    app = web.Application()
-
-    app.router.add_get(
-        "/history/{ticker}",
-        handler,
+async def test_price_history_uses_defaults():
+    client = MyClient(
+        downloader_url="http://downloader",
     )
 
-    server = await aiohttp_server(
-        app
+    response = FakeResponse(
+        json_data={
+            "data": [],
+        },
     )
 
-    client = DownloaderApiClient(
-        base_url=str(
-            server.make_url("")
-        ).rstrip("/")
-    )
+    fake_session = FakeSession(response)
 
-    await client.price_history(
-        "AAPL"
-    )
+    with patch(
+        "src.client.aiohttp.ClientSession",
+        return_value=fake_session,
+    ):
+        await client.price_history("AAPL")
 
-    assert received == {
+    assert fake_session.params == {
         "period": "10y",
         "interval": "1d",
         "aggregate": "false",
@@ -248,350 +488,114 @@ async def test_price_history_uses_defaults(
 
 
 @pytest.mark.asyncio
-async def test_price_history_rejects_missing_data(
-    aiohttp_server,
-) -> None:
-    async def handler(
-        request: web.Request,
-    ) -> web.Response:
-        return web.json_response(
-            {
-                "ticker": "AAPL",
-            }
-        )
-
-    app = web.Application()
-
-    app.router.add_get(
-        "/history/{ticker}",
-        handler,
+async def test_price_history_rejects_invalid_data():
+    client = MyClient(
+        downloader_url="http://downloader",
     )
 
-    server = await aiohttp_server(
-        app
-    )
-
-    client = DownloaderApiClient(
-        base_url=str(
-            server.make_url("")
-        ).rstrip("/")
-    )
-
-    with pytest.raises(
-        InvalidDownloaderResponseError,
-        match="Downloader response 'data' must be a list.",
-    ):
-        await client.price_history(
-            "AAPL"
-        )
-
-
-@pytest.mark.asyncio
-async def test_price_history_rejects_non_list_data(
-    aiohttp_server,
-) -> None:
-    async def handler(
-        request: web.Request,
-    ) -> web.Response:
-        return web.json_response(
-            {
-                "data": {
-                    "Close": 200.0,
-                },
-            }
-        )
-
-    app = web.Application()
-
-    app.router.add_get(
-        "/history/{ticker}",
-        handler,
-    )
-
-    server = await aiohttp_server(
-        app
-    )
-
-    client = DownloaderApiClient(
-        base_url=str(
-            server.make_url("")
-        ).rstrip("/")
-    )
-
-    with pytest.raises(
-        InvalidDownloaderResponseError,
-        match="Downloader response 'data' must be a list.",
-    ):
-        await client.price_history(
-            "AAPL"
-        )
-
-
-@pytest.mark.asyncio
-async def test_price_history_rejects_non_object_response(
-    aiohttp_server,
-) -> None:
-    async def handler(
-        request: web.Request,
-    ) -> web.Response:
-        return web.json_response(
-            [
-                {
-                    "data": [],
-                },
-            ]
-        )
-
-    app = web.Application()
-
-    app.router.add_get(
-        "/history/{ticker}",
-        handler,
-    )
-
-    server = await aiohttp_server(
-        app
-    )
-
-    client = DownloaderApiClient(
-        base_url=str(
-            server.make_url("")
-        ).rstrip("/")
-    )
-
-    with pytest.raises(
-        InvalidDownloaderResponseError,
-        match="Downloader response must be a JSON object.",
-    ):
-        await client.price_history(
-            "AAPL"
-        )
-
-
-@pytest.mark.asyncio
-async def test_price_history_rejects_invalid_json(
-    aiohttp_server,
-) -> None:
-    async def handler(
-        request: web.Request,
-    ) -> web.Response:
-        return web.Response(
-            text="not-json",
-            content_type="text/plain",
-        )
-
-    app = web.Application()
-
-    app.router.add_get(
-        "/history/{ticker}",
-        handler,
-    )
-
-    server = await aiohttp_server(
-        app
-    )
-
-    client = DownloaderApiClient(
-        base_url=str(
-            server.make_url("")
-        ).rstrip("/")
-    )
-
-    with pytest.raises(
-        InvalidDownloaderResponseError,
-        match="Downloader returned invalid JSON.",
-    ):
-        await client.price_history(
-            "AAPL"
-        )
-
-
-@pytest.mark.asyncio
-async def test_price_history_raises_downloader_response_error(
-    aiohttp_server,
-) -> None:
-    async def handler(
-        request: web.Request,
-    ) -> web.Response:
-        return web.json_response(
-            {
-                "message": "Ticker not found.",
+    response = FakeResponse(
+        json_data={
+            "data": {
+                "Close": 100,
             },
-            status=404,
-        )
-
-    app = web.Application()
-
-    app.router.add_get(
-        "/history/{ticker}",
-        handler,
+        },
     )
 
-    server = await aiohttp_server(
-        app
-    )
+    fake_session = FakeSession(response)
 
-    client = DownloaderApiClient(
-        base_url=str(
-            server.make_url("")
-        ).rstrip("/")
-    )
-
-    with pytest.raises(
-        DownloaderResponseError
-    ) as exc_info:
-        await client.price_history(
-            "BAD"
-        )
-
-    assert exc_info.value.status == 404
-
-    assert (
-        exc_info.value.message
-        == "Ticker not found."
-    )
+    with patch(
+        "src.client.aiohttp.ClientSession",
+        return_value=fake_session,
+    ):
+        with pytest.raises(
+            InvalidDownloaderResponseError,
+            match="'data' must be a list",
+        ):
+            await client.price_history("AAPL")
 
 
 @pytest.mark.asyncio
-async def test_price_history_http_error_uses_error_field(
-    aiohttp_server,
-) -> None:
-    async def handler(
-        request: web.Request,
-    ) -> web.Response:
-        return web.json_response(
-            {
-                "error": "Invalid ticker.",
-            },
-            status=400,
-        )
+async def test_price_history_maps_connection_error():
+    client = MyClient()
 
-    app = web.Application()
-
-    app.router.add_get(
-        "/history/{ticker}",
-        handler,
+    fake_session = FakeSession(
+        request_error=aiohttp.ClientConnectionError(),
     )
 
-    server = await aiohttp_server(
-        app
-    )
-
-    client = DownloaderApiClient(
-        base_url=str(
-            server.make_url("")
-        ).rstrip("/")
-    )
-
-    with pytest.raises(
-        DownloaderResponseError
-    ) as exc_info:
-        await client.price_history(
-            "BAD"
-        )
-
-    assert (
-        exc_info.value.message
-        == "Invalid ticker."
-    )
+    with patch(
+        "src.client.aiohttp.ClientSession",
+        return_value=fake_session,
+    ):
+        with pytest.raises(
+            DownloaderClientError,
+            match="Unable to connect",
+        ):
+            await client.price_history("AAPL")
 
 
 @pytest.mark.asyncio
-async def test_price_history_http_error_falls_back_to_text(
-    aiohttp_server,
-) -> None:
-    async def handler(
-        request: web.Request,
-    ) -> web.Response:
-        return web.Response(
-            text="Service unavailable",
-            status=503,
-            content_type="text/plain",
-        )
+async def test_price_history_maps_timeout_error():
+    client = MyClient()
 
-    app = web.Application()
-
-    app.router.add_get(
-        "/history/{ticker}",
-        handler,
+    fake_session = FakeSession(
+        request_error=aiohttp.ServerTimeoutError(),
     )
 
-    server = await aiohttp_server(
-        app
-    )
-
-    client = DownloaderApiClient(
-        base_url=str(
-            server.make_url("")
-        ).rstrip("/")
-    )
-
-    with pytest.raises(
-        DownloaderResponseError
-    ) as exc_info:
-        await client.price_history(
-            "AAPL"
-        )
-
-    assert exc_info.value.status == 503
-
-    assert (
-        exc_info.value.message
-        == "Service unavailable"
-    )
-
-
-# =========================================================
-# DownloaderApiClient
-# Latest Close
-# =========================================================
+    with patch(
+        "src.client.aiohttp.ClientSession",
+        return_value=fake_session,
+    ):
+        with pytest.raises(
+            DownloaderClientError,
+            match="timed out",
+        ):
+            await client.price_history("AAPL")
 
 
 @pytest.mark.asyncio
-async def test_latest_close_returns_most_recent_valid_close() -> None:
-    client = DownloaderApiClient()
+async def test_price_history_maps_generic_client_error():
+    client = MyClient()
+
+    fake_session = FakeSession(
+        request_error=aiohttp.ClientError(),
+    )
+
+    with patch(
+        "src.client.aiohttp.ClientSession",
+        return_value=fake_session,
+    ):
+        with pytest.raises(
+            DownloaderClientError,
+            match="request failed",
+        ):
+            await client.price_history("AAPL")
+
+
+# ---------------------------------------------------------------------------
+# Latest close
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_latest_close_returns_most_recent_valid_close():
+    client = MyClient()
 
     client.price_history = AsyncMock(
         return_value=[
             {
-                "Date": "2026-08-17",
+                "Date": "2026-01-01",
                 "Close": 100.0,
             },
             {
-                "Date": "2026-08-18",
-                "Close": 101.0,
-            },
-            {
-                "Date": "2026-08-19",
-                "Close": 102.0,
+                "Date": "2026-01-02",
+                "Close": 105.25,
             },
         ]
     )
 
-    result = await client.latest_close(
-        "AAPL"
-    )
+    result = await client.latest_close("AAPL")
 
-    assert result == pytest.approx(
-        102.0
-    )
-
-
-@pytest.mark.asyncio
-async def test_latest_close_requests_one_year_daily_history() -> None:
-    client = DownloaderApiClient()
-
-    client.price_history = AsyncMock(
-        return_value=[
-            {
-                "Close": 100.0,
-            },
-        ]
-    )
-
-    await client.latest_close(
-        "AAPL"
-    )
+    assert result == 105.25
 
     client.price_history.assert_awaited_once_with(
         "AAPL",
@@ -603,78 +607,88 @@ async def test_latest_close_requests_one_year_daily_history() -> None:
 
 
 @pytest.mark.asyncio
-async def test_latest_close_skips_invalid_trailing_rows() -> None:
-    client = DownloaderApiClient()
+async def test_latest_close_skips_invalid_latest_rows():
+    client = MyClient()
 
     client.price_history = AsyncMock(
         return_value=[
             {
-                "Close": 95.0,
+                "Close": 101.5,
             },
             {
                 "Close": None,
             },
             {
-                "Close": "banana",
+                "Close": "garbage",
             },
             {
-                "Close": -1.0,
+                "Close": float("nan"),
             },
         ]
     )
 
-    result = await client.latest_close(
-        "AAPL"
-    )
+    result = await client.latest_close("AAPL")
 
-    assert result == pytest.approx(
-        95.0
-    )
+    assert result == 101.5
 
 
 @pytest.mark.asyncio
-async def test_latest_close_skips_non_object_rows() -> None:
-    client = DownloaderApiClient()
+async def test_latest_close_skips_non_dict_rows():
+    client = MyClient()
 
     client.price_history = AsyncMock(
         return_value=[
             {
-                "Close": 100.0,
+                "Close": 99.0,
             },
-            "bad-row",
             None,
+            "bad row",
         ]
     )
 
-    result = await client.latest_close(
-        "AAPL"
-    )
+    result = await client.latest_close("AAPL")
 
-    assert result == pytest.approx(
-        100.0
-    )
+    assert result == 99.0
 
 
 @pytest.mark.asyncio
-async def test_latest_close_rejects_empty_history() -> None:
-    client = DownloaderApiClient()
+async def test_latest_close_skips_rows_without_close():
+    client = MyClient()
 
     client.price_history = AsyncMock(
-        return_value=[]
+        return_value=[
+            {
+                "Close": 123.45,
+            },
+            {
+                "Open": 125.0,
+            },
+        ]
+    )
+
+    result = await client.latest_close("AAPL")
+
+    assert result == 123.45
+
+
+@pytest.mark.asyncio
+async def test_latest_close_rejects_empty_history():
+    client = MyClient()
+
+    client.price_history = AsyncMock(
+        return_value=[],
     )
 
     with pytest.raises(
         InvalidDownloaderResponseError,
-        match="Downloader returned no price history.",
+        match="no price history",
     ):
-        await client.latest_close(
-            "AAPL"
-        )
+        await client.latest_close("AAPL")
 
 
 @pytest.mark.asyncio
-async def test_latest_close_rejects_history_without_valid_close() -> None:
-    client = DownloaderApiClient()
+async def test_latest_close_rejects_when_no_valid_close_exists():
+    client = MyClient()
 
     client.price_history = AsyncMock(
         return_value=[
@@ -682,342 +696,161 @@ async def test_latest_close_rejects_history_without_valid_close() -> None:
                 "Close": None,
             },
             {
-                "Close": "invalid",
+                "Close": -1,
             },
             {
                 "Close": 0,
             },
             {
-                "Close": -5,
+                "Close": float("nan"),
+            },
+            {
+                "Close": float("inf"),
             },
         ]
     )
 
     with pytest.raises(
         InvalidDownloaderResponseError,
-        match="Downloader returned no valid closing price",
+        match="no valid closing price",
     ):
-        await client.latest_close(
-            "AAPL"
-        )
+        await client.latest_close("AAPL")
 
 
-# =========================================================
-# DownloaderApiClient
+# ---------------------------------------------------------------------------
 # Dividends
-# =========================================================
+# ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
-async def test_get_dividends_returns_data(
-    aiohttp_server,
-) -> None:
-    async def handler(
-        request: web.Request,
-    ) -> web.Response:
-        return web.json_response(
-            {
-                "ticker": "AAPL",
-                "data": [
-                    {
-                        "Date": "2026-05-09",
-                        "Dividend": 0.26,
-                    },
-                    {
-                        "Date": "2026-08-08",
-                        "Dividend": 0.26,
-                    },
-                ],
-            }
-        )
-
-    app = web.Application()
-
-    app.router.add_get(
-        "/dividends/{ticker}",
-        handler,
+async def test_get_dividends_returns_data():
+    client = MyClient(
+        downloader_url="http://downloader",
     )
 
-    server = await aiohttp_server(
-        app
-    )
-
-    client = DownloaderApiClient(
-        base_url=str(
-            server.make_url("")
-        ).rstrip("/")
-    )
-
-    result = await client.get_dividends(
-        "AAPL"
-    )
-
-    assert result == [
+    expected = [
         {
-            "Date": "2026-05-09",
-            "Dividend": 0.26,
+            "Date": "2025-01-01",
+            "Dividend": 0.25,
         },
         {
-            "Date": "2026-08-08",
-            "Dividend": 0.26,
+            "Date": "2025-04-01",
+            "Dividend": 0.30,
         },
     ]
 
+    response = FakeResponse(
+        json_data={
+            "data": expected,
+        },
+    )
 
-@pytest.mark.asyncio
-async def test_get_dividends_normalizes_ticker_and_sends_period(
-    aiohttp_server,
-) -> None:
-    received = {}
+    fake_session = FakeSession(response)
 
-    async def handler(
-        request: web.Request,
-    ) -> web.Response:
-        received["ticker"] = (
-            request.match_info["ticker"]
+    with patch(
+        "src.client.aiohttp.ClientSession",
+        return_value=fake_session,
+    ):
+        result = await client.get_dividends(
+            " aapl ",
+            period="5y",
         )
 
-        received["period"] = (
-            request.query["period"]
-        )
+    assert result == expected
 
-        return web.json_response(
-            {
-                "data": [],
-            }
-        )
-
-    app = web.Application()
-
-    app.router.add_get(
-        "/dividends/{ticker}",
-        handler,
+    assert fake_session.url == (
+        "http://downloader/dividends/AAPL"
     )
 
-    server = await aiohttp_server(
-        app
-    )
-
-    client = DownloaderApiClient(
-        base_url=str(
-            server.make_url("")
-        ).rstrip("/")
-    )
-
-    await client.get_dividends(
-        " msft ",
-        period="5y",
-    )
-
-    assert received == {
-        "ticker": "MSFT",
+    assert fake_session.params == {
         "period": "5y",
     }
 
 
 @pytest.mark.asyncio
-async def test_get_dividends_rejects_non_list_data(
-    aiohttp_server,
-) -> None:
-    async def handler(
-        request: web.Request,
-    ) -> web.Response:
-        return web.json_response(
-            {
-                "data": {
-                    "Dividend": 1.0,
-                },
-            }
-        )
+async def test_get_dividends_rejects_invalid_data():
+    client = MyClient()
 
-    app = web.Application()
-
-    app.router.add_get(
-        "/dividends/{ticker}",
-        handler,
+    response = FakeResponse(
+        json_data={
+            "data": {},
+        },
     )
 
-    server = await aiohttp_server(
-        app
-    )
+    fake_session = FakeSession(response)
 
-    client = DownloaderApiClient(
-        base_url=str(
-            server.make_url("")
-        ).rstrip("/")
-    )
-
-    with pytest.raises(
-        InvalidDownloaderResponseError,
-        match="Downloader dividend response 'data' must be a list.",
+    with patch(
+        "src.client.aiohttp.ClientSession",
+        return_value=fake_session,
     ):
-        await client.get_dividends(
-            "AAPL"
-        )
-
-
-# =========================================================
-# AnalyzerApiClient
-# Initialization
-# =========================================================
-
-
-def test_analyzer_client_uses_default_base_url() -> None:
-    client = AnalyzerApiClient()
-
-    assert client._base_url == "http://localhost:8090"
-
-
-def test_analyzer_client_removes_trailing_slash() -> None:
-    client = AnalyzerApiClient(
-        base_url="http://localhost:8090/",
-    )
-
-    assert client._base_url == "http://localhost:8090"
-
-
-def test_analyzer_client_sets_timeout() -> None:
-    client = AnalyzerApiClient(
-        timeout_seconds=20.0,
-    )
-
-    assert client._timeout.total == 20.0
-
-
-# =========================================================
-# AnalyzerApiClient
-# Ticker Normalization
-# =========================================================
-
-
-def test_analyzer_normalizes_ticker() -> None:
-    result = AnalyzerApiClient._normalize_ticker(
-        " msft "
-    )
-
-    assert result == "MSFT"
-
-
-def test_analyzer_rejects_empty_ticker() -> None:
-    with pytest.raises(
-        InvalidAnalyzerResponseError,
-        match="Ticker cannot be empty.",
-    ):
-        AnalyzerApiClient._normalize_ticker(
-            " "
-        )
-
-
-def test_analyzer_rejects_non_string_ticker() -> None:
-    with pytest.raises(
-        InvalidAnalyzerResponseError,
-        match="Ticker must be a string.",
-    ):
-        AnalyzerApiClient._normalize_ticker(
-            None
-        )
-
-
-# =========================================================
-# AnalyzerApiClient
-# Analysis
-# =========================================================
+        with pytest.raises(
+            InvalidDownloaderResponseError,
+            match="'data' must be a list",
+        ):
+            await client.get_dividends("AAPL")
 
 
 @pytest.mark.asyncio
-async def test_get_analysis_returns_payload(
-    aiohttp_server,
-) -> None:
-    async def handler(
-        request: web.Request,
-    ) -> web.Response:
-        return web.json_response(
-            {
-                "ticker": "AAPL",
-                "cagr": 0.123,
-                "volatility": 0.20,
-            }
-        )
+async def test_get_dividends_maps_connection_error():
+    client = MyClient()
 
-    app = web.Application()
-
-    app.router.add_get(
-        "/analysis/{ticker}",
-        handler,
+    fake_session = FakeSession(
+        request_error=aiohttp.ClientConnectionError(),
     )
 
-    server = await aiohttp_server(
-        app
+    with patch(
+        "src.client.aiohttp.ClientSession",
+        return_value=fake_session,
+    ):
+        with pytest.raises(
+            DownloaderClientError,
+            match="Unable to connect",
+        ):
+            await client.get_dividends("AAPL")
+
+
+# ---------------------------------------------------------------------------
+# Analysis
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_get_analysis_returns_payload():
+    client = MyClient(
+        analyzer_url="http://analyzer",
     )
 
-    client = AnalyzerApiClient(
-        base_url=str(
-            server.make_url("")
-        ).rstrip("/")
-    )
-
-    result = await client.get_analysis(
-        "AAPL"
-    )
-
-    assert result == {
+    expected = {
         "ticker": "AAPL",
-        "cagr": 0.123,
+        "cagr": 0.15,
         "volatility": 0.20,
     }
 
+    response = FakeResponse(
+        json_data=expected,
+    )
 
-@pytest.mark.asyncio
-async def test_get_analysis_normalizes_ticker_and_sends_parameters(
-    aiohttp_server,
-) -> None:
-    received = {}
+    fake_session = FakeSession(response)
 
-    async def handler(
-        request: web.Request,
-    ) -> web.Response:
-        received["ticker"] = (
-            request.match_info["ticker"]
+    with patch(
+        "src.client.aiohttp.ClientSession",
+        return_value=fake_session,
+    ):
+        result = await client.get_analysis(
+            " aapl ",
+            period="5y",
+            interval="1wk",
+            aggregate=True,
+            auto_adjust=False,
         )
 
-        received["query"] = dict(
-            request.query
-        )
+    assert result == expected
 
-        return web.json_response(
-            {
-                "cagr": 0.10,
-            }
-        )
-
-    app = web.Application()
-
-    app.router.add_get(
-        "/analysis/{ticker}",
-        handler,
+    assert fake_session.url == (
+        "http://analyzer/analysis/AAPL"
     )
 
-    server = await aiohttp_server(
-        app
-    )
-
-    client = AnalyzerApiClient(
-        base_url=str(
-            server.make_url("")
-        ).rstrip("/")
-    )
-
-    await client.get_analysis(
-        " aapl ",
-        period="5y",
-        interval="1wk",
-        aggregate=True,
-        auto_adjust=False,
-    )
-
-    assert received["ticker"] == "AAPL"
-
-    assert received["query"] == {
+    assert fake_session.params == {
         "period": "5y",
         "interval": "1wk",
         "aggregate": "true",
@@ -1026,46 +859,26 @@ async def test_get_analysis_normalizes_ticker_and_sends_parameters(
 
 
 @pytest.mark.asyncio
-async def test_get_analysis_uses_defaults(
-    aiohttp_server,
-) -> None:
-    received = {}
-
-    async def handler(
-        request: web.Request,
-    ) -> web.Response:
-        received.update(
-            request.query
-        )
-
-        return web.json_response(
-            {
-                "cagr": 0.05,
-            }
-        )
-
-    app = web.Application()
-
-    app.router.add_get(
-        "/analysis/{ticker}",
-        handler,
+async def test_get_analysis_uses_defaults():
+    client = MyClient(
+        analyzer_url="http://analyzer",
     )
 
-    server = await aiohttp_server(
-        app
+    response = FakeResponse(
+        json_data={
+            "ticker": "AAPL",
+        },
     )
 
-    client = AnalyzerApiClient(
-        base_url=str(
-            server.make_url("")
-        ).rstrip("/")
-    )
+    fake_session = FakeSession(response)
 
-    await client.get_analysis(
-        "AAPL"
-    )
+    with patch(
+        "src.client.aiohttp.ClientSession",
+        return_value=fake_session,
+    ):
+        await client.get_analysis("AAPL")
 
-    assert received == {
+    assert fake_session.params == {
         "period": "10y",
         "interval": "1d",
         "aggregate": "false",
@@ -1074,216 +887,57 @@ async def test_get_analysis_uses_defaults(
 
 
 @pytest.mark.asyncio
-async def test_get_analysis_rejects_non_object_response(
-    aiohttp_server,
-) -> None:
-    async def handler(
-        request: web.Request,
-    ) -> web.Response:
-        return web.json_response(
-            [
-                {
-                    "cagr": 0.10,
-                },
-            ]
-        )
+async def test_get_analysis_maps_connection_error():
+    client = MyClient()
 
-    app = web.Application()
-
-    app.router.add_get(
-        "/analysis/{ticker}",
-        handler,
+    fake_session = FakeSession(
+        request_error=aiohttp.ClientConnectionError(),
     )
 
-    server = await aiohttp_server(
-        app
-    )
-
-    client = AnalyzerApiClient(
-        base_url=str(
-            server.make_url("")
-        ).rstrip("/")
-    )
-
-    with pytest.raises(
-        InvalidAnalyzerResponseError,
-        match="Analyzer response must be a JSON object.",
+    with patch(
+        "src.client.aiohttp.ClientSession",
+        return_value=fake_session,
     ):
-        await client.get_analysis(
-            "AAPL"
-        )
+        with pytest.raises(
+            AnalyzerClientError,
+            match="Unable to connect",
+        ):
+            await client.get_analysis("AAPL")
 
 
 @pytest.mark.asyncio
-async def test_get_analysis_rejects_invalid_json(
-    aiohttp_server,
-) -> None:
-    async def handler(
-        request: web.Request,
-    ) -> web.Response:
-        return web.Response(
-            text="not-json",
-            content_type="text/plain",
-        )
+async def test_get_analysis_maps_timeout_error():
+    client = MyClient()
 
-    app = web.Application()
-
-    app.router.add_get(
-        "/analysis/{ticker}",
-        handler,
+    fake_session = FakeSession(
+        request_error=aiohttp.ServerTimeoutError(),
     )
 
-    server = await aiohttp_server(
-        app
-    )
-
-    client = AnalyzerApiClient(
-        base_url=str(
-            server.make_url("")
-        ).rstrip("/")
-    )
-
-    with pytest.raises(
-        InvalidAnalyzerResponseError,
-        match="Analyzer returned invalid JSON.",
+    with patch(
+        "src.client.aiohttp.ClientSession",
+        return_value=fake_session,
     ):
-        await client.get_analysis(
-            "AAPL"
-        )
+        with pytest.raises(
+            AnalyzerClientError,
+            match="timed out",
+        ):
+            await client.get_analysis("AAPL")
 
 
 @pytest.mark.asyncio
-async def test_get_analysis_raises_analyzer_response_error(
-    aiohttp_server,
-) -> None:
-    async def handler(
-        request: web.Request,
-    ) -> web.Response:
-        return web.json_response(
-            {
-                "message": "Unable to analyze ticker.",
-            },
-            status=400,
-        )
+async def test_get_analysis_maps_generic_client_error():
+    client = MyClient()
 
-    app = web.Application()
-
-    app.router.add_get(
-        "/analysis/{ticker}",
-        handler,
+    fake_session = FakeSession(
+        request_error=aiohttp.ClientError(),
     )
 
-    server = await aiohttp_server(
-        app
-    )
-
-    client = AnalyzerApiClient(
-        base_url=str(
-            server.make_url("")
-        ).rstrip("/")
-    )
-
-    with pytest.raises(
-        AnalyzerResponseError
-    ) as exc_info:
-        await client.get_analysis(
-            "BAD"
-        )
-
-    assert exc_info.value.status == 400
-
-    assert (
-        exc_info.value.message
-        == "Unable to analyze ticker."
-    )
-
-
-@pytest.mark.asyncio
-async def test_get_analysis_http_error_uses_error_field(
-    aiohttp_server,
-) -> None:
-    async def handler(
-        request: web.Request,
-    ) -> web.Response:
-        return web.json_response(
-            {
-                "error": "Analyzer failed.",
-            },
-            status=500,
-        )
-
-    app = web.Application()
-
-    app.router.add_get(
-        "/analysis/{ticker}",
-        handler,
-    )
-
-    server = await aiohttp_server(
-        app
-    )
-
-    client = AnalyzerApiClient(
-        base_url=str(
-            server.make_url("")
-        ).rstrip("/")
-    )
-
-    with pytest.raises(
-        AnalyzerResponseError
-    ) as exc_info:
-        await client.get_analysis(
-            "AAPL"
-        )
-
-    assert exc_info.value.status == 500
-
-    assert (
-        exc_info.value.message
-        == "Analyzer failed."
-    )
-
-
-@pytest.mark.asyncio
-async def test_get_analysis_http_error_falls_back_to_text(
-    aiohttp_server,
-) -> None:
-    async def handler(
-        request: web.Request,
-    ) -> web.Response:
-        return web.Response(
-            text="Analyzer unavailable",
-            status=503,
-            content_type="text/plain",
-        )
-
-    app = web.Application()
-
-    app.router.add_get(
-        "/analysis/{ticker}",
-        handler,
-    )
-
-    server = await aiohttp_server(
-        app
-    )
-
-    client = AnalyzerApiClient(
-        base_url=str(
-            server.make_url("")
-        ).rstrip("/")
-    )
-
-    with pytest.raises(
-        AnalyzerResponseError
-    ) as exc_info:
-        await client.get_analysis(
-            "AAPL"
-        )
-
-    assert exc_info.value.status == 503
-
-    assert (
-        exc_info.value.message
-        == "Analyzer unavailable"
-    )
+    with patch(
+        "src.client.aiohttp.ClientSession",
+        return_value=fake_session,
+    ):
+        with pytest.raises(
+            AnalyzerClientError,
+            match="request failed",
+        ):
+            await client.get_analysis("AAPL")

@@ -237,52 +237,6 @@ def project_holding(
         + dividend_value
     )
 
-    print(
-        "FORECAST DEBUG",
-        {
-            "ticker": state.ticker,
-
-            "starting_price": current_price,
-            "ending_price": state.price,
-
-            "initial_investment":
-                state.initial_investment,
-
-            "starting_market_value":
-                starting_market_value,
-
-            "current_growth":
-                current_growth,
-
-            "contributions":
-                state.contributions,
-
-            "purchased_shares":
-                purchased_shares,
-
-            "drip_shares":
-                drip_shares,
-
-            "total_shares":
-                ending_total_shares,
-
-            "dividend_cash":
-                state.dividend_cash,
-
-            "investment_value":
-                investment_value,
-
-            "dividend_value":
-                dividend_value,
-
-            "future_growth":
-                growth,
-
-            "future_value":
-                future_value,
-        },
-    )
-
     return HoldingProjectionResult(
         ticker=state.ticker,
 

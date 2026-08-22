@@ -80,7 +80,8 @@ class ForecasterService:
         # Portfolio summary
         # -----------------------------------------------------
 
-        summary_content = lambda x, y: round(sum(getattr(result, y) for result in x), 2)
+        summary_fields = {"future_contributions":"contributions", "stock_growth":"growth",}
+        summary_content = lambda x, y: round(sum(getattr(result, summary_fields.get(y, y)) for result in x), 2)
         summary_params = {key.name: summary_content(results, key.name) for key in fields(ForecastSummary) if key.init}    
         summary = ForecastSummary(**summary_params)
 
