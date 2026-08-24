@@ -19,16 +19,18 @@ PYTHON := py
 $(SERVICES):
 	@:
 
-
 service:
 	@if "$(SVC)"=="" (echo SVC is required && exit /b 1)
 	@if "$(CMD)"=="" (echo CMD is required && exit /b 1)
 	@$(MAKE) -C services/$(SVC) $(CMD)
 
+install:
+	@if "$(SELECTED_SERVICES)"=="" (echo Usage: make ^<service...^> install && exit /b 1)
+	@for %%s in ($(SELECTED_SERVICES)) do @$(MAKE) service SVC=%%s CMD=install || exit /b 1
+
 run:
 	@if "$(SELECTED_SERVICES)"=="" (echo Usage: make ^<service...^> run && exit /b 1)
 	@for %%s in ($(SELECTED_SERVICES)) do @$(MAKE) service SVC=%%s CMD=run || exit /b 1
-
 
 test:
 	@if "$(SELECTED_SERVICES)"=="" (echo Usage: make ^<service...^> test && exit /b 1)

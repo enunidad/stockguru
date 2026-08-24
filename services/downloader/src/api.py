@@ -10,20 +10,10 @@ from .service import DownloaderService
 
 
 async def health(request: web.Request) -> web.Response:
-    """
-    health handler
-    """
-    return web.json_response({"status": "ok"})
+    return web.json_response({"status": "ok", "code": "200"})
 
 async def get_metadata(request: web.Request) -> web.Response:
-    """
-    metadata handler
-
-    Raises:
-        DownloaderClientError: If service is unable to get metadata for the requested ticker
-    """
     ticker = request.match_info["ticker"]
-
     try:
         metadata = request.app["service"].get_metadata(ticker)
         return web.json_response(metadata)
@@ -31,47 +21,13 @@ async def get_metadata(request: web.Request) -> web.Response:
     except DownloaderClientError as exc:
         return web.json_response({"error": type(exc).__name__, "message": str(exc), }, status=400, )
 
-def parse_bool(value: str) -> bool:
-    """
-    helper function to parse string booleans properly
-
-    Args:
-        value (str): the string to be evaluated into a boolean
-    
-    Returns:
-        bool: The parsed value as a boolean
-    
-    Raises:
-        ValueError: is the value to be parsed is not expected
-    """
-    normalized = value.strip().lower()
-
-    if normalized in ['true', '1', 'on', 'yes']:
-        return True
-    if normalized in ['false', '0', 'off', 'no']:
-        return False
-    raise ValueError(f'Invalid boolean value {value}')
 
 async def get_price_history(request: web.Request) -> web.Response:
-    """
-    price history handler
-
-    Raises:
-        ValueError: If auto_adjust is not an expected value to be parsed as boolean
-        DownloaderClientError: If service is unable to get the ticker price history
-    """
     ticker = request.match_info["ticker"]
-
     period = request.query.get("period", "10y")
     interval = request.query.get("interval", "1d")
-    auto_adjust_value = request.query.get("autoadjust", "true")
-    aggregate_value = request.query.get("aggregate", "true")
-
-    try:
-        auto_adjust = parse_bool(auto_adjust_value)
-        aggregate = parse_bool(aggregate_value)
-    except ValueError as exc:
-        return web.json_response({"error": type(exc).__name__, "message": str(exc), }, status=400, )
+    auto_adjust = request.query.get("autoadjust", "true")
+    aggregate = request.query.get("aggregate", "true")
 
     try:
         data = request.app["service"].get_price_history(
@@ -99,33 +55,13 @@ async def get_price_history(request: web.Request) -> web.Response:
     except (DownloaderClientError, ValueError) as exc:
         return web.json_response({"error": type(exc).__name__, "message": str(exc), }, status=400, )
 
-async def get_dividends(
-    request: web.Request,
-) -> web.Response:
-    """
-    dividend history handler
-
-    Raises:
-        DownloaderClientError:
-            If service is unable to get dividend history.
-
-        ValueError:
-            If the requested period is unsupported.
-    """
+async def get_dividends(request: web.Request, ) -> web.Response:
     ticker = request.match_info["ticker"]
 
-    period = request.query.get(
-        "period",
-        "10y",
-    )
+    period = request.query.get("period", "10y", )
 
     try:
-        dividends = (
-            request.app["service"].get_dividends(
-                ticker=ticker,
-                period=period,
-            )
-        )
+        dividends = (request.app["service"].get_dividends(ticker=ticker, period=period, ))
 
         records = [
             {
@@ -138,33 +74,15 @@ async def get_dividends(
             for date, amount in dividends.items()
         ]
 
-        return web.json_response(
-            {
-                "ticker": ticker.upper(),
-                "period": period,
-                "rows": len(dividends),
-                "data": records,
-            }
-        )
+        return web.json_response({"ticker": ticker.upper(), "period": period, 
+                                    "rows": len(dividends), "data": records, })
 
-    except (
-        DownloaderClientError,
-        ValueError,
-    ) as exc:
-        return web.json_response(
-            {
-                "error": type(exc).__name__,
-                "message": str(exc),
-            },
-            status=400,
-        )
+    except (DownloaderClientError, ValueError, ) as exc:
+        return web.json_response({"error": type(exc).__name__, "message": str(exc), }, status=400, )
 
-def create_app(service_override: DownloaderService | None = None) -> web.Application:
-    """
-    starting an application for history and metadata
-    """
+def create_app(service: DownloaderService | None = None) -> web.Application:
     app = web.Application()
-    app["service"] = service_override or DownloaderService()
+    app["service"] = service or DownloaderService()
 
     app.router.add_get("/health", health)
     app.router.add_get("/history/{ticker}", get_price_history)

@@ -6,13 +6,20 @@ of expected errors. Specificity in debugging is very valuable.
 class DownloaderClientError(Exception):
     """Base exception for downloader client errors."""
 
+class CacheSaveError(DownloaderClientError):
+    """Base Exception for cache saving errors."""
+
+class CacheLoadError(DownloaderClientError):
+    """Base Exception for cache loading errors."""
 
 class EmptyDownloadError(DownloaderClientError):
     """Raised when the data provider returns no rows."""
 
-
 class InvalidTickerError(DownloaderClientError):
     """Raised when the ticker appears invalid or unsupported."""
 
-class PriceAggregationError(Exception):
+class InvalidParameterError(DownloaderClientError):
+    """Raised when the requested downloader parameters are invalid."""
+
+class PriceAggregationError(DownloaderClientError):
     """Raised when price history cannot be aggregated."""

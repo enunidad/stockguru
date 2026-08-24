@@ -1,23 +1,77 @@
+import yfinance as yf
 from dataclasses import dataclass, field
 from typing import Any, Optional
+from .exceptions import InvalidTickerError, InvalidParameterError
 
 @dataclass(frozen=True)
 class PriceHistoryRequest:
-    """
-    Price history request object.
-
-    Args:
-        ticker (str): The symbol for the stock requested
-        period (str): The length of history requested. any of product(['1', '2', '3', ...], ['d', 'wk', 'm', 'y'])
-        interval (str): The interval for reporting history. any of product(['1', '2', '3', ...], ['d', 'wk', 'm', 'y'])
-        auto_adjust (bool): Flag for adjusting prices if stock went through splits.
-        aggregate (bool): flag for displaying monthly stats instead of daily, reducing space required on the frontend
-    """
-    ticker: str
+    ticker: yf.Ticker|str
     period: str = "10y"
     interval: str = "1d"
-    auto_adjust: bool = True
-    aggregate: bool = True
+    auto_adjust: str|bool = True
+    aggregate: str|bool = True
+
+    @staticmethod
+    def _validate_time_period(val, kind):
+        if isinstance(val, str):
+            expected_suffixes = ["d", "wk", "mo", "y"]
+            present = None
+            for suffix in expected_suffixes:
+                if val.endswith(suffix):
+                    present = suffix
+                    break
+            if present is None:
+                raise InvalidParameterError(f"{kind} suffix unrecognized. Must be one of {expected_suffixes}.")
+            duration = val.replace(present, "")
+            try:
+                d = int(duration)
+            except ValueError:
+                raise InvalidParameterError(f"{kind} value must be castable as an integer.")
+            if d <= 0:
+                raise InvalidParameterError(f"{kind} value must be a positive integer.")
+            if d >= 30:
+                raise InvalidParameterError(f"{kind} value must be less than 30.")
+        else:
+            raise InvalidParameterError(f"{kind} parameter must be a string.")
+    
+    def _validate_boolean(self, name):
+        val = getattr(self, name)
+        if isinstance(val, str):
+            true = ["true", "yes", "1", "on"]
+            false = ["false", "no", "0", "off"]
+            expected = true + false
+            if val.lower() in expected:
+                if val.lower() in true:
+                    object.__setattr__(self, name, True)
+                else:
+                    object.__setattr__(self, name, False)
+            else:
+                raise InvalidParameterError(f"{name} parameter must be one of {expected}.")            
+        elif isinstance(val, bool):
+            pass
+        else:
+            raise InvalidParameterError(f"{name} parameter is invalid.")
+
+    def __post_init__(self):
+        if isinstance(self.ticker, str):
+            symbol = self.ticker.strip().upper()
+            if symbol:
+                try:
+                    object.__setattr__(self, "ticker", yf.Ticker(symbol))
+                except Exception as exc:
+                    raise InvalidTickerError(f"Ticker '{symbol}' could not be created.") from exc
+            else:
+                raise InvalidTickerError("Ticker cannot be empty.")
+        elif isinstance(self.ticker, yf.Ticker):
+            pass
+        else:
+            raise InvalidTickerError(f"Ticker '{self.ticker}' is not a valid symbol")
+        
+        self._validate_time_period(self.period, "period")
+        self._validate_time_period(self.interval, "interval")
+
+        self._validate_boolean("auto_adjust")
+        self._validate_boolean("aggregate")
 
 @dataclass(frozen=True)
 class TickerMetadata:

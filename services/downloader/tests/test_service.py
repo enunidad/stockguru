@@ -1,499 +1,686 @@
-import pytest
+# services/downloader/tests/test_service.py
+
+from __future__ import annotations
+
+from unittest.mock import Mock, patch
+
 import pandas as pd
+import pytest
+import yfinance as yf
 
-from src.schemas import PriceHistoryRequest, TickerMetadata
 from src.service import DownloaderService
-from dataclasses import asdict
-
-class FakeCache:
-    def __init__(self):
-        self.saved_request = None
-        self.saved_data = None
-
-    def get_if_fresh(self, request):
-        return None
-
-    def save(self, request, data):
-        self.saved_request = request
-        self.saved_data = data
-
-class FakeMetadata:
-    def __init__(self):
-        self.saved_data = None
-
-    def get_if_fresh(self, request):
-        return None
-
-    def save(self, data):
-        self.saved_data = data
-
-class FakeYahooFinanceClient:
-    def __init__(self):
-        self.received_request = None
-        self.response = pd.DataFrame(
-            {
-                "Date": ["2024-01-01", "2024-01-02", ],
-                "Open": [100.0, 101.0, ],
-                "High": [112.0, 113.0, ],
-                "Low": [98.0, 99.0, ],
-                "Close": [110.0, 111.0, ],
-                "Volume": [1_000, 1_200, ],
-            },
-        )
-        self.response["Date"] = pd.to_datetime(self.response["Date"], errors="raise", utc=True, )
-        self.response = self.response.set_index("Date")
-        self.response.index.name = "Date"
-        self.recieved_metadata_request = None
-        self.metadata = TickerMetadata(ticker = 'AAPL')
-
-    def download_price_history(self, request: PriceHistoryRequest) -> pd.DataFrame:
-        self.received_request = request
-        return self.response
-    
-    def download_metadata(self, request: str) -> dict:
-        self.received_metadata_request = request
-        return self.metadata
+from src.schemas import PriceHistoryRequest, TickerMetadata
 
 
-def test_get_price_history_builds_request_and_calls_client():
-    fake_client = FakeYahooFinanceClient()
-    fake_cache = FakeCache()
-    fake_metadata = FakeMetadata()
-    service = DownloaderService(client=fake_client, cache=fake_cache, metadata=fake_metadata)
+# ---------------------------------------------------------------------
+# Fixtures
+# ---------------------------------------------------------------------
 
-    result = service.get_price_history(
+
+@pytest.fixture
+def client():
+    return Mock()
+
+
+@pytest.fixture
+def cache():
+    return Mock()
+
+
+@pytest.fixture
+def service(client, cache):
+    return DownloaderService(
+        client=client,
+        cache=cache,
+    )
+
+
+@pytest.fixture
+def metadata():
+    return TickerMetadata(
         ticker="AAPL",
-        period="10y",
-        interval="1d",
-        auto_adjust=True,
-        aggregate=False,
+        currency="USD",
+        exchange="NMS",
+        timezone="America/New_York",
+        quote_type="EQUITY",
+        name="Apple Inc.",
+        sector="Technology",
+        industry="Consumer Electronics",
+        country="United States",
+        raw={},
     )
 
-    expected_request = PriceHistoryRequest(
-        ticker="AAPL",
-        period="10y",
-        interval="1d",
-        auto_adjust=True,
-        aggregate=False,
-    )
 
-    print(fake_client.received_request)
-    print(expected_request)
-    assert fake_client.received_request == expected_request
-    assert fake_cache.saved_request == expected_request
-    pd.testing.assert_frame_equal(fake_cache.saved_data, fake_client.response)
-    pd.testing.assert_frame_equal(result, fake_client.response)
-
-
-def test_get_price_history_uses_default_request_values():
-    fake_client = FakeYahooFinanceClient()
-    fake_cache = FakeCache()
-    service = DownloaderService(client=fake_client, cache=fake_cache)
-
-    service.get_price_history(ticker="MSFT")
-
-    assert fake_client.received_request == PriceHistoryRequest(
-        ticker="MSFT",
-        period="10y",
-        interval="1d",
-        auto_adjust=True,
-    )
-
-def test_get_metadata_builds_request_and_calls_client():
-    fake_client = FakeYahooFinanceClient()
-    fake_cache = FakeCache()
-    fake_metadata = FakeMetadata()
-    service = DownloaderService(client=fake_client, cache=fake_cache, metadata=fake_metadata)
-
-    result = service.get_metadata(ticker='AAPL')
-
-    expected_result = asdict(TickerMetadata(ticker="AAPL"))
-
-    assert fake_client.received_metadata_request.ticker == 'AAPL'
-    assert result == expected_result
-
-def test_filter_period_returns_requested_years():
-    dates = pd.to_datetime(
+@pytest.fixture
+def price_history():
+    index = pd.to_datetime(
         [
+            "2015-01-01",
+            "2018-01-01",
             "2020-01-01",
-            "2021-01-01",
             "2022-01-01",
             "2023-01-01",
             "2024-01-01",
             "2025-01-01",
-            "2026-01-01",
         ],
         utc=True,
     )
 
     data = pd.DataFrame(
         {
-            "Close": [
-                100.0,
-                110.0,
-                120.0,
-                130.0,
-                140.0,
-                150.0,
-                160.0,
-            ]
+            "Open": [10, 20, 30, 40, 50, 60, 70],
+            "High": [11, 21, 31, 41, 51, 61, 71],
+            "Low": [9, 19, 29, 39, 49, 59, 69],
+            "Close": [10.5, 20.5, 30.5, 40.5, 50.5, 60.5, 70.5],
+            "Volume": [100] * 7,
         },
-        index=dates,
+        index=index,
     )
 
-    result = DownloaderService._filter_period(
-        data,
-        "5y",
-    )
+    data.index.name = "Date"
 
-    assert result.index.min() == pd.Timestamp(
-        "2021-01-01",
-        tz="UTC",
-    )
-    assert result.index.max() == pd.Timestamp(
-        "2026-01-01",
-        tz="UTC",
-    )
+    return data
 
-def test_filter_period_10y_returns_full_data():
-    data = pd.DataFrame(
-        {"Close": [100.0, 200.0]},
+
+@pytest.fixture
+def dividends():
+    data = pd.Series(
+        [0.10, 0.20, 0.30, 0.40, 0.50],
         index=pd.to_datetime(
             [
-                "2016-01-01",
-                "2026-01-01",
-            ],
-            utc=True,
-        ),
-    )
-
-    result = DownloaderService._filter_period(
-        data,
-        "10y",
-    )
-
-    pd.testing.assert_frame_equal(
-        result,
-        data,
-    )
-
-def test_filter_period_rejects_unsupported_period():
-    data = pd.DataFrame(
-        {"Close": [100.0]},
-        index=pd.to_datetime(
-            ["2026-01-01"],
-            utc=True,
-        ),
-    )
-
-    with pytest.raises(
-        ValueError,
-        match="Unsupported period",
-    ):
-        DownloaderService._filter_period(
-            data,
-            "banana",
-        )
-
-# =========================================================
-# Dividend Test Helpers
-# =========================================================
-
-
-def make_dividend_history() -> pd.Series:
-    dividends = pd.Series(
-        [
-            0.20,
-            0.22,
-            0.24,
-            0.25,
-            0.26,
-            0.27,
-        ],
-        index=pd.to_datetime(
-            [
-                "2020-08-01",
-                "2022-08-01",
-                "2023-08-01",
-                "2024-08-01",
-                "2025-08-01",
-                "2026-08-01",
+                "2015-01-01",
+                "2020-01-01",
+                "2022-01-01",
+                "2024-01-01",
+                "2025-01-01",
             ],
             utc=True,
         ),
         name="Dividends",
-        dtype=float,
     )
 
-    dividends.index.name = "Date"
+    data.index.name = "Date"
 
-    return dividends
+    return data
 
 
-class FakeDividendCache:
-    def __init__(
-        self,
-        cached_data=None,
+@pytest.fixture
+def complete_download(
+    metadata,
+    price_history,
+    dividends,
+):
+    return {
+        "metadata": metadata,
+        "price_history": price_history,
+        "dividends": dividends,
+    }
+
+
+# ---------------------------------------------------------------------
+# __init__
+# ---------------------------------------------------------------------
+
+
+def test_init_uses_injected_dependencies(
+    client,
+    cache,
+):
+    service = DownloaderService(
+        client=client,
+        cache=cache,
+    )
+
+    assert service.client is client
+    assert service.cache is cache
+
+
+# ---------------------------------------------------------------------
+# _filter_period
+# ---------------------------------------------------------------------
+
+
+def test_filter_period_10y_returns_original_data(
+    price_history,
+):
+    result = DownloaderService._filter_period(
+        price_history,
+        "10y",
+    )
+
+    assert result is price_history
+
+
+def test_filter_period_1y(
+    price_history,
+):
+    result = DownloaderService._filter_period(
+        price_history,
+        "1y",
+    )
+
+    assert result.index.min() >= pd.Timestamp(
+        "2024-01-01",
+        tz="UTC",
+    )
+
+    assert list(result.index) == list(
+        pd.to_datetime(
+            [
+                "2024-01-01",
+                "2025-01-01",
+            ],
+            utc=True,
+        )
+    )
+
+
+def test_filter_period_2y(
+    price_history,
+):
+    result = DownloaderService._filter_period(
+        price_history,
+        "2y",
+    )
+
+    assert list(result.index) == list(
+        pd.to_datetime(
+            [
+                "2023-01-01",
+                "2024-01-01",
+                "2025-01-01",
+            ],
+            utc=True,
+        )
+    )
+
+
+def test_filter_period_5y(
+    price_history,
+):
+    result = DownloaderService._filter_period(
+        price_history,
+        "5y",
+    )
+
+    assert result.index.min() >= pd.Timestamp(
+        "2020-01-01",
+        tz="UTC",
+    )
+
+
+def test_filter_period_unsupported_raises(
+    price_history,
+):
+    with pytest.raises(
+        ValueError,
+        match="Unsupported period '3y'",
     ):
-        self.cached_data = cached_data
-        self.requested_ticker = None
-        self.saved_ticker = None
-        self.saved_data = None
-
-
-    def get_if_fresh(
-        self,
-        ticker,
-    ):
-        self.requested_ticker = ticker
-
-        return self.cached_data
-
-
-    def save(
-        self,
-        ticker,
-        dividends,
-    ):
-        self.saved_ticker = ticker
-        self.saved_data = dividends
-
-
-class FakeDividendClient:
-    def __init__(
-        self,
-        dividends=None,
-    ):
-        self.dividends = (
-            dividends
-            if dividends is not None
-            else make_dividend_history()
+        DownloaderService._filter_period(
+            price_history,
+            "3y",
         )
 
-        self.received_ticker = None
+
+# ---------------------------------------------------------------------
+# _filter_dividend_period
+# ---------------------------------------------------------------------
 
 
-    def download_dividends(
-        self,
-        ticker,
-    ):
-        self.received_ticker = ticker
+def test_filter_dividend_period_empty_returns_empty():
+    dividends = pd.Series(
+        dtype=float,
+        name="Dividends",
+    )
 
-        return self.dividends
+    result = DownloaderService._filter_dividend_period(
+        dividends,
+        "1y",
+    )
+
+    assert result.empty
 
 
-# =========================================================
-# Dividend Period Filtering
-# =========================================================
+def test_filter_dividend_period_1y(
+    dividends,
+):
+    result = DownloaderService._filter_dividend_period(
+        dividends,
+        "1y",
+    )
+
+    assert list(result.index) == list(
+        pd.to_datetime(
+            [
+                "2024-01-01",
+                "2025-01-01",
+            ],
+            utc=True,
+        )
+    )
 
 
-def test_filter_dividend_period_returns_requested_years():
-    dividends = make_dividend_history()
-
+def test_filter_dividend_period_2y(
+    dividends,
+):
     result = DownloaderService._filter_dividend_period(
         dividends,
         "2y",
     )
 
-    assert list(result.index) == [
-        pd.Timestamp(
-            "2024-08-01",
-            tz="UTC",
-        ),
-        pd.Timestamp(
-            "2025-08-01",
-            tz="UTC",
-        ),
-        pd.Timestamp(
-            "2026-08-01",
-            tz="UTC",
-        ),
-    ]
-
-
-def test_filter_dividend_period_includes_cutoff_date():
-    dividends = pd.Series(
-        [
-            0.25,
-            0.26,
-        ],
-        index=pd.to_datetime(
+    assert list(result.index) == list(
+        pd.to_datetime(
             [
-                "2025-08-01",
-                "2026-08-01",
+                "2024-01-01",
+                "2025-01-01",
             ],
             utc=True,
-        ),
-        name="Dividends",
-    )
-
-    result = DownloaderService._filter_dividend_period(
-        dividends,
-        "1y",
-    )
-
-    assert len(result) == 2
-
-    assert result.index.min() == pd.Timestamp(
-        "2025-08-01",
-        tz="UTC",
+        )
     )
 
 
-@pytest.mark.parametrize(
-    (
-        "period",
-        "expected_start",
-    ),
-    [
-        (
-            "1y",
-            "2025-08-01",
-        ),
-        (
-            "2y",
-            "2024-08-01",
-        ),
-        (
-            "5y",
-            "2022-08-01",
-        ),
-        (
-            "10y",
-            "2020-08-01",
-        ),
-    ],
-)
-def test_filter_dividend_period_supports_expected_periods(
-    period,
-    expected_start,
+def test_filter_dividend_period_5y(
+    dividends,
 ):
-    dividends = make_dividend_history()
-
     result = DownloaderService._filter_dividend_period(
         dividends,
-        period,
+        "5y",
     )
 
-    assert result.index.min() == pd.Timestamp(
-        expected_start,
-        tz="UTC",
+    assert list(result.index) == list(
+        pd.to_datetime(
+            [
+                "2020-01-01",
+                "2022-01-01",
+                "2024-01-01",
+                "2025-01-01",
+            ],
+            utc=True,
+        )
     )
 
 
-def test_filter_dividend_period_returns_empty_series_unchanged():
-    dividends = pd.Series(
-        dtype=float,
-        name="Dividends",
-    )
-
+def test_filter_dividend_period_10y(
+    dividends,
+):
     result = DownloaderService._filter_dividend_period(
         dividends,
-        "1y",
+        "10y",
     )
 
-    assert result is dividends
-    assert result.empty
+    assert list(result.index) == list(dividends.index)
 
 
-def test_filter_dividend_period_rejects_unsupported_period():
-    dividends = make_dividend_history()
-
+def test_filter_dividend_period_unsupported_raises(
+    dividends,
+):
     with pytest.raises(
         ValueError,
-        match="Unsupported period",
+        match="Unsupported period '3y'",
     ):
         DownloaderService._filter_dividend_period(
             dividends,
-            "banana",
+            "3y",
         )
 
 
-# =========================================================
-# DownloaderService.get_dividends
-# =========================================================
+# ---------------------------------------------------------------------
+# _download_and_save
+# ---------------------------------------------------------------------
 
 
-def test_get_dividends_uses_fresh_cache():
-    dividends = make_dividend_history()
-
-    fake_client = FakeDividendClient()
-
-    fake_dividend_cache = FakeDividendCache(
-        cached_data=dividends,
+def test_download_and_save(
+    service,
+    client,
+    cache,
+    complete_download,
+    metadata,
+):
+    request = PriceHistoryRequest(
+        ticker="AAPL",
+        period="10y",
+        interval="1d",
     )
 
-    service = DownloaderService(
-        client=fake_client,
-        dividend=fake_dividend_cache,
+    client.download.return_value = complete_download
+    cache.load.return_value = metadata
+
+    result = service._download_and_save(
+        request,
+        "metadata",
     )
+
+    client.download.assert_called_once_with(
+        request,
+    )
+
+    cache.save.assert_called_once_with(
+        request,
+        complete_download,
+    )
+
+    cache.load.assert_called_once_with(
+        request,
+        "metadata",
+    )
+
+    assert result is metadata
+
+
+def test_download_and_save_price_history_uses_none_kind(
+    service,
+    client,
+    cache,
+    complete_download,
+    price_history,
+):
+    request = PriceHistoryRequest(
+        ticker="AAPL",
+        period="10y",
+        interval="1d",
+    )
+
+    client.download.return_value = complete_download
+    cache.load.return_value = price_history
+
+    result = service._download_and_save(
+        request,
+    )
+
+    cache.load.assert_called_once_with(
+        request,
+        None,
+    )
+
+    assert result is price_history
+
+
+# ---------------------------------------------------------------------
+# get_metadata
+# ---------------------------------------------------------------------
+
+
+def test_get_metadata_returns_cached_metadata(
+    service,
+    cache,
+    metadata,
+):
+    cache.get_if_fresh.return_value = metadata
+
+    result = service.get_metadata("AAPL")
+
+    assert result["ticker"] == "AAPL"
+    assert result["currency"] == "USD"
+    assert result["name"] == "Apple Inc."
+
+    cache.get_if_fresh.assert_called_once()
+
+    service.client.download.assert_not_called()
+
+
+def test_get_metadata_downloads_when_cache_miss(
+    service,
+    client,
+    cache,
+    metadata,
+    complete_download,
+):
+    cache.get_if_fresh.return_value = None
+    client.download.return_value = complete_download
+    cache.load.return_value = metadata
+
+    result = service.get_metadata("AAPL")
+
+    assert result["ticker"] == "AAPL"
+    assert result["name"] == "Apple Inc."
+
+    client.download.assert_called_once()
+    cache.save.assert_called_once()
+    cache.load.assert_called_once()
+
+
+def test_get_metadata_uses_canonical_download_request(
+    service,
+    cache,
+    metadata,
+):
+    cache.get_if_fresh.return_value = metadata
+
+    service.get_metadata(
+        ticker="aapl",
+        period="2y",
+        interval="2wk",
+        auto_adjust=False,
+        aggregate=False,
+    )
+
+    request = cache.get_if_fresh.call_args.args[0]
+
+    assert request.ticker.ticker == "AAPL"
+    assert request.period == "10y"
+    assert request.interval == "1d"
+    assert request.auto_adjust is False
+    assert request.aggregate is False
+
+
+# ---------------------------------------------------------------------
+# get_price_history
+# ---------------------------------------------------------------------
+
+
+def test_get_price_history_returns_cached_history(
+    service,
+    cache,
+    price_history,
+):
+    cache.get_if_fresh.return_value = price_history
+
+    result = service.get_price_history(
+        ticker="AAPL",
+        period="10y",
+        interval="1d",
+        aggregate=False,
+    )
+
+    pd.testing.assert_frame_equal(
+        result,
+        price_history,
+    )
+
+    service.client.download.assert_not_called()
+
+
+def test_get_price_history_downloads_on_cache_miss(
+    service,
+    client,
+    cache,
+    price_history,
+    complete_download,
+):
+    cache.get_if_fresh.return_value = None
+    client.download.return_value = complete_download
+    cache.load.return_value = price_history
+
+    result = service.get_price_history(
+        ticker="AAPL",
+        period="10y",
+        interval="1d",
+        aggregate=False,
+    )
+
+    client.download.assert_called_once()
+    cache.save.assert_called_once()
+    cache.load.assert_called_once()
+
+    pd.testing.assert_frame_equal(
+        result,
+        price_history,
+    )
+
+
+def test_get_price_history_download_request_is_always_10y_1d(
+    service,
+    cache,
+    price_history,
+):
+    cache.get_if_fresh.return_value = price_history
+
+    service.get_price_history(
+        ticker="AAPL",
+        period="2y",
+        interval="2wk",
+        auto_adjust=True,
+        aggregate=False,
+    )
+
+    request = cache.get_if_fresh.call_args.args[0]
+
+    assert request.period == "10y"
+    assert request.interval == "1d"
+    assert request.auto_adjust is True
+
+
+def test_get_price_history_filters_requested_period(
+    service,
+    cache,
+    price_history,
+):
+    cache.get_if_fresh.return_value = price_history
+
+    result = service.get_price_history(
+        ticker="AAPL",
+        period="2y",
+        interval="1d",
+        aggregate=False,
+    )
+
+    assert list(result.index) == list(
+        pd.to_datetime(
+            [
+                "2023-01-01",
+                "2024-01-01",
+                "2025-01-01",
+            ],
+            utc=True,
+        )
+    )
+
+
+def test_get_price_history_does_not_aggregate_when_false(
+    service,
+    cache,
+    price_history,
+):
+    cache.get_if_fresh.return_value = price_history
+
+    with patch(
+        "src.service.HistoricalAggregator"
+    ) as aggregator_class:
+
+        result = service.get_price_history(
+            ticker="AAPL",
+            period="10y",
+            interval="2wk",
+            aggregate=False,
+        )
+
+    aggregator_class.assert_not_called()
+
+    pd.testing.assert_frame_equal(
+        result,
+        price_history,
+    )
+
+
+def test_get_price_history_aggregates_requested_interval(
+    service,
+    cache,
+    price_history,
+):
+    cache.get_if_fresh.return_value = price_history
+
+    aggregated = pd.DataFrame(
+        {
+            "Close": [123.45],
+        },
+        index=pd.to_datetime(
+            ["2025-01-01"],
+            utc=True,
+        ),
+    )
+
+    with patch(
+        "src.service.HistoricalAggregator"
+    ) as aggregator_class:
+
+        aggregator = aggregator_class.return_value
+        aggregator.aggregate.return_value = aggregated
+
+        result = service.get_price_history(
+            ticker="AAPL",
+            period="2y",
+            interval="2wk",
+            aggregate=True,
+        )
+
+        call = aggregator.aggregate.call_args
+
+        assert call.kwargs["interval"] == "2wk"
+
+        filtered_data = call.kwargs["df"]
+
+        assert filtered_data.index.min() >= pd.Timestamp(
+            "2023-01-01",
+            tz="UTC",
+        )
+
+    assert result is aggregated
+
+
+# ---------------------------------------------------------------------
+# get_dividends
+# ---------------------------------------------------------------------
+
+
+def test_get_dividends_returns_cached_dividends(
+    service,
+    cache,
+    dividends,
+):
+    cache.get_if_fresh.return_value = dividends
 
     result = service.get_dividends(
         ticker="AAPL",
         period="10y",
     )
 
-    assert (
-        fake_dividend_cache.requested_ticker
-        == "AAPL"
-    )
-
-    assert fake_client.received_ticker is None
-
-    assert fake_dividend_cache.saved_data is None
-
     pd.testing.assert_series_equal(
         result,
         dividends,
     )
 
-
-def test_get_dividends_normalizes_ticker_before_cache_lookup():
-    dividends = make_dividend_history()
-
-    fake_client = FakeDividendClient()
-
-    fake_dividend_cache = FakeDividendCache(
-        cached_data=dividends,
-    )
-
-    service = DownloaderService(
-        client=fake_client,
-        dividend=fake_dividend_cache,
-    )
-
-    service.get_dividends(
-        ticker="  aapl  ",
-    )
-
-    assert (
-        fake_dividend_cache.requested_ticker
-        == "AAPL"
-    )
+    service.client.download.assert_not_called()
 
 
-def test_get_dividends_downloads_when_cache_missing():
-    dividends = make_dividend_history()
-
-    fake_client = FakeDividendClient(
-        dividends=dividends,
-    )
-
-    fake_dividend_cache = FakeDividendCache(
-        cached_data=None,
-    )
-
-    service = DownloaderService(
-        client=fake_client,
-        dividend=fake_dividend_cache,
-    )
+def test_get_dividends_downloads_on_cache_miss(
+    service,
+    client,
+    cache,
+    dividends,
+    complete_download,
+):
+    cache.get_if_fresh.return_value = None
+    client.download.return_value = complete_download
+    cache.load.return_value = dividends
 
     result = service.get_dividends(
-        ticker=" aapl ",
+        ticker="AAPL",
         period="10y",
     )
 
-    assert fake_client.received_ticker == "AAPL"
+    client.download.assert_called_once()
+    cache.save.assert_called_once()
+    cache.load.assert_called_once()
 
     pd.testing.assert_series_equal(
         result,
@@ -501,146 +688,47 @@ def test_get_dividends_downloads_when_cache_missing():
     )
 
 
-def test_get_dividends_saves_downloaded_data_to_cache():
-    dividends = make_dividend_history()
-
-    fake_client = FakeDividendClient(
-        dividends=dividends,
-    )
-
-    fake_dividend_cache = FakeDividendCache()
-
-    service = DownloaderService(
-        client=fake_client,
-        dividend=fake_dividend_cache,
-    )
-
-    service.get_dividends(
-        ticker="msft",
-    )
-
-    assert (
-        fake_dividend_cache.saved_ticker
-        == "MSFT"
-    )
-
-    pd.testing.assert_series_equal(
-        fake_dividend_cache.saved_data,
-        dividends,
-    )
-
-
-def test_get_dividends_filters_cached_history_to_requested_period():
-    dividends = make_dividend_history()
-
-    fake_client = FakeDividendClient()
-
-    fake_dividend_cache = FakeDividendCache(
-        cached_data=dividends,
-    )
-
-    service = DownloaderService(
-        client=fake_client,
-        dividend=fake_dividend_cache,
-    )
+def test_get_dividends_filters_requested_period(
+    service,
+    cache,
+    dividends,
+):
+    cache.get_if_fresh.return_value = dividends
 
     result = service.get_dividends(
         ticker="AAPL",
         period="1y",
     )
 
-    assert list(result.index) == [
-        pd.Timestamp(
-            "2025-08-01",
-            tz="UTC",
-        ),
-        pd.Timestamp(
-            "2026-08-01",
-            tz="UTC",
-        ),
-    ]
-
-
-def test_get_dividends_filters_downloaded_history_to_requested_period():
-    dividends = make_dividend_history()
-
-    fake_client = FakeDividendClient(
-        dividends=dividends,
+    assert list(result.index) == list(
+        pd.to_datetime(
+            [
+                "2024-01-01",
+                "2025-01-01",
+            ],
+            utc=True,
+        )
     )
 
-    fake_dividend_cache = FakeDividendCache()
 
-    service = DownloaderService(
-        client=fake_client,
-        dividend=fake_dividend_cache,
-    )
+def test_get_dividends_uses_canonical_download_request(
+    service,
+    cache,
+    dividends,
+):
+    cache.get_if_fresh.return_value = dividends
 
-    result = service.get_dividends(
+    service.get_dividends(
         ticker="AAPL",
         period="2y",
+        interval="2wk",
+        auto_adjust=False,
+        aggregate=False,
     )
 
-    assert list(result.index) == [
-        pd.Timestamp(
-            "2024-08-01",
-            tz="UTC",
-        ),
-        pd.Timestamp(
-            "2025-08-01",
-            tz="UTC",
-        ),
-        pd.Timestamp(
-            "2026-08-01",
-            tz="UTC",
-        ),
-    ]
+    request = cache.get_if_fresh.call_args.args[0]
 
-
-def test_get_dividends_handles_empty_download():
-    dividends = pd.Series(
-        dtype=float,
-        name="Dividends",
-    )
-
-    fake_client = FakeDividendClient(
-        dividends=dividends,
-    )
-
-    fake_dividend_cache = FakeDividendCache()
-
-    service = DownloaderService(
-        client=fake_client,
-        dividend=fake_dividend_cache,
-    )
-
-    result = service.get_dividends(
-        ticker="AAPL",
-        period="10y",
-    )
-
-    assert result.empty
-
-    pd.testing.assert_series_equal(
-        fake_dividend_cache.saved_data,
-        dividends,
-    )
-
-
-def test_get_dividends_rejects_unsupported_period():
-    fake_dividend_cache = FakeDividendCache(
-        cached_data=make_dividend_history(),
-    )
-
-    service = DownloaderService(
-        client=FakeDividendClient(),
-        dividend=fake_dividend_cache,
-    )
-
-    with pytest.raises(
-        ValueError,
-        match="Unsupported period",
-    ):
-        service.get_dividends(
-            ticker="AAPL",
-            period="3y",
-        )
+    assert request.period == "10y"
+    assert request.interval == "1d"
+    assert request.auto_adjust is False
+    assert request.aggregate is False

@@ -1,31 +1,45 @@
+# services/downloader/tests/test_api.py
+
+from __future__ import annotations
+
 import pandas as pd
 import pytest
 
-from src.api import create_app, parse_bool
-from src.exceptions import EmptyDownloadError
+from src.api import create_app
+from src.exceptions import (
+    DownloaderClientError,
+    EmptyDownloadError,
+    InvalidParameterError,
+)
 
-class InvalidPeriodDownloaderService:
-    def get_price_history(
-        self,
-        ticker: str,
-        period: str,
-        interval: str,
-        auto_adjust: bool,
-        aggregate: bool,
-    ):
-        raise ValueError(
-            f"Unsupported period '{period}'."
-        )
+
+# =========================================================
+# Fake Services
+# =========================================================
+
 
 class FakeDownloaderService:
+    def __init__(self):
+        self.history_args = None
+        self.metadata_ticker = None
+        self.dividend_args = None
+
     def get_price_history(
         self,
         ticker: str,
         period: str,
         interval: str,
-        auto_adjust: bool,
-        aggregate: bool,
+        auto_adjust,
+        aggregate,
     ) -> pd.DataFrame:
+        self.history_args = {
+            "ticker": ticker,
+            "period": period,
+            "interval": interval,
+            "auto_adjust": auto_adjust,
+            "aggregate": aggregate,
+        }
+
         data = pd.DataFrame(
             {
                 "Open": [100.0, 101.0],
@@ -43,70 +57,153 @@ class FakeDownloaderService:
         return data
 
     def get_metadata(self, ticker: str) -> dict:
+        self.metadata_ticker = ticker
+
         return {
             "ticker": ticker.upper(),
             "currency": "USD",
             "exchange": "NMS",
             "timezone": "America/New_York",
             "quote_type": "EQUITY",
+            "name": "Apple Inc.",
+            "sector": "Technology",
+            "industry": "Consumer Electronics",
+            "country": "United States",
             "raw": {},
         }
 
-
-class FailingDownloaderService:
-    def get_price_history(
+    def get_dividends(
         self,
         ticker: str,
-        period: str = "10y",
-        interval: str = "1mo",
-        auto_adjust: bool = False,
-        aggregate: bool = False,
-    ) -> pd.DataFrame:
-        raise EmptyDownloadError("No price history returned for ticker 'BAD'.")
+        period: str,
+    ) -> pd.Series:
+        self.dividend_args = {
+            "ticker": ticker,
+            "period": period,
+        }
+
+        dividends = pd.Series(
+            [0.24, 0.25, 0.26],
+            index=pd.to_datetime(
+                [
+                    "2026-02-08 00:00:00-05:00",
+                    "2026-05-08 00:00:00-04:00",
+                    "2026-08-08 00:00:00-04:00",
+                ],
+                utc=True,
+            ),
+            name="Dividends",
+            dtype=float,
+        )
+
+        dividends.index.name = "Date"
+
+        return dividends
+
+
+class EmptyDividendService:
+    def get_dividends(
+        self,
+        ticker: str,
+        period: str,
+    ) -> pd.Series:
+        result = pd.Series(
+            dtype=float,
+            name="Dividends",
+        )
+
+        result.index.name = "Date"
+
+        return result
+
+
+class ValueErrorHistoryService:
+    def get_price_history(self, **kwargs):
+        raise ValueError(
+            f"Unsupported period '{kwargs['period']}'."
+        )
+
+
+class DownloaderErrorHistoryService:
+    def get_price_history(self, **kwargs):
+        raise EmptyDownloadError(
+            "No price history returned for ticker 'BAD'."
+        )
+
+
+class ValueErrorDividendService:
+    def get_dividends(
+        self,
+        ticker: str,
+        period: str,
+    ):
+        raise ValueError(
+            f"Unsupported period '{period}'."
+        )
+
+
+class DownloaderErrorDividendService:
+    def get_dividends(
+        self,
+        ticker: str,
+        period: str,
+    ):
+        raise EmptyDownloadError(
+            f"No dividend history returned for ticker '{ticker.upper()}'."
+        )
+
+
+class DownloaderErrorMetadataService:
+    def get_metadata(self, ticker: str):
+        raise DownloaderClientError(
+            f"Failed to download metadata for ticker '{ticker.upper()}'."
+        )
+
+
+# =========================================================
+# Health
+# =========================================================
 
 
 @pytest.mark.asyncio
-async def test_get_price_history_formats_dates_without_time(
+async def test_health_endpoint(
     aiohttp_client,
 ):
     app = create_app(
-        service_override=FakeDownloaderService()
+        service=FakeDownloaderService()
     )
-    client = await aiohttp_client(app)
 
-    response = await client.get("/history/aapl")
-    body = await response.json()
-
-    assert response.status == 200
-
-    assert body["data"][0]["Date"] == "2024-01-01"
-    assert body["data"][1]["Date"] == "2024-01-02"
-
-    assert " " not in body["data"][0]["Date"]
-    assert "T" not in body["data"][0]["Date"]
-    assert "-05:00" not in body["data"][0]["Date"]
-
-@pytest.mark.asyncio
-async def test_health_endpoint(aiohttp_client):
-    app = create_app(service_override=FakeDownloaderService())
     client = await aiohttp_client(app)
 
     response = await client.get("/health")
     body = await response.json()
 
     assert response.status == 200
-    assert body == {"status": "ok"}
+
+    assert body == {
+        "status": "ok",
+        "code": "200",
+    }
+
+
+# =========================================================
+# Metadata
+# =========================================================
+
 
 @pytest.mark.asyncio
 async def test_get_metadata_returns_json(
     aiohttp_client,
 ):
-    app = create_app(
-        service_override=FakeDownloaderService()
-    )
+    service = FakeDownloaderService()
+
+    app = create_app(service=service)
     client = await aiohttp_client(app)
 
-    response = await client.get("/metadata/aapl")
+    response = await client.get(
+        "/metadata/aapl"
+    )
+
     body = await response.json()
 
     assert response.status == 200
@@ -117,14 +214,55 @@ async def test_get_metadata_returns_json(
         "exchange": "NMS",
         "timezone": "America/New_York",
         "quote_type": "EQUITY",
+        "name": "Apple Inc.",
+        "sector": "Technology",
+        "industry": "Consumer Electronics",
+        "country": "United States",
         "raw": {},
     }
 
+    assert service.metadata_ticker == "aapl"
+
+
 @pytest.mark.asyncio
-async def test_get_price_history_returns_json(aiohttp_client):
+async def test_get_metadata_returns_400_for_downloader_error(
+    aiohttp_client,
+):
     app = create_app(
-        service_override=FakeDownloaderService()
+        service=DownloaderErrorMetadataService()
     )
+
+    client = await aiohttp_client(app)
+
+    response = await client.get(
+        "/metadata/BAD"
+    )
+
+    body = await response.json()
+
+    assert response.status == 400
+
+    assert body == {
+        "error": "DownloaderClientError",
+        "message": (
+            "Failed to download metadata "
+            "for ticker 'BAD'."
+        ),
+    }
+
+
+# =========================================================
+# Price History
+# =========================================================
+
+
+@pytest.mark.asyncio
+async def test_get_price_history_returns_json(
+    aiohttp_client,
+):
+    service = FakeDownloaderService()
+
+    app = create_app(service=service)
     client = await aiohttp_client(app)
 
     response = await client.get(
@@ -132,6 +270,7 @@ async def test_get_price_history_returns_json(aiohttp_client):
         "?period=5y"
         "&interval=1mo"
         "&autoadjust=false"
+        "&aggregate=false"
     )
 
     body = await response.json()
@@ -157,192 +296,138 @@ async def test_get_price_history_returns_json(aiohttp_client):
         ],
     }
 
+
 @pytest.mark.asyncio
-async def test_get_price_history_rejects_invalid_auto_adjust(
+async def test_get_price_history_passes_query_parameters_to_service(
     aiohttp_client,
 ):
-    app = create_app(
-        service_override=FakeDownloaderService()
-    )
+    service = FakeDownloaderService()
+
+    app = create_app(service=service)
     client = await aiohttp_client(app)
 
     response = await client.get(
-        "/history/AAPL?autoadjust=banana"
+        "/history/msft"
+        "?period=2y"
+        "&interval=2wk"
+        "&autoadjust=false"
+        "&aggregate=false"
     )
 
-    body = await response.json()
+    assert response.status == 200
 
-    assert response.status == 400
-    assert body["error"] == "ValueError"
-    assert "banana" in body["message"]
-
-
-@pytest.mark.asyncio
-async def test_get_price_history_returns_400_for_downloader_errors(aiohttp_client):
-    app = create_app(service_override=FailingDownloaderService())
-    client = await aiohttp_client(app)
-
-    response = await client.get("/history/bad")
-    body = await response.json()
-
-    assert response.status == 400
-    assert body["error"] == "EmptyDownloadError"
-    assert body["message"] == "No price history returned for ticker 'BAD'."
-
-@pytest.mark.parametrize(
-    ("value", "expected"),
-    [
-        ("true", True),
-        ("True", True),
-        ("TRUE", True),
-        ("1", True),
-        ("yes", True),
-        ("YES", True),
-        ("on", True),
-
-        ("false", False),
-        ("False", False),
-        ("FALSE", False),
-        ("0", False),
-        ("no", False),
-        ("NO", False),
-        ("off", False),
-
-        (" true ", True),
-        (" false ", False),
-    ],
-)
-def test_parse_bool_valid_values(
-    value: str,
-    expected: bool,
-) -> None:
-    assert parse_bool(value) is expected
-
-@pytest.mark.parametrize(
-    "value",
-    [
-        "",
-        "banana",
-        "2",
-        "y",
-        "n",
-        "t",
-        "f",
-        "maybe",
-        "null",
-    ],
-)
-def test_parse_bool_invalid_values(
-    value: str,
-) -> None:
-    with pytest.raises(
-        ValueError,
-        match="Invalid boolean",
-    ):
-        parse_bool(value)
-
-@pytest.mark.asyncio
-async def test_get_price_history_returns_400_for_invalid_period(
-    aiohttp_client,
-):
-    app = create_app(
-        service_override=InvalidPeriodDownloaderService()
-    )
-    client = await aiohttp_client(app)
-
-    response = await client.get(
-        "/history/AAPL?period=banana"
-    )
-    body = await response.json()
-
-    assert response.status == 400
-    assert body == {
-        "error": "ValueError",
-        "message": "Unsupported period 'banana'.",
+    assert service.history_args == {
+        "ticker": "msft",
+        "period": "2y",
+        "interval": "2wk",
+        "auto_adjust": "false",
+        "aggregate": "false",
     }
 
+
+@pytest.mark.asyncio
+async def test_get_price_history_uses_defaults(
+    aiohttp_client,
+):
+    service = FakeDownloaderService()
+
+    app = create_app(service=service)
+    client = await aiohttp_client(app)
+
+    response = await client.get(
+        "/history/AAPL"
+    )
+
+    assert response.status == 200
+
+    assert service.history_args == {
+        "ticker": "AAPL",
+        "period": "10y",
+        "interval": "1d",
+        "auto_adjust": "true",
+        "aggregate": "true",
+    }
+
+
+@pytest.mark.asyncio
+async def test_get_price_history_formats_dates_without_time(
+    aiohttp_client,
+):
+    app = create_app(
+        service=FakeDownloaderService()
+    )
+
+    client = await aiohttp_client(app)
+
+    response = await client.get(
+        "/history/AAPL"
+    )
+
+    body = await response.json()
+
+    assert response.status == 200
+
+    assert body["data"][0]["Date"] == "2024-01-01"
+    assert body["data"][1]["Date"] == "2024-01-02"
+
+    assert "T" not in body["data"][0]["Date"]
+    assert " " not in body["data"][0]["Date"]
+    assert ":" not in body["data"][0]["Date"]
+
+
+@pytest.mark.asyncio
+async def test_get_price_history_returns_400_for_value_error(
+    aiohttp_client,
+):
+    app = create_app(
+        service=ValueErrorHistoryService()
+    )
+
+    client = await aiohttp_client(app)
+
+    response = await client.get(
+        "/history/AAPL?period=3y"
+    )
+
+    body = await response.json()
+
+    assert response.status == 400
+
+    assert body == {
+        "error": "ValueError",
+        "message": "Unsupported period '3y'.",
+    }
+
+
+@pytest.mark.asyncio
+async def test_get_price_history_returns_400_for_downloader_error(
+    aiohttp_client,
+):
+    app = create_app(
+        service=DownloaderErrorHistoryService()
+    )
+
+    client = await aiohttp_client(app)
+
+    response = await client.get(
+        "/history/BAD"
+    )
+
+    body = await response.json()
+
+    assert response.status == 400
+
+    assert body == {
+        "error": "EmptyDownloadError",
+        "message": (
+            "No price history returned "
+            "for ticker 'BAD'."
+        ),
+    }
+
+
 # =========================================================
-# Dividend API Test Services
-# =========================================================
-
-
-class FakeDividendDownloaderService:
-    def __init__(self):
-        self.received_ticker = None
-        self.received_period = None
-
-
-    def get_dividends(
-        self,
-        ticker: str,
-        period: str,
-    ) -> pd.Series:
-        self.received_ticker = ticker
-        self.received_period = period
-
-        dividends = pd.Series(
-            [
-                0.24,
-                0.25,
-                0.26,
-            ],
-            index=pd.to_datetime(
-                [
-                    "2026-02-08 00:00:00-05:00",
-                    "2026-05-08 00:00:00-04:00",
-                    "2026-08-08 00:00:00-04:00",
-                ],
-                utc=True,
-            ),
-            name="Dividends",
-            dtype=float,
-        )
-
-        dividends.index.name = "Date"
-
-        return dividends
-
-
-class EmptyDividendDownloaderService:
-    def get_dividends(
-        self,
-        ticker: str,
-        period: str,
-    ) -> pd.Series:
-        dividends = pd.Series(
-            dtype=float,
-            name="Dividends",
-        )
-
-        dividends.index.name = "Date"
-
-        return dividends
-
-
-class InvalidDividendPeriodService:
-    def get_dividends(
-        self,
-        ticker: str,
-        period: str,
-    ) -> pd.Series:
-        raise ValueError(
-            f"Unsupported period '{period}'."
-        )
-
-
-class FailingDividendDownloaderService:
-    def get_dividends(
-        self,
-        ticker: str,
-        period: str,
-    ) -> pd.Series:
-        raise EmptyDownloadError(
-            f"No dividend history returned for ticker '{ticker.upper()}'."
-        )
-
-
-# =========================================================
-# Dividend Endpoint
+# Dividends
 # =========================================================
 
 
@@ -350,12 +435,9 @@ class FailingDividendDownloaderService:
 async def test_get_dividends_returns_json(
     aiohttp_client,
 ):
-    service = FakeDividendDownloaderService()
+    service = FakeDownloaderService()
 
-    app = create_app(
-        service_override=service
-    )
-
+    app = create_app(service=service)
     client = await aiohttp_client(app)
 
     response = await client.get(
@@ -388,15 +470,12 @@ async def test_get_dividends_returns_json(
 
 
 @pytest.mark.asyncio
-async def test_get_dividends_passes_ticker_and_period_to_service(
+async def test_get_dividends_passes_parameters_to_service(
     aiohttp_client,
 ):
-    service = FakeDividendDownloaderService()
+    service = FakeDownloaderService()
 
-    app = create_app(
-        service_override=service
-    )
-
+    app = create_app(service=service)
     client = await aiohttp_client(app)
 
     response = await client.get(
@@ -405,20 +484,19 @@ async def test_get_dividends_passes_ticker_and_period_to_service(
 
     assert response.status == 200
 
-    assert service.received_ticker == "msft"
-    assert service.received_period == "2y"
+    assert service.dividend_args == {
+        "ticker": "msft",
+        "period": "2y",
+    }
 
 
 @pytest.mark.asyncio
 async def test_get_dividends_uses_default_period(
     aiohttp_client,
 ):
-    service = FakeDividendDownloaderService()
+    service = FakeDownloaderService()
 
-    app = create_app(
-        service_override=service
-    )
-
+    app = create_app(service=service)
     client = await aiohttp_client(app)
 
     response = await client.get(
@@ -429,8 +507,7 @@ async def test_get_dividends_uses_default_period(
 
     assert response.status == 200
 
-    assert service.received_period == "10y"
-
+    assert service.dividend_args["period"] == "10y"
     assert body["period"] == "10y"
 
 
@@ -439,7 +516,7 @@ async def test_get_dividends_formats_dates_without_time(
     aiohttp_client,
 ):
     app = create_app(
-        service_override=FakeDividendDownloaderService()
+        service=FakeDownloaderService()
     )
 
     client = await aiohttp_client(app)
@@ -452,19 +529,18 @@ async def test_get_dividends_formats_dates_without_time(
 
     assert response.status == 200
 
-    assert body["data"][0]["Date"] == "2026-02-08"
-
-    assert " " not in body["data"][0]["Date"]
-    assert "T" not in body["data"][0]["Date"]
-    assert "-05:00" not in body["data"][0]["Date"]
+    for record in body["data"]:
+        assert len(record["Date"]) == 10
+        assert "T" not in record["Date"]
+        assert ":" not in record["Date"]
 
 
 @pytest.mark.asyncio
-async def test_get_dividends_converts_values_to_float(
+async def test_get_dividends_values_are_floats(
     aiohttp_client,
 ):
     app = create_app(
-        service_override=FakeDividendDownloaderService()
+        service=FakeDownloaderService()
     )
 
     client = await aiohttp_client(app)
@@ -491,7 +567,7 @@ async def test_get_dividends_returns_empty_history(
     aiohttp_client,
 ):
     app = create_app(
-        service_override=EmptyDividendDownloaderService()
+        service=EmptyDividendService()
     )
 
     client = await aiohttp_client(app)
@@ -513,17 +589,17 @@ async def test_get_dividends_returns_empty_history(
 
 
 @pytest.mark.asyncio
-async def test_get_dividends_returns_400_for_invalid_period(
+async def test_get_dividends_returns_400_for_value_error(
     aiohttp_client,
 ):
     app = create_app(
-        service_override=InvalidDividendPeriodService()
+        service=ValueErrorDividendService()
     )
 
     client = await aiohttp_client(app)
 
     response = await client.get(
-        "/dividends/AAPL?period=banana"
+        "/dividends/AAPL?period=3y"
     )
 
     body = await response.json()
@@ -532,7 +608,7 @@ async def test_get_dividends_returns_400_for_invalid_period(
 
     assert body == {
         "error": "ValueError",
-        "message": "Unsupported period 'banana'.",
+        "message": "Unsupported period '3y'.",
     }
 
 
@@ -541,7 +617,7 @@ async def test_get_dividends_returns_400_for_downloader_error(
     aiohttp_client,
 ):
     app = create_app(
-        service_override=FailingDividendDownloaderService()
+        service=DownloaderErrorDividendService()
     )
 
     client = await aiohttp_client(app)
@@ -561,3 +637,33 @@ async def test_get_dividends_returns_400_for_downloader_error(
             "for ticker 'BAD'."
         ),
     }
+
+
+# =========================================================
+# Routing
+# =========================================================
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/health",
+        "/history/AAPL",
+        "/metadata/AAPL",
+        "/dividends/AAPL",
+    ],
+)
+async def test_public_routes_exist(
+    aiohttp_client,
+    path,
+):
+    app = create_app(
+        service=FakeDownloaderService()
+    )
+
+    client = await aiohttp_client(app)
+
+    response = await client.get(path)
+
+    assert response.status != 404

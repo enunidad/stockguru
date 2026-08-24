@@ -6,50 +6,31 @@ from dataclasses import asdict
 import pandas as pd
 from pathlib import Path
 from datetime import timedelta
+from typing import Any
 
 from .client import YahooFinanceClient
 from .aggregator import HistoricalAggregator
 from .schemas import PriceHistoryRequest
-from .cache import PriceHistoryCache, TickerMetadataCache, DividendCache
+from .cache import DownloaderCache
 
 
 class DownloaderService:
-    """
-    Orchestration layer for the downloader service.
-    """
-
     def __init__(self, client: YahooFinanceClient | None = None,
-                cache: PriceHistoryCache | None = None,
-                metadata: TickerMetadataCache | None = None, 
-                dividend: DividendCache | None = None, ) -> None:
+                cache: DownloaderCache | None = None, ) -> None:
         self.client = client or YahooFinanceClient()
-        self.cache = cache or PriceHistoryCache(cache_dir=Path("data"),
-                                                ttl=timedelta(days=1),)
-        self.metadata = metadata or TickerMetadataCache(cache_dir=Path("data"),
-                                                        ttl=timedelta(days=1),)
-        self.dividend = dividend or DividendCache(cache_dir=Path("data"),
-                                                    ttl=timedelta(days=1), )
+        self.cache = cache or DownloaderCache(cache_dir=Path("data"), ttl=timedelta(days=1),)
     
     @staticmethod
-    def _filter_period(
-        data: pd.DataFrame,
-        period: str,
-    ) -> pd.DataFrame:
+    def _filter_period(data: pd.DataFrame, period: str, ) -> pd.DataFrame:
         if period == "10y":
             return data
 
-        supported_periods = {
-            "1y": 1,
-            "2y": 2,
-            "5y": 5,
-        }
+        supported_periods = {"1y": 1, "2y": 2, "5y": 5, }
 
         years = supported_periods.get(period)
 
         if years is None:
-            raise ValueError(
-                f"Unsupported period '{period}'."
-            )
+            raise ValueError(f"Unsupported period '{period}'.")
 
         latest_date = data.index.max()
         cutoff_date = latest_date - pd.DateOffset(years=years)
@@ -57,88 +38,54 @@ class DownloaderService:
         return data.loc[data.index >= cutoff_date]
     
     @staticmethod
-    def _filter_dividend_period(
-        dividends: pd.Series,
-        period: str,
-    ) -> pd.Series:
+    def _filter_dividend_period(dividends: pd.Series, period: str, ) -> pd.Series:
         """
         Filter dividend history to the requested period.
         """
         if dividends.empty:
             return dividends
 
-        supported_periods = {
-            "1y": 1,
-            "2y": 2,
-            "5y": 5,
-            "10y": 10,
-        }
+        supported_periods = {"1y": 1, "2y": 2, "5y": 5, "10y": 10, }
 
         years = supported_periods.get(period)
 
         if years is None:
-            raise ValueError(
-                f"Unsupported period '{period}'."
-            )
+            raise ValueError(f"Unsupported period '{period}'.")
 
         latest_date = dividends.index.max()
 
-        cutoff_date = (
-            latest_date
-            - pd.DateOffset(years=years)
-        )
+        cutoff_date = (latest_date - pd.DateOffset(years=years))
 
-        return dividends.loc[
-            dividends.index >= cutoff_date
-        ]
+        return dividends.loc[dividends.index >= cutoff_date]
+    
+    def _download_and_save(self, request:PriceHistoryRequest, kind:str|None=None) -> Any:
+        data = self.client.download(request)
+        self.cache.save(request, data)
+        return self.cache.load(request, kind)
 
-    def get_metadata(self, ticker:str, ) -> dict:
-        """
-        metadata cache and retrieval
-
-        Args:
-            ticker (str): the ticker being requested
+    def get_metadata(self, ticker: str, period: str = "10y",  interval: str = "1mo", 
+                            auto_adjust: bool = True, aggregate: bool = True,  ) -> dict:
         
-        Returns:
-            dict: the metadata dataclass as a dict foreasy use by api
-        """
-        request = PriceHistoryRequest(ticker=ticker, )
-        
-        cached_metadata = self.metadata.get_if_fresh(ticker)
+        request = PriceHistoryRequest(ticker=ticker, period="10y", interval="1d", 
+                                        auto_adjust=auto_adjust, aggregate=aggregate)
+
+        cached_metadata = self.cache.get_if_fresh(request, "metadata")
         if cached_metadata is not None:
             return asdict(cached_metadata)
-        
-        metadata = self.client.download_metadata(request)
-        self.metadata.save(metadata)
+        metadata = self._download_and_save(request, "metadata")
         return asdict(metadata)
     
     def get_price_history(self, ticker: str, period: str = "10y",  interval: str = "1mo", 
                             auto_adjust: bool = True, aggregate: bool = True, ) -> pd.DataFrame:
-        """
-        price history cache and retrieval
-
-        Args:
-            ticker (str): the ticker name being requested
-            period (str): how far back the data comes from. Default "10y"
-            interval (str): How the data should be reported. Default "1mo"
-            auto_adjust (bool): adjust if the stock went through splits. Default True.
-            aggregate (bool): flag for aggregating interval data. if False, the returned
-                                data will just be the boundaries of periods. Default True.
-                                e.g.: interval = "1mo", aggregate = False returns just the
-                                OHLC for the start of the month. aggregate = True will return
-                                OHLC values for the month itself regardles of when it 
-                                happens during the month
-        """
-        request = PriceHistoryRequest(ticker=ticker, period='10y', 
-                                        interval='1d', auto_adjust=auto_adjust, aggregate=aggregate)
+        
+        request = PriceHistoryRequest(ticker=ticker, period="10y", interval="1d", 
+                                        auto_adjust=auto_adjust, aggregate=aggregate)
 
         cached_history = self.cache.get_if_fresh(request)
         if cached_history is not None:
             to_return = cached_history
         else:
-            data = self.client.download_price_history(request)
-            self.cache.save(request,  data)
-            to_return = data
+            to_return = self._download_and_save(request)
         
         to_return = self._filter_period(to_return, period, )
         
@@ -148,34 +95,15 @@ class DownloaderService:
 
         return to_return
     
-    def get_dividends(
-        self,
-        ticker: str,
-        period: str = "10y",
-    ) -> pd.Series:
-        """
-        Retrieve dividend history for a ticker.
+    def get_dividends(self, ticker: str, period: str = "10y",  interval: str = "1mo", 
+                            auto_adjust: bool = True, aggregate: bool = True, ) -> pd.Series:
+        request = PriceHistoryRequest(ticker=ticker, period="10y", interval="1d", 
+                                        auto_adjust=auto_adjust, aggregate=aggregate)
 
-        Cached dividend history is preferred. If no cached
-        history exists, download it and populate the cache.
-        """
-        ticker = ticker.strip().upper()
+        dividends = self.cache.get_if_fresh(request, "dividends")
+        if dividends is not None:
+            to_return = dividends
+        else:
+            to_return = self._download_and_save(request, "dividends")
 
-        dividends = self.dividend.get_if_fresh(
-            ticker
-        )
-
-        if dividends is None:
-            dividends = self.client.download_dividends(
-                ticker
-            )
-
-            self.dividend.save(
-                ticker,
-                dividends,
-            )
-
-        return self._filter_dividend_period(
-            dividends,
-            period,
-        )
+        return self._filter_dividend_period(to_return, period, )

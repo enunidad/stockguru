@@ -3,381 +3,108 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import json
-from typing import Optional
+from typing import Optional, Any
 from dataclasses import asdict
 
 import pandas as pd
 
 from .schemas import PriceHistoryRequest, TickerMetadata
+from .exceptions import CacheSaveError, CacheLoadError
 
-
-class PriceHistoryCache:
-    def __init__(self, cache_dir: Path, ttl: timedelta = timedelta(days=1), ) -> None:
-        """
-        initializes price history cache
-        
-        Args:
-            cache_dir (Path): the path object to the data folder
-            ttl (timedelta): used for freshness. if cached and was cached less ttl, just
-                                return the cache, otherwise return None.
-        
-        Returns:
-            None
-        """
+class DownloaderCache:
+    def __init__(self, cache_dir: Path, ttl: timedelta=timedelta(days=1), ) -> None:
         self.cache_dir = cache_dir
         self.ttl = ttl
 
-    def get_path(self, request: PriceHistoryRequest) -> Path:
-        """
-        returns path for where the ticker cache goes in the data folder
-
-        Args:
-            request (PriceHistoryRequest): The request object. refer to schemas.PriceHistoryRequest
-        
-        Returns:
-            Path: The directory path where the ticker data goes in the data folder
-        """
-        ticker = request.ticker.strip().upper()
-        filename = f"{request.period}_{request.interval}_{str(request.auto_adjust)}.csv"
+    def get_path(self, request: PriceHistoryRequest, kind: str|None = None) -> Path:
+        ticker = request.ticker.ticker
+        if kind is None:
+            filename = f"{request.period}_{request.interval}_{str(request.auto_adjust)}.csv"
+        else:
+            filename = f"{ticker}_{kind}.csv"
         return self.cache_dir / ticker / filename
-
-    def exists(self, request: PriceHistoryRequest) -> bool:
-        """
-        helper to check a path exists
-        
-        Args:
-            request (PriceHistoryRequest): the request object. refer to schemas.PriceHistoryRequest
-        
-        Returns:
-            bool: True if the path already exists
-        """
-        return self.get_path(request).exists()
-
-    def is_fresh(self, request: PriceHistoryRequest) -> bool:
-        """
-        checker if the cache is within self.ttl
-
-        Args:
-            request (PriceHistoryRequest): The request object. refer to schemas.PriceHistoryRequest
-        
-        Returns:
-            bool: True if the cache is within self.ttl
-        """
-        path = self.get_path(request)
-
-        if not path.exists():
-            return False
-
-        modified_time = datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc, )
-
-        return datetime.now(timezone.utc) - modified_time <= self.ttl
-
-    def load(self, request: PriceHistoryRequest) -> pd.DataFrame:
-        """
-        loads the cache into the expected format
-
-        Args:
-            request (PriceHistoryRequest): The request object. refer to schemas.PriceHistoryRequest
-        
-        Returns:
-            pd.DataFrame: stored cache as a dataframe
-        """
-        path = self.get_path(request)
-        data = pd.read_csv(path)
-
-        data["Date"] = pd.to_datetime(data["Date"], errors="raise", utc=True,)
-
-        data = data.set_index("Date")
-        data.index.name = "Date"
-
-        return data
-
-    def save(self, request: PriceHistoryRequest, data: pd.DataFrame, ) -> Path:
-        """
-        saves requested dataframe into cache as a csv
-
-        Args:
-            request (PriceHistoryRequest): The request object. refer to schemas.PriceHistoryRequest
-            data (pd.Dataframe): The data to be stored
-        
-        Returns:
-            Path: The path where the data is stored
-        """
-        path = self.get_path(request)
+    
+    def _save(self, request, data, kind=None):
+        path = self.get_path(request, kind)
         path.parent.mkdir(parents=True, exist_ok=True)
 
-        output = data.copy()
+        if kind is None:
+            if isinstance(data, pd.DataFrame):
+                data.to_csv(path)
+            else:
+                raise CacheSaveError("price_history object must be pandas.DataFrame.")
+        elif kind == "metadata":
+            if isinstance(data, TickerMetadata):
+                with path.open("w", encoding="utf-8", ) as file:
+                    json.dump(asdict(data), file, indent=2, sort_keys=True, )
+            else:
+                raise CacheSaveError("metadata object must be of class TickerMetadata")
+        elif kind == "dividends":
+            if isinstance(data, pd.Series):
+                output = data.copy()
+                output.index.name = "Date"
+                output.name = "Dividends"
+                output.to_csv(path, header=True, )
+            else:
+                raise CacheSaveError("dividends object must be pandas.Series.")
+        else:
+            raise CacheSaveError(f"{kind} saving logic undefined")
 
-        output.to_csv(path)
-
-        return path
-
-    def get_if_fresh(self, request: PriceHistoryRequest) -> Optional[pd.DataFrame]:
-        """
-        service calls this. if exist and fresh, return cache, otherwise return None.
-
-        Args:
-            request(PriceHistoryRequest): The request object. refer to schemas.PriceHistoryRequest
+    def save(self, request: PriceHistoryRequest, data: dict[str, Any]) -> None:
+        expected = {"price_history", "metadata", "dividends"}
+        unexpected = set(data) - expected
+        if unexpected:
+            raise CacheSaveError(f"Unexpected object to save: {unexpected}")
         
-        Returns:
-            pd.DataFrame (Optional): if None data requests either does not exist or is not fresh
-        """
-        if not self.is_fresh(request):
-            return None
+        missing = expected - set(data)
+        if missing:
+            raise CacheSaveError(f"Missing objects to save: {missing}")
+        for kind, entry in data.items():
+            self._save(request, entry, None if kind == "price_history" else kind)
+    
+    def load(self, request: PriceHistoryRequest, kind: str|None = None) -> Any:
+        path = self.get_path(request, kind)
+        if not path.exists():
+            raise CacheLoadError(f"Path {str(path)} does not exist")
+        if kind is None:
+            data = pd.read_csv(path)
+            data["Date"] = pd.to_datetime(data["Date"], errors="raise", utc=True,)
 
-        return self.load(request)
+            data = data.set_index("Date")
+            data.index.name = "Date"
 
-class TickerMetadataCache:
-    def __init__(self, cache_dir: Path, ttl: timedelta = timedelta(days=1), ) -> None:
-        """
-        initializes metadata cache object
+            return data
+        elif kind == "metadata":
+            with path.open("r", encoding="utf-8", ) as file:
+                payload = json.load(file)
 
-        Args:
-            cache_dir (Path): The path object to the data folder
-            ttl (timedelta): used for freshness. if cached and was cached less ttl, just
-                                return the cache, otherwise return None.
-        
-        Returns:
-            None
-        """
-        self.cache_dir = cache_dir
-        self.ttl = ttl
+            return TickerMetadata(**payload)
+        elif kind == "dividends":
+            data = pd.read_csv(path, parse_dates=["Date"], )
 
-    def get_path(self, ticker: str) -> Path:
-        """
-        The path to where the metadata is stored in the data folder
+            if data.empty:
+                dividends = pd.Series(dtype=float, name="Dividends", )
+                dividends.index.name = "Date"
+                return dividends
 
-        Args:
-            ticker (str): The symbol for the metadata to be stored
-        
-        Returns:
-            Path: The path object to where this ticker metadata is saved
-        """
-        symbol = ticker.strip().upper()
-        return self.cache_dir / symbol / f"{symbol}_metadata.json"
+            data["Date"] = pd.to_datetime(data["Date"], errors="raise", utc=True, )
+            data = data.set_index("Date")
+            dividends = data["Dividends"]
+            dividends.index.name = "Date"
+            dividends.name = "Dividends"
 
-    def is_fresh(self, ticker: str) -> bool:
-        """
-        Checker if the ticker cache is within self.ttl
+            return dividends
+        else:
+            raise CacheLoadError(f"No data to load for {kind}.")
 
-        Args:
-            ticker (str): The symbol for the ticker to be checked
-        
-        Returns:
-            bool: True if cache exists and is within self.ttl
-        """
-        path = self.get_path(ticker)
-
+    def get_if_fresh(self, request: PriceHistoryRequest, kind:str|None = None) -> Optional[Any]:
+        if self.is_fresh(request, kind):
+            return self.load(request, kind)
+        return None
+    
+    def is_fresh(self, request: PriceHistoryRequest, kind: str|None = None) -> bool:
+        path = self.get_path(request, kind)
         if not path.exists():
             return False
-
         modified_time = datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc, )
-
         return datetime.now(timezone.utc) - modified_time <= self.ttl
-
-    def load(self, ticker: str) -> TickerMetadata:
-        """
-        loads cached metadata into a TickerMetadata object
-
-        Args:
-            ticker (str): The symbol for the metadata to be loaded
-        
-        Returns:
-            TickerMetadata: The metadata object. refer to schemas.TickerMetadata
-        """
-        path = self.get_path(ticker)
-
-        with path.open("r", encoding="utf-8", ) as file:
-            payload = json.load(file)
-
-        return TickerMetadata(**payload)
-
-    def save(self, metadata: TickerMetadata, ) -> Path:
-        """
-        Saves the metadata object into cache
-
-        Args:
-            metadata (TickerMetadata): The metadata object. refer to schemas.TickerMetadata
-        
-        Returns:
-            Path: The path object where the metadata is stored in the data folder
-        """
-        path = self.get_path(metadata.ticker)
-        path.parent.mkdir(parents=True, exist_ok=True, )
-
-        with path.open("w", encoding="utf-8", ) as file:
-            json.dump(asdict(metadata), file, indent=2, sort_keys=True, )
-
-        return path
-
-    def get_if_fresh(self, ticker: str, ) -> Optional[TickerMetadata]:
-        """
-        This is the function service calls.
-
-        Args:
-            ticker (str): the symbol for the requested metadata
-        
-        Returns:
-            TickerMetadata (Optional): if ticker exists and is fresh, returns the cache.
-                                        Otherwise return None.
-        """
-        if not self.is_fresh(ticker):
-            return None
-
-        return self.load(ticker)
-
-class DividendCache:
-    def __init__(
-        self,
-        cache_dir: Path,
-        ttl: timedelta = timedelta(days=1),
-    ) -> None:
-        """
-        Initializes dividend history cache.
-
-        Args:
-            cache_dir (Path): Path to the cache data folder.
-            ttl (timedelta): Duration cached dividend data
-                is considered fresh.
-        """
-        self.cache_dir = cache_dir
-        self.ttl = ttl
-
-    def get_path(
-        self,
-        ticker: str,
-    ) -> Path:
-        """
-        Return the path used to store dividend history.
-
-        Args:
-            ticker (str): Ticker symbol.
-
-        Returns:
-            Path: Path to the dividend cache file.
-        """
-        symbol = ticker.strip().upper()
-
-        return (
-            self.cache_dir
-            / symbol
-            / f"{symbol}_dividends.csv"
-        )
-
-    def is_fresh(
-        self,
-        ticker: str,
-    ) -> bool:
-        """
-        Check whether cached dividend data exists and
-        is still within the configured TTL.
-        """
-        path = self.get_path(ticker)
-
-        if not path.exists():
-            return False
-
-        modified_time = datetime.fromtimestamp(
-            path.stat().st_mtime,
-            tz=timezone.utc,
-        )
-
-        return (
-            datetime.now(timezone.utc)
-            - modified_time
-            <= self.ttl
-        )
-
-    def load(
-        self,
-        ticker: str,
-    ) -> pd.Series:
-        """
-        Load cached dividend history.
-
-        Args:
-            ticker (str): Ticker symbol.
-
-        Returns:
-            pd.Series: Dividend payments indexed by date.
-        """
-        path = self.get_path(ticker)
-
-        data = pd.read_csv(
-            path,
-            parse_dates=["Date"],
-        )
-
-        if data.empty:
-            return pd.Series(
-                dtype=float,
-                name="Dividends",
-            )
-
-        data["Date"] = pd.to_datetime(
-            data["Date"],
-            errors="raise",
-            utc=True,
-        )
-
-        data = data.set_index("Date")
-
-        dividends = data["Dividends"]
-
-        dividends.index.name = "Date"
-        dividends.name = "Dividends"
-
-        return dividends
-
-    def save(
-        self,
-        ticker: str,
-        dividends: pd.Series,
-    ) -> Path:
-        """
-        Save dividend history to cache.
-
-        Args:
-            ticker (str): Ticker symbol.
-            dividends (pd.Series): Dividend history.
-
-        Returns:
-            Path: Path where dividend data was saved.
-        """
-        path = self.get_path(ticker)
-
-        path.parent.mkdir(
-            parents=True,
-            exist_ok=True,
-        )
-
-        output = dividends.copy()
-
-        output.index.name = "Date"
-        output.name = "Dividends"
-
-        output.to_csv(
-            path,
-            header=True,
-        )
-
-        return path
-
-    def get_if_fresh(
-        self,
-        ticker: str,
-    ) -> Optional[pd.Series]:
-        """
-        Return cached dividend data if fresh.
-
-        Args:
-            ticker (str): Ticker symbol.
-
-        Returns:
-            Optional[pd.Series]: Cached dividend data,
-            otherwise None.
-        """
-        if not self.is_fresh(ticker):
-            return None
-
-        return self.load(ticker)

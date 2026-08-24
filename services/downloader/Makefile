@@ -1,7 +1,7 @@
 .PHONY: help install test run clean docker-build docker-run docker-test docker-down
 
 PYTHON := py
-PIP := py -m pip
+PIP := $(PYTHON) -m pip
 
 help:
 	@echo "StocksGuru Downloader"
