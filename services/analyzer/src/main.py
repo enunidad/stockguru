@@ -10,7 +10,7 @@ from .config import DOWNLOADER_BASE_URL, HOST, PORT
 
 def main() -> None:
     """Start the analyzer HTTP service."""
-    app = create_app(downloader_base_url=DOWNLOADER_BASE_URL, )
+    app = create_app(analyzer_service=DOWNLOADER_BASE_URL, )
 
     web.run_app(app, host=HOST, port=PORT, )
 

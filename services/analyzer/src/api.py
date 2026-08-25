@@ -12,15 +12,15 @@ from .exceptions import (
 from .service import AnalyzerService
 
 
-ANALYZER_SERVICE_KEY = web.AppKey(
-    "analyzer_service",
-    AnalyzerService,
-)
+ANALYZER_SERVICE_KEY = web.AppKey("analyzer_service", AnalyzerService, )
 
 
-def create_app(analyzer_service: AnalyzerService | None = None, )-> web.Application:
+def create_app(analyzer_service: AnalyzerService | str | None = None, )-> web.Application:
     app = web.Application()
-    service = analyzer_service if analyzer_service is not None else AnalyzerService(DOWNLOADER_BASE_URL)
+    if isinstance(analyzer_service, str):
+        service = AnalyzerService(analyzer_service)
+    else:
+        service = analyzer_service if analyzer_service is not None else AnalyzerService(DOWNLOADER_BASE_URL)
     app[ANALYZER_SERVICE_KEY] = service
 
     app.router.add_get("/health", health, )
