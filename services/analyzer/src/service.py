@@ -9,49 +9,19 @@ from .calculations import (
     calculate_simple_moving_average,
     calculate_total_return,
 )
-from .client import DownloaderApiClient
+from .client import LocalDownloaderClient, HttpDownloaderClient
 from .exceptions import InvalidPriceHistoryError
 from .schemas import AnalysisResult, PriceHistory
 
 
 class AnalyzerService:
-    """Coordinates price retrieval and financial analysis."""
+    def __init__(self, downloader_client: LocalDownloaderClient | HttpDownloaderClient | str | None = None, ) -> None:
+        if isinstance(downloader_client, str):
+            self._downloader_client = HttpDownloaderClient(downloader_client)
+        else:
+            self._downloader_client = downloader_client or LocalDownloaderClient()
 
-    def __init__(
-        self,
-        downloader_client: DownloaderApiClient,
-    ) -> None:
-        self._downloader_client = downloader_client
-
-    async def analyze_ticker(
-        self,
-        ticker: str,
-        *,
-        period: str = "10y",
-        auto_adjust: bool = False,
-    ) -> AnalysisResult:
-        """
-        Retrieve historical prices and calculate investment metrics.
-
-        Args:
-            ticker:
-                Stock ticker symbol, such as ``AAPL``.
-            period:
-                Historical period requested from the downloader.
-
-        Returns:
-            AnalysisResult containing the calculated metrics.
-
-        Raises:
-            DownloaderClientError:
-                If the downloader request fails.
-            InvalidDownloaderResponseError:
-                If the downloader returns invalid data.
-            InvalidPriceHistoryError:
-                If the returned history cannot support the analysis.
-            InvalidCalculationParameterError:
-                If a calculation receives an invalid parameter.
-        """
+    async def analyze_ticker(self, ticker: str, *, period: str = "10y", auto_adjust: bool = False, ) -> AnalysisResult:
         history = await self._downloader_client.get_price_history(
             ticker,
             period=period,
@@ -62,10 +32,7 @@ class AnalyzerService:
 
         return self._analyze_history(history)
 
-    def _analyze_history(
-        self,
-        history: PriceHistory,
-    ) -> AnalysisResult:
+    def _analyze_history(self, history: PriceHistory, ) -> AnalysisResult:
         self._validate_history(history)
 
         prices = history.closing_prices
@@ -118,84 +85,41 @@ class AnalyzerService:
         )
 
     @staticmethod
-    def _validate_history(
-        history: PriceHistory,
-    ) -> None:
+    def _validate_history(history: PriceHistory, ) -> None:
         if len(history.rows) < 3:
-            raise InvalidPriceHistoryError(
-                "At least three price-history rows are required "
-                "to perform an analysis."
-            )
+            raise InvalidPriceHistoryError("At least three price-history rows are required to perform an analysis.")
 
     @staticmethod
     def _parse_date(value: str) -> date:
-        """
-        Parse a downloader date into a date object.
-
-        Supports plain ISO dates such as ``2026-07-22`` and ISO
-        datetimes such as ``2026-07-22T16:00:00``.
-        """
         if not isinstance(value, str) or not value.strip():
-            raise InvalidPriceHistoryError(
-                f"Invalid price history date: {value!r}."
-            )
+            raise InvalidPriceHistoryError(f"Invalid price history date: {value!r}.")
 
         try:
-            return datetime.fromisoformat(
-                value.replace("Z", "+00:00")
-            ).date()
+            return datetime.fromisoformat(value.replace("Z", "+00:00")).date()
         except ValueError as exc:
-            raise InvalidPriceHistoryError(
-                f"Invalid price history date: {value!r}."
-            ) from exc
+            raise InvalidPriceHistoryError(f"Invalid price history date: {value!r}.") from exc
 
     @staticmethod
-    def _calculate_years(
-        *,
-        start_date: date,
-        end_date: date,
-    ) -> float:
-        elapsed_days = (
-            end_date - start_date
-        ).days
+    def _calculate_years(*, start_date: date, end_date: date, ) -> float:
+        elapsed_days = (end_date - start_date).days
 
         if elapsed_days <= 0:
-            raise InvalidPriceHistoryError(
-                "Price-history end date must be later "
-                "than its start date."
-            )
+            raise InvalidPriceHistoryError("Price-history end date must be later than its start date.")
 
         return elapsed_days / 365.2425
 
     @staticmethod
-    def _get_trading_periods(
-        interval: str,
-    ) -> int:
-        trading_periods_by_interval = {
-            "1d": 252,
-            "5d": 52,
-            "1wk": 52,
-            "1mo": 12,
-            "3mo": 4,
-        }
+    def _get_trading_periods(interval: str, ) -> int:
+        trading_periods_by_interval = {"1d": 252, "5d": 52, "1wk": 52, "1mo": 12, "3mo": 4, }
 
         try:
             return trading_periods_by_interval[interval]
         except KeyError as exc:
-            raise InvalidPriceHistoryError(
-                f"Unsupported price interval: {interval!r}."
-            ) from exc
+            raise InvalidPriceHistoryError(f"Unsupported price interval: {interval!r}.") from exc
 
     @staticmethod
-    def _calculate_moving_average(
-        prices: tuple[float, ...],
-        *,
-        window: int,
-    ) -> float | None:
+    def _calculate_moving_average(prices: tuple[float, ...], *, window: int, ) -> float | None:
         if len(prices) < window:
             return None
 
-        return calculate_simple_moving_average(
-            prices,
-            window=window,
-        )
+        return calculate_simple_moving_average(prices, window=window, )

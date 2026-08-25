@@ -1,4 +1,5 @@
-PYTHON ?= python
+PYTHON ?= py
+PIP ?= $(PYTHON) -m pip
 
 smoke:
 	powershell -NoProfile -Command \
@@ -19,6 +20,9 @@ smoke:
 				Stop-Process -Id $$server.Id \
 			} \
 		}"
+
+install:
+	$(PIP) install -r requirements.txt
 
 run:
 	$(PYTHON) -m src.main
