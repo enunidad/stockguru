@@ -9,7 +9,7 @@ from .calculations import (
     calculate_simple_moving_average,
     calculate_total_return,
 )
-from .client import LocalDownloaderClient, HttpDownloaderClient
+from .client import DownloaderClient, LocalDownloaderClient, HttpDownloaderClient
 from .exceptions import InvalidPriceHistoryError
 from .schemas import AnalysisResult, PriceHistory
 
