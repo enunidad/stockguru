@@ -15,7 +15,7 @@ from .schemas import AnalysisResult, PriceHistory
 
 
 class AnalyzerService:
-    def __init__(self, downloader_client: LocalDownloaderClient | HttpDownloaderClient | str | None = None, ) -> None:
+    def __init__(self, downloader_client: DownloaderClient | str | None = None, ) -> None:
         if isinstance(downloader_client, str):
             self._downloader_client = HttpDownloaderClient(downloader_client)
         else:

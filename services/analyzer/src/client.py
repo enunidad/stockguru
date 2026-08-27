@@ -55,7 +55,10 @@ def _parse_price_history(payload: dict[str, Any], ) -> PriceHistory:
 
     return history
 
-class LocalDownloaderClient:
+class DownloaderClient:
+    """Base client class"""
+
+class LocalDownloaderClient(DownloaderClient):
     def __init__(self, service:DownloaderService|None = None) -> None:
         if service is None:
             from services.downloader import DownloaderService
@@ -76,7 +79,7 @@ class LocalDownloaderClient:
             }
         return _parse_price_history(payload)
     
-class HttpDownloaderClient:
+class HttpDownloaderClient(DownloaderClient):
     def __init__(self, base_url: str = "http://localhost:8080", *, timeout_seconds: float = 30.0, ) -> None:
         self._base_url = base_url.rstrip("/")
         self._timeout = aiohttp.ClientTimeout(total=timeout_seconds, )
