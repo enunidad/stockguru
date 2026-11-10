@@ -10,7 +10,7 @@ services:
       - ./data:/app/data
     environment:
       - PYTHONPATH=/app/src
-    command: python -m downloader.main
+    command: python -m src.main
 
   downloader-tests:
     build:

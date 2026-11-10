@@ -561,6 +561,7 @@ def assert_forecast(
             "downloader",
             {
                 "status": "ok",
+                "code": "200",
             },
         ),
         (

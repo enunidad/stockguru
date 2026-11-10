@@ -3,16 +3,19 @@ CMD ?=
 PORT ?= 8000
 MSG ?= dev update
 
-SERVICE_DIRS := $(wildcard services/*/)
-SERVICES := $(patsubst services/%/,%,$(SERVICE_DIRS))
+SERVICES := $(patsubst services/%/Makefile,%,$(wildcard services/*/Makefile))
 PID_DIR := .pids
 
 SELECTED_SERVICES := $(filter $(SERVICES),$(MAKECMDGOALS))
 
-PYTHON := py
+PYTHON ?= python3
+export PYTHON
+# Keep the detached launcher from running during make --dry-run.
+BACKGROUND_MAKE = $(MAKE)
 
 
-.PHONY: service test run-all-tests start-detached stop start-all stop-all run-local push-to-remote $(SERVICES)
+.PHONY: service install run test test-all integration-test full-test start-detached stop \
+        start-all stop-all run-local clean clean-all push-to-remote $(SERVICES)
 
 
 # Service names are valid make targets, but don't do anything themselves.
@@ -20,45 +23,50 @@ $(SERVICES):
 	@:
 
 service:
-	@if "$(SVC)"=="" (echo SVC is required && exit /b 1)
-	@if "$(CMD)"=="" (echo CMD is required && exit /b 1)
+	@if [ -z "$(SVC)" ]; then echo "SVC is required" >&2; exit 1; fi
+	@if [ -z "$(CMD)" ]; then echo "CMD is required" >&2; exit 1; fi
 	@$(MAKE) -C services/$(SVC) $(CMD)
 
 install:
-	@if "$(SELECTED_SERVICES)"=="" (echo Usage: make ^<service...^> install && exit /b 1)
-	@for %%s in ($(SELECTED_SERVICES)) do @$(MAKE) service SVC=%%s CMD=install || exit /b 1
+	@if [ -z "$(SELECTED_SERVICES)" ]; then echo "Usage: make <service...> install" >&2; exit 1; fi
+	@for svc in $(SELECTED_SERVICES); do $(MAKE) service SVC="$$svc" CMD=install || exit $$?; done
 
 run:
-	@if "$(SELECTED_SERVICES)"=="" (echo Usage: make ^<service...^> run && exit /b 1)
-	@for %%s in ($(SELECTED_SERVICES)) do @$(MAKE) service SVC=%%s CMD=run || exit /b 1
+	@if [ -z "$(SELECTED_SERVICES)" ]; then echo "Usage: make <service...> run" >&2; exit 1; fi
+	@for svc in $(SELECTED_SERVICES); do $(MAKE) service SVC="$$svc" CMD=run || exit $$?; done
 
 test:
-	@if "$(SELECTED_SERVICES)"=="" (echo Usage: make ^<service...^> test && exit /b 1)
-	@for %%s in ($(SELECTED_SERVICES)) do @$(MAKE) service SVC=%%s CMD=test || exit /b 1
-	@for %%s in ($(SELECTED_SERVICES)) do @$(MAKE) service SVC=%%s CMD=clean
+	@if [ -z "$(SELECTED_SERVICES)" ]; then echo "Usage: make <service...> test" >&2; exit 1; fi
+	@for svc in $(SELECTED_SERVICES); do \
+		docker compose run --build --rm --no-deps -T "$$svc" python -m pytest tests -v || exit $$?; \
+	done
 
 
 test-all:
 	@echo ========================================
 	@echo Running all service tests...
 	@echo ========================================
-	@for %%s in ($(SERVICES)) do @$(MAKE) service SVC=%%s CMD=test || exit /b 1
-	@echo.
+	@$(MAKE) $(SERVICES) test
+	@echo
 	@echo ========================================
 	@echo All unit tests passed.
 	@echo ========================================
 
-integration-test: start-all
+integration-test:
 	@echo ========================================
 	@echo Running all public endpoints tests...
 	@echo ========================================
-	@$(PYTHON) -m pytest integration_tests -v
-	@$(MAKE) stop-all
+	@set -e; \
+	compose="docker compose -f docker-compose.yml -f docker-compose.integration.yml -p stockguru-integration-$$$$"; \
+	trap '$$compose down --volumes --rmi local' EXIT; \
+	$$compose up --build --wait; \
+	$$compose run --rm --no-deps -T \
+		--volume "$(CURDIR)/integration_tests:/app/integration_tests:ro" \
+		-e FRONTEND_BASE_URL=http://frontend:8000 \
+		frontend python -m pytest integration_tests -v
 	@echo ========================================
 	@echo All endpoints passed.
 	@echo ========================================
-	@$(MAKE) clean-all
-	@$(PYTHON) -c "import shutil, pathlib; [shutil.rmtree(p, ignore_errors=True) for p in pathlib.Path('.').rglob('__pycache__')]; [p.unlink() for p in pathlib.Path('.').rglob('*.pyc')]"
 
 
 full-test: test-all
@@ -68,15 +76,38 @@ full-test: test-all
 	@echo ========================================
 
 start-detached:
-	@if "$(SELECTED_SERVICES)"=="" (echo Usage: make ^<service...^> start-detached && exit /b 1)
-	@if not exist "$(PID_DIR)" mkdir "$(PID_DIR)"
-	@for %%s in ($(SELECTED_SERVICES)) do @powershell -NoProfile -Command "$$p = Start-Process powershell -PassThru -ArgumentList '-NoProfile','-Command','$(MAKE) service SVC=%%s CMD=run'; $$p.Id | Out-File -Encoding ascii '$(PID_DIR)/%%s.pid'; Write-Host 'Started %%s PID' $$p.Id"
-	powershell -NoProfile -Command "Start-Sleep -Seconds 2"
-
+	@if [ -z "$(SELECTED_SERVICES)" ]; then echo "Usage: make <service...> start-detached" >&2; exit 1; fi
+	@mkdir -p "$(PID_DIR)"
+	@set -e; for svc in $(SELECTED_SERVICES); do \
+		pid_file="$(PID_DIR)/$$svc.pid"; \
+		if [ -s "$$pid_file" ] && /bin/kill -0 -- "-$$(cat "$$pid_file")" 2>/dev/null; then \
+			echo "$$svc is already running."; \
+			continue; \
+		fi; \
+		nohup setsid $(BACKGROUND_MAKE) service SVC="$$svc" CMD=run </dev/null >"$(PID_DIR)/$$svc.log" 2>&1 & \
+		pid=$$!; \
+		echo "$$pid" >"$$pid_file"; \
+		echo "Started $$svc (PID $$pid). Log: $(PID_DIR)/$$svc.log"; \
+	done
+	@sleep 2
 
 stop:
-	@if "$(SELECTED_SERVICES)"=="" (echo Usage: make ^<service...^> stop && exit /b 1)
-	@for %%s in ($(SELECTED_SERVICES)) do @powershell -NoProfile -Command "if (Test-Path '$(PID_DIR)/%%s.pid') { $$processId = Get-Content '$(PID_DIR)/%%s.pid'; Write-Host 'Stopping %%s PID' $$processId; taskkill /PID $$processId /T /F | Out-Null; Remove-Item '$(PID_DIR)/%%s.pid' -Force } else { Write-Host '%%s is not running.' }"
+	@if [ -z "$(SELECTED_SERVICES)" ]; then echo "Usage: make <service...> stop" >&2; exit 1; fi
+	@set -e; for svc in $(SELECTED_SERVICES); do \
+		pid_file="$(PID_DIR)/$$svc.pid"; \
+		if [ -s "$$pid_file" ]; then \
+			pid=$$(cat "$$pid_file"); \
+			if /bin/kill -0 -- "-$$pid" 2>/dev/null; then \
+				echo "Stopping $$svc (PID $$pid)."; \
+				/bin/kill -TERM -- "-$$pid"; \
+			else \
+				echo "$$svc is not running."; \
+			fi; \
+			rm -f "$$pid_file"; \
+		else \
+			echo "$$svc is not running."; \
+		fi; \
+	done
 
 
 start-all:
@@ -88,17 +119,17 @@ stop-all:
 
 
 run-local: start-all
-	powershell -NoProfile -Command "Start-Process 'http://localhost:$(PORT)/'"
+	xdg-open "http://localhost:$(PORT)/"
 
 clean:
-	@if "$(SELECTED_SERVICES)"=="" (echo Usage: make ^<service...^> clean && exit /b 1)
-	@for %%s in ($(SELECTED_SERVICES)) do @$(MAKE) service SVC=%%s CMD=clean
+	@if [ -z "$(SELECTED_SERVICES)" ]; then echo "Usage: make <service...> clean" >&2; exit 1; fi
+	@for svc in $(SELECTED_SERVICES); do $(MAKE) service SVC="$$svc" CMD=clean || exit $$?; done
 
 clean-all:
 	$(MAKE) $(SERVICES) clean
 
 push-to-remote:
-	$(MAKE) service SVC=downloader CMD=clean-cache
+	$(MAKE) clean-all
 	git add .
 	git commit -m '$(MSG)'
 	git push

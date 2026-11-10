@@ -11,7 +11,11 @@ CONNECTED_SERVICES = {"downloader": "http://localhost:8080",
                         "analyzer": "http://localhost:8090",
                         }
 
-DOWNLOADER_BASE_URL = os.getenv("GLOBAL_BASE_URL", CONNECTED_SERVICES["downloader"], )
+DOWNLOADER_BASE_URL = os.getenv(
+    "DOWNLOADER_BASE_URL", os.getenv("GLOBAL_BASE_URL", CONNECTED_SERVICES["downloader"])
+)
 
-ANALYZER_BASE_URL = os.getenv("GLOBAL_BASE_URL", CONNECTED_SERVICES["analyzer"], )
+ANALYZER_BASE_URL = os.getenv(
+    "ANALYZER_BASE_URL", os.getenv("GLOBAL_BASE_URL", CONNECTED_SERVICES["analyzer"])
+)
 

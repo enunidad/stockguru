@@ -1,6 +1,7 @@
-PYTHON ?= python
+PYTHON ?= python3
+PIP ?= $(PYTHON) -m pip
 
-.PHONY: run test clean
+.PHONY: install run test clean
 
 run:
 	$(PYTHON) -m src.main

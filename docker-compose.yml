@@ -1,0 +1,64 @@
+x-healthcheck: &healthcheck
+  test:
+    - CMD
+    - python
+    - -c
+    - "import os, urllib.request; urllib.request.urlopen('http://127.0.0.1:' + os.environ['PORT'] + '/health', timeout=2).close()"
+  interval: 5s
+  timeout: 3s
+  retries: 12
+
+services:
+  downloader:
+    build: ./services/downloader
+    environment:
+      PORT: "8080"
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - downloader-data:/app/data
+    healthcheck: *healthcheck
+
+  analyzer:
+    build: ./services/analyzer
+    environment:
+      PORT: "8090"
+      DOWNLOADER_BASE_URL: http://downloader:8080
+    ports:
+      - "127.0.0.1:8090:8090"
+    healthcheck: *healthcheck
+
+  chartmgr:
+    build: ./services/chartmgr
+    environment:
+      PORT: "8050"
+      DOWNLOADER_BASE_URL: http://downloader:8080
+      ANALYZER_BASE_URL: http://analyzer:8090
+    ports:
+      - "127.0.0.1:8050:8050"
+    healthcheck: *healthcheck
+
+  forecaster:
+    build: ./services/forecaster
+    environment:
+      PORT: "8060"
+      DOWNLOADER_BASE_URL: http://downloader:8080
+      ANALYZER_BASE_URL: http://analyzer:8090
+    ports:
+      - "127.0.0.1:8060:8060"
+    healthcheck: *healthcheck
+
+  frontend:
+    build: ./services/frontend
+    environment:
+      PORT: "8000"
+      DOWNLOADER_BASE_URL: http://downloader:8080
+      ANALYZER_BASE_URL: http://analyzer:8090
+      CHARTMGR_BASE_URL: http://chartmgr:8050
+      FORECASTER_BASE_URL: http://forecaster:8060
+    ports:
+      - "127.0.0.1:8000:8000"
+    healthcheck: *healthcheck
+
+volumes:
+  downloader-data:

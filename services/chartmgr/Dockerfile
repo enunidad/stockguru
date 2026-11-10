@@ -6,7 +6,9 @@ COPY requirements.txt .
 
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+COPY src ./src
+COPY tests ./tests
+COPY chart_definition.json .
 
 ENV PYTHONUNBUFFERED=1
 

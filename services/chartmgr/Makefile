@@ -1,24 +1,18 @@
-PYTHON ?= python
+PYTHON ?= python3
+PIP ?= $(PYTHON) -m pip
+
+.PHONY: install smoke run test clean
 
 smoke:
-	powershell -NoProfile -Command \
-		"$$server = Start-Process python \
-			-ArgumentList '-m src.main' \
-			-PassThru; \
-		Start-Sleep -Seconds 2; \
-		try { \
-			$$response = Invoke-RestMethod \
-				'http://localhost:8050/health'; \
-			if ($$response.status -ne 'ok') { \
-				throw 'Chartmgr health check failed' \
-			}; \
-			Write-Host 'Chartmgr smoke test passed' \
-		} finally { \
-			if (Get-Process -Id $$server.Id \
-				-ErrorAction SilentlyContinue) { \
-				Stop-Process -Id $$server.Id \
-			} \
-		}"
+	@set -e; \
+	$(PYTHON) -m src.main & server=$$!; \
+	trap 'kill "$$server" 2>/dev/null || true; wait "$$server" 2>/dev/null || true' EXIT; \
+	sleep 2; \
+	$(PYTHON) -c "import json, urllib.request; response = urllib.request.urlopen('http://localhost:8050/health', timeout=5); raise SystemExit(json.load(response).get('status') != 'ok')"; \
+	echo "Chartmgr smoke test passed"
+
+install:
+	$(PIP) install -r requirements.txt
 
 run:
 	$(PYTHON) -m src.main

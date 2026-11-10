@@ -1,0 +1,11 @@
+services:
+  downloader:
+    ports: !reset []
+  analyzer:
+    ports: !reset []
+  chartmgr:
+    ports: !reset []
+  forecaster:
+    ports: !reset []
+  frontend:
+    ports: !reset []

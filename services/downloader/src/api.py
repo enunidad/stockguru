@@ -9,13 +9,16 @@ from .exceptions import DownloaderClientError
 from .service import DownloaderService
 
 
+SERVICE_KEY = web.AppKey("service", DownloaderService)
+
+
 async def health(request: web.Request) -> web.Response:
     return web.json_response({"status": "ok", "code": "200"})
 
 async def get_metadata(request: web.Request) -> web.Response:
     ticker = request.match_info["ticker"]
     try:
-        metadata = request.app["service"].get_metadata(ticker)
+        metadata = request.app[SERVICE_KEY].get_metadata(ticker)
         return web.json_response(metadata)
     
     except DownloaderClientError as exc:
@@ -30,7 +33,7 @@ async def get_price_history(request: web.Request) -> web.Response:
     aggregate = request.query.get("aggregate", "true")
 
     try:
-        data = request.app["service"].get_price_history(
+        data = request.app[SERVICE_KEY].get_price_history(
             ticker=ticker,
             period=period,
             interval=interval,
@@ -61,7 +64,7 @@ async def get_dividends(request: web.Request, ) -> web.Response:
     period = request.query.get("period", "10y", )
 
     try:
-        dividends = (request.app["service"].get_dividends(ticker=ticker, period=period, ))
+        dividends = (request.app[SERVICE_KEY].get_dividends(ticker=ticker, period=period, ))
 
         records = [
             {
@@ -82,7 +85,7 @@ async def get_dividends(request: web.Request, ) -> web.Response:
 
 def create_app(service: DownloaderService | None = None) -> web.Application:
     app = web.Application()
-    app["service"] = service or DownloaderService()
+    app[SERVICE_KEY] = service or DownloaderService()
 
     app.router.add_get("/health", health)
     app.router.add_get("/history/{ticker}", get_price_history)
