@@ -116,6 +116,7 @@ start-all:
 
 stop-all:
 	@$(MAKE) $(SERVICES) stop
+	docker compose stop
 
 
 run-local: start-all
